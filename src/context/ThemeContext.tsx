@@ -185,7 +185,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         },
       },
       shape: {
-        borderRadius: 8,
+        borderRadius: 3,
       },
       components: {
         MuiCssBaseline: {

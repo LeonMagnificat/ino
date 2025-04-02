@@ -1,8 +1,7 @@
 import React from 'react';
 import { IconButton, Tooltip, Box, styled } from '@mui/material';
-import LightModeIcon from '@mui/icons-material/LightMode';
-import DarkModeIcon from '@mui/icons-material/DarkMode';
 import { useTheme } from '../../context/ThemeContext';
+import { SunIcon, MoonIcon } from '../icons/FallbackIcons';
 
 interface ThemeToggleProps {
   /** Button size */
@@ -15,7 +14,7 @@ interface ThemeToggleProps {
 const StyledIconButton = styled(IconButton)(({ theme }) => ({
   position: 'relative',
   transition: 'all 0.3s ease-in-out',
-  borderRadius: '12px',
+  borderRadius: '3px',
   padding: theme.spacing(1.5),
   color: theme.palette.mode === 'dark' ? '#90caf9' : '#1976d2',
   backgroundColor: theme.palette.mode === 'dark'
@@ -73,19 +72,22 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({
         onClick={toggleColorMode}
         aria-label="toggle theme"
         size={size}
+        className="hover:animate-pulse-slow"
       >
         {mode === 'light' ? (
-          <DarkModeIcon sx={{
-            fontSize: '1.5rem',
-            transition: 'transform 0.3s ease',
-            '&:hover': { transform: 'scale(1.1)' }
-          }} />
+          <MoonIcon
+            size={24}
+            color="currentColor"
+            animate={true}
+            animationVariant="pulse"
+          />
         ) : (
-          <LightModeIcon sx={{
-            fontSize: '1.5rem',
-            transition: 'transform 0.3s ease',
-            '&:hover': { transform: 'scale(1.1)' }
-          }} />
+          <SunIcon
+            size={24}
+            color="currentColor"
+            animate={true}
+            animationVariant="spin"
+          />
         )}
       </StyledIconButton>
     </Tooltip>

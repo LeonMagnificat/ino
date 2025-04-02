@@ -7,6 +7,8 @@ import Sidebar from './components/layout/Sidebar';
 import Dashboard from './components/dashboard/Dashboard';
 import Notifications from './components/notifications/Notifications';
 import Accounts from './components/accounts/Accounts';
+import Campaigns from './components/campaigns';
+import Settings from './components/settings/Settings';
 import { ThemeProvider } from './context/ThemeContext';
 
 function App() {
@@ -31,13 +33,16 @@ function App() {
             component="main"
             sx={{
               flexGrow: 1,
-              overflow: 'hidden',
+              overflow: 'auto',
               position: 'relative',
+              width: 'calc(100% - 80px)',
             }}
           >
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/accounts" element={<Accounts />} />
+              <Route path="/campaigns" element={<Campaigns />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Dashboard />} />
             </Routes>
           </Box>

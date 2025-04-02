@@ -157,16 +157,17 @@ const TabCount = styled('span')(({ theme }) => ({
 
 const TableHeader = styled(TableCell)(({ theme }) => ({
   fontWeight: 600,
-  color: '#666',
-  borderBottom: '1px solid #e0e0e0',
+  color: theme.palette.mode === 'dark' ? theme.palette.text.secondary : '#666',
+  borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#e0e0e0'}`,
   padding: theme.spacing(1.5, 2),
   fontSize: '0.875rem',
+  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
 }));
 
 const TableContent = styled(TableCell)(({ theme }) => ({
-  borderBottom: '1px solid #e0e0e0',
+  borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#e0e0e0'}`,
   padding: theme.spacing(1.5, 2),
-  color: '#333',
+  color: theme.palette.mode === 'dark' ? theme.palette.text.primary : '#333',
   fontSize: '0.875rem',
 }));
 
@@ -230,10 +231,10 @@ interface SuggestedSolution {
   tag: string;
 }
 
-// Fonction pour générer une couleur stable basée sur une chaîne
+// Function to generate a stable color based on a string
 const stringToColor = (string: string) => {
-  // Vérification de sécurité pour éviter les erreurs
-  if (!string) return '#1A73E8'; // Couleur par défaut en cas de chaîne vide
+  // Safety check to avoid errors
+  if (!string) return '#1A73E8'; // Default color for empty strings
   
   let hash = 0;
   let i;
@@ -242,38 +243,38 @@ const stringToColor = (string: string) => {
     hash = string.charCodeAt(i) + ((hash << 5) - hash);
   }
 
-  // Palette de couleurs vives mais professionnelles
+  // Palette of vibrant but professional colors
   const colors = [
-    '#1A73E8', // bleu Google
-    '#EA4335', // rouge Google
-    '#34A853', // vert Google
-    '#FBBC05', // jaune Google
-    '#7B1FA2', // violet
+    '#1A73E8', // Google blue
+    '#EA4335', // Google red
+    '#34A853', // Google green
+    '#FBBC05', // Google yellow
+    '#7B1FA2', // purple
     '#0097A7', // cyan
     '#00796B', // teal
-    '#C62828', // rouge
-    '#AD1457', // rose
-    '#6A1B9A', // pourpre
-    '#4527A0', // indigo foncé
+    '#C62828', // red
+    '#AD1457', // pink
+    '#6A1B9A', // deep purple
+    '#4527A0', // dark indigo
     '#283593', // indigo
-    '#1565C0', // bleu
-    '#0277BD', // bleu clair
+    '#1565C0', // blue
+    '#0277BD', // light blue
     '#00838F', // cyan
     '#00695C', // teal
-    '#2E7D32', // vert
-    '#558B2F', // vert clair
-    '#F9A825', // ambre
+    '#2E7D32', // green
+    '#558B2F', // light green
+    '#F9A825', // amber
     '#EF6C00', // orange
-    '#D84315', // orange foncé
-    '#4E342E', // marron
+    '#D84315', // deep orange
+    '#4E342E', // brown
   ];
   
   return colors[Math.abs(hash) % colors.length];
 };
 
-// Fonction pour générer les initiales à partir d'un nom
+// Function to generate initials from a name
 const getInitials = (name: string) => {
-  // Vérification de sécurité pour éviter les erreurs
+  // Safety check to avoid errors
   if (!name) return '??';
   
   const words = name.split(' ');
@@ -460,11 +461,11 @@ const BookmarkButton = styled(IconButton)(({ theme }) => ({
   position: 'absolute',
   top: theme.spacing(1),
   right: theme.spacing(1),
-  color: '#FFA000',
-  backgroundColor: 'rgba(255, 255, 255, 0.8)',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+  color: theme.palette.warning.main,
+  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(66, 66, 66, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+  boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.12)',
   '&:hover': {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(66, 66, 66, 0.95)' : 'rgba(255, 255, 255, 0.95)',
     transform: 'scale(1.05)',
   },
   transition: theme.transitions.create(['background-color', 'box-shadow', 'transform'], {
@@ -499,7 +500,7 @@ const AccountBadge = styled(Box)(({ theme }) => ({
   fontWeight: 600,
 }));
 
-// Ajout d'un composant de transition pour les vues
+// Adding a transition component for views
 const PageTransition = styled(Box)(({ theme }) => ({
   transition: theme.transitions.create(['width', 'margin', 'opacity', 'transform'], {
     easing: theme.transitions.easing.easeInOut,
@@ -582,11 +583,11 @@ const Accounts: React.FC = () => {
     
     if (sortConfig !== null) {
       sortableAccounts.sort((a, b) => {
-        // Vérifier si les propriétés existent sur les objets a et b
+        // Check if properties exist on objects a and b
         const aValue = a[sortConfig.key];
         const bValue = b[sortConfig.key];
-        
-        // Gérer les cas où les valeurs pourraient être undefined
+
+        // Handle cases where values might be undefined
         if (aValue === undefined && bValue === undefined) return 0;
         if (aValue === undefined) return sortConfig.direction === 'asc' ? -1 : 1;
         if (bValue === undefined) return sortConfig.direction === 'asc' ? 1 : -1;
@@ -609,12 +610,12 @@ const Accounts: React.FC = () => {
     setLoading(true);
     setSelectedAccount(account);
     
-    // Délai pour l'animation avant d'afficher les détails
+    // Delay for animation before displaying details
     setTimeout(() => {
       setDetailsView(true);
       setLoading(false);
-      
-      // Terminer l'animation
+
+      // Finish the animation
       setTimeout(() => {
         setAnimatingTransition(false);
       }, 300);
@@ -624,11 +625,11 @@ const Accounts: React.FC = () => {
   const handleBackToAccounts = () => {
     setAnimatingTransition(true);
     
-    // Délai pour l'animation avant de revenir à la liste
+    // Delay for animation before returning to the list
     setTimeout(() => {
       setDetailsView(false);
-      
-      // Terminer l'animation
+
+      // Finish the animation
       setTimeout(() => {
         setAnimatingTransition(false);
       }, 300);
@@ -795,7 +796,7 @@ const Accounts: React.FC = () => {
                   </Box>
                   <StatusLabel status={account.updates} />
                   {bookmarked.includes(account.id) && (
-                    <BookmarkIcon sx={{ ml: 1, fontSize: 16, color: '#FFA000' }} />
+                    <BookmarkIcon sx={{ ml: 1, fontSize: 16, color: (theme) => theme.palette.warning.main }} />
                   )}
                 </Box>
               </AccountListItem>
@@ -833,16 +834,17 @@ const Accounts: React.FC = () => {
           </Typography>
         </Breadcrumbs>
 
-        <Paper 
-          elevation={0} 
-          sx={{ 
-            p: 3, 
-            mb: 3, 
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            mb: 3,
             borderRadius: (theme) => theme.shape.borderRadius,
             position: 'relative',
             borderLeft: '4px solid',
-            borderColor: (theme) => 
-              selectedAccount.updates === 'completed' ? theme.palette.success.main : 
+            backgroundColor: (theme) => theme.palette.background.paper,
+            borderColor: (theme) =>
+              selectedAccount.updates === 'completed' ? theme.palette.success.main :
               selectedAccount.updates === 'failed' ? theme.palette.error.main : theme.palette.warning.main
           }}
         >
@@ -952,10 +954,10 @@ const Accounts: React.FC = () => {
             pr: 3
           }}>
             <Paper elevation={0} sx={{ borderRadius: (theme) => theme.shape.borderRadius, mb: 3, overflow: 'hidden' }}>
-              <Box sx={{ 
-                display: 'flex', 
-                borderBottom: '1px solid #eee',
-                backgroundColor: '#fff'
+              <Box sx={{
+                display: 'flex',
+                borderBottom: (theme) => `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#eee'}`,
+                backgroundColor: (theme) => theme.palette.background.paper
               }}>
                 <DetailTab 
                   active={activeTab === 'tasks'}
