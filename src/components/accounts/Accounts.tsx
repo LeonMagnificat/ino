@@ -35,7 +35,8 @@ import {
   Alert,
   CssBaseline,
 } from '@mui/material';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { useTheme as useMuiTheme } from '@mui/material/styles';
+import { useTheme } from '../../context/ThemeContext';
 import SearchIcon from '@mui/icons-material/Search';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
@@ -59,155 +60,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import HomeIcon from '@mui/icons-material/Home';
 
-// Create a theme with Nunito font
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1a73e8',
-      dark: '#0d47a1',
-      light: '#4791db',
-      contrastText: '#ffffff',
-    },
-    secondary: {
-      main: '#202124',
-      dark: '#000000',
-      light: '#484848',
-      contrastText: '#ffffff',
-    },
-    success: {
-      main: '#047857',
-      light: 'rgba(4, 120, 87, 0.1)',
-    },
-    error: {
-      main: '#B91C1C',
-      light: 'rgba(185, 28, 28, 0.1)',
-    },
-    warning: {
-      main: '#B45309',
-      light: 'rgba(180, 83, 9, 0.1)',
-    },
-    background: {
-      default: '#f8f9fa',
-      paper: '#ffffff',
-    },
-    text: {
-      primary: '#202124',
-      secondary: '#5f6368',
-    },
-  },
-  typography: {
-    fontFamily: "'Nunito', 'Roboto', 'Helvetica', 'Arial', sans-serif",
-    h4: {
-      fontWeight: 800,
-      fontSize: '1.75rem',
-      letterSpacing: '-0.01em',
-    },
-    h5: {
-      fontWeight: 700,
-      fontSize: '1.3rem',
-      letterSpacing: '-0.01em',
-    },
-    h6: {
-      fontWeight: 700,
-      fontSize: '1rem',
-      letterSpacing: '-0.01em',
-    },
-    subtitle1: {
-      fontWeight: 600,
-      fontSize: '0.95rem',
-    },
-    subtitle2: {
-      fontWeight: 600,
-      fontSize: '0.875rem',
-    },
-    body1: {
-      fontWeight: 400,
-      fontSize: '0.95rem',
-    },
-    body2: {
-      fontWeight: 400,
-      fontSize: '0.875rem',
-      lineHeight: 1.5,
-    },
-    button: {
-      fontWeight: 600,
-      textTransform: 'none',
-      fontSize: '0.875rem',
-    },
-    caption: {
-      fontSize: '0.75rem',
-      fontWeight: 400,
-    },
-  },
-  shape: {
-    borderRadius: 8,
-  },
-  components: {
-    MuiCssBaseline: {
-      styleOverrides: `
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&display=swap');
-        
-        body {
-          font-family: 'Nunito', sans-serif;
-          background-color: #f8f9fa;
-        }
-        
-        ::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
-        }
-        
-        ::-webkit-scrollbar-track {
-          background: #f1f1f1;
-          border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-          background: #c1c1c1;
-          border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-          background: #a8a8a8;
-        }
-      `,
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: 20,
-          padding: '6px 16px',
-          fontWeight: 600,
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.07)',
-        },
-      },
-    },
-    MuiTableCell: {
-      styleOverrides: {
-        root: {
-          fontSize: '0.875rem',
-          padding: '12px 16px',
-        },
-        head: {
-          fontWeight: 700,
-        },
-      },
-    },
-    MuiChip: {
-      styleOverrides: {
-        root: {
-          fontWeight: 600,
-        },
-      },
-    },
-  },
-});
+// Use the global theme from ThemeContext
 
 const AccountsContainer = styled(Box)(({ theme }) => ({
   width: '100%',
@@ -226,9 +79,9 @@ const Header = styled(Box)(({ theme }) => ({
 
 const SearchBar = styled(TextField)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
-  borderRadius: '50px',
+  borderRadius: '3px',
   '& .MuiOutlinedInput-root': {
-    borderRadius: '50px',
+    borderRadius: '3px',
     '& fieldset': {
       borderColor: theme.palette.divider,
     },
@@ -243,7 +96,7 @@ const SearchBar = styled(TextField)(({ theme }) => ({
 }));
 
 const ActionButton = styled(Button)(({ theme }) => ({
-  borderRadius: '20px',
+  borderRadius: '3px',
   textTransform: 'none',
   padding: theme.spacing(0.75, 2.5),
   marginLeft: theme.spacing(1.5),
@@ -268,8 +121,13 @@ const ActionButton = styled(Button)(({ theme }) => ({
 }));
 
 const TabsContainer = styled(Box)(({ theme }) => ({
-  marginBottom: theme.spacing(3),
   borderBottom: `1px solid ${theme.palette.divider}`,
+  marginBottom: theme.spacing(2),
+  '& .MuiTabs-indicator': {
+    backgroundColor: theme.palette.primary.main,
+    height: 3,
+    borderRadius: '3px',
+  },
 }));
 
 const StyledTab = styled(Tab)(({ theme }) => ({
@@ -322,7 +180,7 @@ const StatusLabel = styled(Box, {
   display: 'inline-flex',
   alignItems: 'center',
   padding: '3px 8px',
-  borderRadius: '16px',
+  borderRadius: '3px',
   fontSize: '0.75rem',
   fontWeight: 700,
   lineHeight: 1,
@@ -587,12 +445,14 @@ const DetailTab = styled(Button, {
   },
   transition: theme.transitions.create(['color', 'border-bottom'], {
     duration: theme.transitions.duration.shorter,
+    easing: theme.transitions.easing.easeInOut,
   }),
 }));
 
 const AnimatedContainer = styled(Box)(({ theme }) => ({
   transition: theme.transitions.create('all', {
     duration: theme.transitions.duration.standard,
+    easing: theme.transitions.easing.easeInOut,
   }),
 }));
 
@@ -605,9 +465,11 @@ const BookmarkButton = styled(IconButton)(({ theme }) => ({
   boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
   '&:hover': {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    transform: 'scale(1.05)',
   },
-  transition: theme.transitions.create(['background-color', 'box-shadow'], {
+  transition: theme.transitions.create(['background-color', 'box-shadow', 'transform'], {
     duration: theme.transitions.duration.short,
+    easing: theme.transitions.easing.easeOut,
   }),
 }));
 
@@ -616,11 +478,13 @@ const AccountListItem = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   padding: theme.spacing(1.5, 2),
   cursor: 'pointer',
-  transition: theme.transitions.create(['background-color'], {
+  transition: theme.transitions.create(['background-color', 'transform'], {
     duration: theme.transitions.duration.shortest,
+    easing: theme.transitions.easing.easeInOut,
   }),
   '&:hover': {
     backgroundColor: theme.palette.action.hover,
+    transform: 'translateX(2px)',
   },
 }));
 
@@ -637,8 +501,8 @@ const AccountBadge = styled(Box)(({ theme }) => ({
 
 // Ajout d'un composant de transition pour les vues
 const PageTransition = styled(Box)(({ theme }) => ({
-  transition: theme.transitions.create(['width', 'margin'], {
-    easing: theme.transitions.easing.sharp,
+  transition: theme.transitions.create(['width', 'margin', 'opacity', 'transform'], {
+    easing: theme.transitions.easing.easeInOut,
     duration: theme.transitions.duration.standard,
   }),
 }));
@@ -718,10 +582,19 @@ const Accounts: React.FC = () => {
     
     if (sortConfig !== null) {
       sortableAccounts.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
+        // Vérifier si les propriétés existent sur les objets a et b
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+        
+        // Gérer les cas où les valeurs pourraient être undefined
+        if (aValue === undefined && bValue === undefined) return 0;
+        if (aValue === undefined) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (bValue === undefined) return sortConfig.direction === 'asc' ? 1 : -1;
+        
+        if (aValue < bValue) {
           return sortConfig.direction === 'asc' ? -1 : 1;
         }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
+        if (aValue > bValue) {
           return sortConfig.direction === 'asc' ? 1 : -1;
         }
         return 0;
@@ -1116,7 +989,7 @@ const Accounts: React.FC = () => {
                 {activeTab === 'tasks' && (
                   <>
                     <Collapse in={showTaskForm}>
-                      <Box sx={{ mb: 2, p: 2, bgcolor: '#f9f9f9', borderRadius: '8px' }}>
+                      <Box sx={{ mb: 2, p: 2, bgcolor: '#f9f9f9', borderRadius: '3px' }}>
                         <Typography variant="subtitle2" fontWeight={500} sx={{ mb: 1 }}>
                           New Task
                         </Typography>
@@ -1134,7 +1007,7 @@ const Accounts: React.FC = () => {
                             variant="outlined" 
                             size="small" 
                             onClick={handleHideTaskForm}
-                            sx={{ borderRadius: '20px', textTransform: 'none' }}
+                            sx={{ borderRadius: '3px', textTransform: 'none' }}
                           >
                             Cancel
                           </Button>
@@ -1143,7 +1016,7 @@ const Accounts: React.FC = () => {
                             size="small" 
                             onClick={handleAddTask}
                             sx={{ 
-                              borderRadius: '20px', 
+                              borderRadius: '3px', 
                               textTransform: 'none', 
                               bgcolor: '#000',
                               '&:hover': { bgcolor: '#333' }
@@ -1156,7 +1029,7 @@ const Accounts: React.FC = () => {
                     </Collapse>
                     
                     <List sx={{ bgcolor: 'background.paper' }}>
-                      <ListItem alignItems="flex-start" sx={{ px: 2, py: 1.5, borderLeft: '3px solid #047857', mb: 1, borderRadius: '4px' }}>
+                      <ListItem alignItems="flex-start" sx={{ px: 2, py: 1.5, borderLeft: '3px solid #047857', mb: 1, borderRadius: '3px' }}>
                         <ListItemAvatar sx={{ minWidth: 30, mt: 0.5 }}>
                           <KeyboardArrowDownIcon fontSize="small" />
                         </ListItemAvatar>
@@ -1186,7 +1059,7 @@ const Accounts: React.FC = () => {
                         />
                         <CheckCircleIcon fontSize="small" sx={{ color: '#047857', ml: 1 }} />
                       </ListItem>
-                      <ListItem alignItems="flex-start" sx={{ px: 2, py: 1.5, borderLeft: '3px solid #B45309', mb: 1, borderRadius: '4px' }}>
+                      <ListItem alignItems="flex-start" sx={{ px: 2, py: 1.5, borderLeft: '3px solid #B45309', mb: 1, borderRadius: '3px' }}>
                         <ListItemAvatar sx={{ minWidth: 30, mt: 0.5 }}>
                           <KeyboardArrowDownIcon fontSize="small" />
                         </ListItemAvatar>
@@ -1273,7 +1146,7 @@ const Accounts: React.FC = () => {
                 <Button 
                   variant="contained" 
                   sx={{ 
-                    borderRadius: '20px', 
+                    borderRadius: '3px', 
                     textTransform: 'none', 
                     bgcolor: '#333', 
                     color: '#fff',
@@ -1287,7 +1160,7 @@ const Accounts: React.FC = () => {
                 <Button 
                   variant="contained" 
                   sx={{ 
-                    borderRadius: '20px', 
+                    borderRadius: '3px', 
                     textTransform: 'none', 
                     bgcolor: '#f5f5f5', 
                     color: '#000',
@@ -1479,8 +1352,12 @@ const Accounts: React.FC = () => {
                       p: 3, 
                       bgcolor: '#fff', 
                       borderRadius: (theme) => theme.shape.borderRadius, 
-                      borderLeft: '3px solid #000',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                      borderLeft: '3px solid #1a73e8',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                      transition: 'all 0.2s ease-in-out',
+                      '&:hover': {
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                      }
                     }}
                   >
                     <Typography variant="body2" sx={{ fontStyle: 'italic', mb: 1, fontWeight: 500 }}>
@@ -1498,7 +1375,7 @@ const Accounts: React.FC = () => {
                       p: 3, 
                       bgcolor: '#fff', 
                       borderRadius: (theme) => theme.shape.borderRadius, 
-                      borderLeft: '3px solid #000',
+                      borderLeft: '3px solid #1a73e8',
                       boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
                     }}
                   >
@@ -1517,7 +1394,7 @@ const Accounts: React.FC = () => {
                       p: 3, 
                       bgcolor: '#fff', 
                       borderRadius: (theme) => theme.shape.borderRadius, 
-                      borderLeft: '3px solid #000',
+                      borderLeft: '3px solid #1a73e8',
                       boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
                     }}
                   >
@@ -1534,7 +1411,7 @@ const Accounts: React.FC = () => {
                   <Button 
                     variant="contained" 
                     sx={{ 
-                      borderRadius: '20px', 
+                      borderRadius: '3px', 
                       textTransform: 'none', 
                       bgcolor: '#f5f5f5', 
                       color: '#000',
@@ -1550,7 +1427,7 @@ const Accounts: React.FC = () => {
                   <Button 
                     variant="contained" 
                     sx={{ 
-                      borderRadius: '20px', 
+                      borderRadius: '3px', 
                       textTransform: 'none', 
                       bgcolor: '#000', 
                       color: '#fff',
@@ -1574,7 +1451,7 @@ const Accounts: React.FC = () => {
                   label="Account History" 
                   clickable 
                   sx={{ 
-                    borderRadius: '16px',
+                    borderRadius: '3px',
                     '&:hover': { bgcolor: '#f5f5f5' }
                   }} 
                 />
@@ -1582,7 +1459,7 @@ const Accounts: React.FC = () => {
                   label="Meeting Notes" 
                   clickable 
                   sx={{ 
-                    borderRadius: '16px',
+                    borderRadius: '3px',
                     '&:hover': { bgcolor: '#f5f5f5' }
                   }} 
                 />
@@ -1590,7 +1467,7 @@ const Accounts: React.FC = () => {
                   label="Contact List" 
                   clickable 
                   sx={{ 
-                    borderRadius: '16px',
+                    borderRadius: '3px',
                     '&:hover': { bgcolor: '#f5f5f5' }
                   }} 
                 />
@@ -1598,7 +1475,7 @@ const Accounts: React.FC = () => {
                   label="Recent Orders" 
                   clickable 
                   sx={{ 
-                    borderRadius: '16px',
+                    borderRadius: '3px',
                     '&:hover': { bgcolor: '#f5f5f5' }
                   }} 
                 />
@@ -1610,18 +1487,19 @@ const Accounts: React.FC = () => {
     );
   };
 
+  const theme = useMuiTheme();
+  const { mode } = useTheme();
+
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AccountsContainer>
-        <PageTransition 
-          sx={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            height: 'calc(100vh - 80px)',
-            overflow: 'hidden'
-          }}
-        >
+    <AccountsContainer>
+      <PageTransition
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: 'calc(100vh - 80px)',
+          overflow: 'hidden'
+        }}
+      >
           {/* Header commun qui reste toujours visible */}
           <Header>
             <Box>
@@ -1704,7 +1582,7 @@ const Accounts: React.FC = () => {
               sx={{ 
                 width: detailsView ? '280px' : '100%',
                 transition: theme.transitions.create(['width'], {
-                  easing: theme.transitions.easing.sharp,
+                  easing: theme.transitions.easing.easeInOut,
                   duration: theme.transitions.duration.standard,
                 }),
                 overflow: 'hidden',
@@ -1931,7 +1809,7 @@ const Accounts: React.FC = () => {
                   opacity: animatingTransition ? 0 : 1,
                   transform: animatingTransition ? 'translateX(20px)' : 'translateX(0)',
                   transition: theme.transitions.create(['opacity', 'transform'], {
-                    easing: theme.transitions.easing.easeOut,
+                    easing: theme.transitions.easing.easeInOut,
                     duration: theme.transitions.duration.standard,
                   }),
                   overflow: 'auto',
@@ -1960,7 +1838,6 @@ const Accounts: React.FC = () => {
           </Box>
         </PageTransition>
       </AccountsContainer>
-    </ThemeProvider>
   );
 };
 

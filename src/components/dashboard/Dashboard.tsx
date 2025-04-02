@@ -7,8 +7,9 @@ import {
   ButtonGroup,
   Chip,
   styled,
-  useTheme,
+  useTheme as useMuiTheme,
 } from '@mui/material';
+import { useTheme } from '../../context/ThemeContext';
 import SearchIcon from '@mui/icons-material/Search';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -38,7 +39,7 @@ const DashboardContainer = styled(Box)(({ theme }) => ({
   height: '100%',
   padding: theme.spacing(3, 4),
   overflow: 'auto',
-  backgroundColor: '#f5f5f5',
+  backgroundColor: theme.palette.background.default,
 }));
 
 const Header = styled(Box)(({ theme }) => ({
@@ -51,21 +52,33 @@ const Header = styled(Box)(({ theme }) => ({
 const SearchBar = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
-  backgroundColor: '#fff',
-  borderRadius: '50px',
+  backgroundColor: theme.palette.background.paper,
+  borderRadius: '3px',
   padding: theme.spacing(0.5, 2),
   width: '300px',
-  border: '1px solid #e0e0e0',
+  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : '#e0e0e0'}`,
+  transition: 'all 0.2s ease-in-out',
+  '&:hover': {
+    boxShadow: theme.palette.mode === 'dark' ? '0 1px 4px rgba(0,0,0,0.2)' : '0 1px 4px rgba(0,0,0,0.05)',
+    borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.25)' : '#d0d0d0',
+  },
+  '&:focus-within': {
+    borderColor: theme.palette.primary.main,
+    boxShadow: `0 0 0 2px ${theme.palette.primary.light}30`,
+  },
 }));
 
 const FilterButton = styled(Button)<{ active: boolean }>(({ theme, active }) => ({
-  backgroundColor: active ? '#000' : 'transparent',
-  color: active ? '#fff' : '#000',
-  borderRadius: '20px',
+  backgroundColor: active ? theme.palette.secondary.main : 'transparent',
+  color: active ? theme.palette.secondary.contrastText : theme.palette.text.primary,
+  borderRadius: '3px',
   padding: theme.spacing(0.5, 3),
   textTransform: 'none',
+  fontWeight: 600,
+  transition: 'all 0.2s ease-in-out',
   '&:hover': {
-    backgroundColor: active ? '#000' : 'rgba(0, 0, 0, 0.04)',
+    backgroundColor: active ? theme.palette.secondary.main : theme.palette.action.hover,
+    transform: active ? 'none' : 'translateY(-1px)',
   },
 }));
 
@@ -79,36 +92,55 @@ const SectionHeader = styled(Box)(({ theme }) => ({
 const ViewAllLink = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
-  color: '#888',
+  color: theme.palette.primary.main,
   cursor: 'pointer',
+  fontWeight: 500,
+  transition: 'all 0.2s ease-in-out',
   '&:hover': {
-    color: '#000',
+    color: theme.palette.primary.dark,
+    transform: 'translateX(2px)',
   },
 }));
 
 const ChartContainer = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
-  borderRadius: '12px',
+  borderRadius: '3px',
   marginBottom: theme.spacing(4),
-  boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.05)',
+  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.07)',
+  transition: 'all 0.2s ease-in-out',
+  overflow: 'hidden',
+  '&:hover': {
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+  },
 }));
 
 const AnalysisContainer = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
-  borderRadius: '12px',
+  borderRadius: '3px',
   marginBottom: theme.spacing(2),
-  boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.05)',
+  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.07)',
+  transition: 'all 0.2s ease-in-out',
+  '&:hover': {
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+  },
 }));
 
 const SuggestionChip = styled(Chip)(({ theme }) => ({
-  borderRadius: '20px',
-  backgroundColor: '#f0f0f0',
+  borderRadius: '3px',
+  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#f0f0f0',
   margin: theme.spacing(0, 1, 1, 0),
+  fontWeight: 600,
+  transition: 'all 0.2s ease-in-out',
+  '&:hover': {
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : '#e0e0e0',
+    transform: 'scale(1.02)',
+  },
 }));
 
 const Dashboard: React.FC = () => {
   const [activeFilter, setActiveFilter] = React.useState<'all' | 'below' | 'above'>('all');
-  const theme = useTheme();
+  const theme = useMuiTheme();
+  const { mode } = useTheme();
 
   const handleFilterChange = (filter: 'all' | 'below' | 'above') => {
     setActiveFilter(filter);
@@ -122,15 +154,15 @@ const Dashboard: React.FC = () => {
         label: 'Value ($k)',
         data: [2.8, 1.2, 2.3, 1.5, 3.0, 2.0, 2.5],
         backgroundColor: [
-          'rgba(200, 200, 200, 0.7)',
-          'rgba(200, 200, 200, 0.7)',
-          'rgba(200, 200, 200, 0.7)',
-          'rgba(200, 200, 200, 0.7)',
-          'rgba(0, 0, 0, 0.9)',
-          'rgba(200, 200, 200, 0.7)',
-          'rgba(200, 200, 200, 0.7)',
+          mode === 'dark' ? 'rgba(150, 150, 150, 0.7)' : 'rgba(200, 200, 200, 0.7)',
+          mode === 'dark' ? 'rgba(150, 150, 150, 0.7)' : 'rgba(200, 200, 200, 0.7)',
+          mode === 'dark' ? 'rgba(150, 150, 150, 0.7)' : 'rgba(200, 200, 200, 0.7)',
+          mode === 'dark' ? 'rgba(150, 150, 150, 0.7)' : 'rgba(200, 200, 200, 0.7)',
+          'rgba(26, 115, 232, 0.9)',
+          mode === 'dark' ? 'rgba(150, 150, 150, 0.7)' : 'rgba(200, 200, 200, 0.7)',
+          mode === 'dark' ? 'rgba(150, 150, 150, 0.7)' : 'rgba(200, 200, 200, 0.7)',
         ],
-        borderRadius: 10,
+        borderRadius: 3,
         borderWidth: 0,
         barThickness: 30,
       },
@@ -147,6 +179,11 @@ const Dashboard: React.FC = () => {
       tooltip: {
         mode: 'index' as const,
         intersect: false,
+        backgroundColor: mode === 'dark' ? 'rgba(30, 30, 30, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+        titleColor: mode === 'dark' ? '#e0e0e0' : '#202124',
+        bodyColor: mode === 'dark' ? '#a0a0a0' : '#5f6368',
+        borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+        borderWidth: 1,
       },
     },
     scales: {
@@ -158,6 +195,7 @@ const Dashboard: React.FC = () => {
           callback: function(value: any) {
             return value + 'k$';
           },
+          color: mode === 'dark' ? '#a0a0a0' : '#5f6368',
         },
         grid: {
           display: false,
@@ -167,6 +205,9 @@ const Dashboard: React.FC = () => {
         grid: {
           display: false,
         },
+        ticks: {
+          color: mode === 'dark' ? '#a0a0a0' : '#5f6368',
+        },
       },
     },
   };
@@ -174,11 +215,11 @@ const Dashboard: React.FC = () => {
   return (
     <DashboardContainer>
       <Header>
-        <Typography variant="h5">
+        <Typography variant="h5" fontWeight={600}>
           Eyo Zee, Waguani!
         </Typography>
         <SearchBar>
-          <SearchIcon sx={{ color: '#888', mr: 1 }} />
+          <SearchIcon sx={{ color: theme.palette.text.secondary, mr: 1 }} />
           <input
             type="text"
             placeholder="Search"
@@ -187,12 +228,32 @@ const Dashboard: React.FC = () => {
               outline: 'none',
               width: '100%',
               backgroundColor: 'transparent',
+              fontFamily: "'Nunito', sans-serif",
+              fontSize: '0.875rem',
+              color: theme.palette.text.primary,
             }}
           />
         </SearchBar>
       </Header>
 
-      <Typography variant="h4" fontWeight={600} mb={3}>
+      <Typography 
+        variant="h4" 
+        fontWeight={800} 
+        mb={3}
+        sx={{ 
+          position: 'relative',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: -8,
+            left: 0,
+            width: 40,
+            height: 4,
+            backgroundColor: '#1a73e8',
+            borderRadius: 2,
+          }
+        }}
+      >
         Accounts Overview
       </Typography>
 
@@ -225,7 +286,7 @@ const Dashboard: React.FC = () => {
       </Box>
 
       <SectionHeader>
-        <Typography variant="h6" fontWeight={500}>
+        <Typography variant="h6" fontWeight={700}>
           Exit rate/Organization type
         </Typography>
         <ViewAllLink>
@@ -247,12 +308,16 @@ const Dashboard: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'center',
               zIndex: 5,
+              transition: 'all 0.3s ease-in-out',
+              '&:hover': {
+                transform: 'translate(-50%, -50%) scale(1.05)',
+              }
             }}
           >
             <Box
               sx={{
-                backgroundColor: '#000',
-                borderRadius: '20px',
+                backgroundColor: '#1a73e8',
+                borderRadius: '3px',
                 height: '200px',
                 width: '60px',
                 display: 'flex',
@@ -266,9 +331,10 @@ const Dashboard: React.FC = () => {
                 label="+$32.45"
                 sx={{
                   backgroundColor: '#fff',
-                  color: '#000',
+                  color: '#1a73e8',
                   fontWeight: 'bold',
                   mb: 1,
+                  borderRadius: '3px',
                 }}
               />
             </Box>
@@ -279,7 +345,7 @@ const Dashboard: React.FC = () => {
 
       <SectionHeader>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography variant="h6" fontWeight={500} mr={2}>
+          <Typography variant="h6" fontWeight={700} mr={2}>
             Current Analysis
           </Typography>
           <Typography variant="body2" color="text.secondary">
@@ -293,10 +359,7 @@ const Dashboard: React.FC = () => {
           Monitor your income regularly to stay on track and allocate a portion to savings each month for better
           financial growth. Monitor your income regularly to stay on track and allocate a portion to savings each
           month for better financial growth. Monitor your income regularly to stay on track and allocate a portion to
-          savings each month for better financial growth. Monitor your income regularly to stay on track and allocate a
-          portion to savings each month for better financial growth. Monitor your income regularly to stay on track and
-          allocate a portion to savings each month for better financial growth. Monitor your income regularly to stay on
-          track and allocate a portion to savings each month for better financial growth.
+          savings each month for better financial growth.
         </Typography>
 
         <Box mt={3}>
