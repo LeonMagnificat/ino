@@ -11,103 +11,137 @@ import ThemeToggle from '../ui/ThemeToggle';
 import { useTheme } from '../../context/ThemeContext';
 
 const SidebarContainer = styled(Box)(({ theme }) => ({
-  width: '85px',
+  width: '80px',
   height: '100%',
-  backgroundColor: theme.palette.background.paper,
+  backgroundColor: theme.palette.mode === 'dark' ? '#1a1a1a' : '#ffffff',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   borderRight: '1px solid',
-  borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : '#e0e0e0',
-  padding: theme.spacing(2, 0),
-  boxShadow: '0 0 10px rgba(0, 0, 0, 0.03)',
+  borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+  padding: theme.spacing(3, 0),
+  boxShadow: theme.palette.mode === 'dark'
+    ? '0 0 15px rgba(0, 0, 0, 0.3)'
+    : '0 0 15px rgba(0, 0, 0, 0.05)',
   position: 'relative',
   zIndex: 10,
+  transition: 'all 0.3s ease-in-out',
 }));
 
-const LogoContainer = styled(Box)({
-  marginBottom: '30px',
-  width: '40px',
-  height: '40px',
-  borderRadius: '3px',
+const LogoContainer = styled(Box)(({ theme }) => ({
+  marginBottom: '36px',
+  width: '44px',
+  height: '44px',
+  borderRadius: '12px',
   overflow: 'hidden',
-  backgroundColor: '#f0f0f0',
+  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f7fa',
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
-  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-  transition: 'all 0.2s ease-in-out',
+  boxShadow: theme.palette.mode === 'dark'
+    ? '0 3px 6px rgba(0, 0, 0, 0.2)'
+    : '0 3px 6px rgba(0, 0, 0, 0.08)',
+  transition: 'all 0.3s ease-in-out',
   '&:hover': {
-    transform: 'scale(1.05)',
-    boxShadow: '0 3px 6px rgba(0, 0, 0, 0.15)',
+    transform: 'scale(1.08) translateY(-2px)',
+    boxShadow: theme.palette.mode === 'dark'
+      ? '0 6px 12px rgba(0, 0, 0, 0.3)'
+      : '0 6px 12px rgba(0, 0, 0, 0.12)',
   },
-});
+}));
 
 const NavButton = styled(IconButton)<{ active?: boolean }>(({ theme, active }) => ({
-  margin: theme.spacing(1, 0),
+  margin: theme.spacing(1.2, 0),
+  padding: theme.spacing(1.5),
   color: active ? theme.palette.primary.main : theme.palette.text.secondary,
-  backgroundColor: active ? theme.palette.action.selected : 'transparent',
+  backgroundColor: active ?
+    (theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.15)' : 'rgba(25, 118, 210, 0.08)') :
+    'transparent',
   position: 'relative',
-  transition: 'all 0.2s ease-in-out',
+  borderRadius: '12px',
+  transition: 'all 0.3s ease-in-out',
   '&:hover': {
     color: theme.palette.primary.main,
-    backgroundColor: theme.palette.action.hover,
-    transform: 'translateY(-2px)',
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+    transform: 'translateY(-3px)',
+    boxShadow: theme.palette.mode === 'dark' ? '0 4px 8px rgba(0, 0, 0, 0.3)' : '0 4px 8px rgba(0, 0, 0, 0.1)',
   },
   '&::after': active ? {
     content: '""',
     position: 'absolute',
-    left: '-16px',
+    left: '-18px',
     top: '50%',
     transform: 'translateY(-50%)',
     width: '4px',
-    height: '20px',
+    height: '24px',
     backgroundColor: theme.palette.primary.main,
-    borderRadius: '0 3px 3px 0',
+    borderRadius: '0 4px 4px 0',
   } : {},
+  '& .MuiSvgIcon-root': {
+    fontSize: '1.5rem',
+    transition: 'transform 0.2s ease-in-out',
+  },
+  '&:hover .MuiSvgIcon-root': {
+    transform: 'scale(1.1)',
+  },
 }));
 
-const AvatarContainer = styled(Box)({
+const AvatarContainer = styled(Box)(({ theme }) => ({
   marginTop: 'auto',
-  width: '40px',
-  height: '40px',
+  marginBottom: theme.spacing(2),
+  width: '44px',
+  height: '44px',
   borderRadius: '50%',
   overflow: 'hidden',
-  backgroundColor: '#f0f0f0',
+  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f7fa',
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
-  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+  boxShadow: theme.palette.mode === 'dark'
+    ? '0 3px 6px rgba(0, 0, 0, 0.25)'
+    : '0 3px 6px rgba(0, 0, 0, 0.1)',
+  border: `2px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
   transition: 'all 0.3s ease',
   cursor: 'pointer',
   '&:hover': {
-    transform: 'scale(1.08)',
-    boxShadow: '0 3px 8px rgba(0, 0, 0, 0.15)',
+    transform: 'scale(1.1) translateY(-2px)',
+    boxShadow: theme.palette.mode === 'dark'
+      ? '0 6px 12px rgba(0, 0, 0, 0.35)'
+      : '0 6px 12px rgba(0, 0, 0, 0.15)',
+    border: `2px solid ${theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.5)' : 'rgba(25, 118, 210, 0.3)'}`,
   },
-});
+}));
 
-// Nouvel indicateur de badge pour les notifications
+// Notification badge indicator with improved animation
 const NotificationBadge = styled(Box)(({ theme }) => ({
   position: 'absolute',
-  top: '2px',
-  right: '2px',
-  width: '8px',
-  height: '8px',
+  top: '4px',
+  right: '4px',
+  width: '10px',
+  height: '10px',
   backgroundColor: theme.palette.error.main,
   borderRadius: '50%',
+  boxShadow: `0 0 0 2px ${theme.palette.mode === 'dark' ? '#1a1a1a' : '#ffffff'}`,
   animation: 'pulse 2s infinite',
+  zIndex: 2,
   '@keyframes pulse': {
     '0%': {
       transform: 'scale(0.95)',
-      boxShadow: '0 0 0 0 rgba(185, 28, 28, 0.7)',
+      boxShadow: `0 0 0 0 ${theme.palette.mode === 'dark'
+        ? 'rgba(244, 67, 54, 0.7)'
+        : 'rgba(211, 47, 47, 0.7)'}`,
     },
     '70%': {
       transform: 'scale(1)',
-      boxShadow: '0 0 0 5px rgba(185, 28, 28, 0)',
+      boxShadow: `0 0 0 6px ${theme.palette.mode === 'dark'
+        ? 'rgba(244, 67, 54, 0)'
+        : 'rgba(211, 47, 47, 0)'}`,
     },
     '100%': {
       transform: 'scale(0.95)',
-      boxShadow: '0 0 0 0 rgba(185, 28, 28, 0)',
+      boxShadow: `0 0 0 0 ${theme.palette.mode === 'dark'
+        ? 'rgba(244, 67, 54, 0)'
+        : 'rgba(211, 47, 47, 0)'}`,
     },
   },
 }));
@@ -124,10 +158,17 @@ const Sidebar: React.FC<SidebarProps> = ({ toggleNotifications }) => {
 
   return (
     <SidebarContainer>
-      <LogoContainer sx={{ 
-        backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f0f0f0' 
-      }}>
-        <img src="/images/logo.png" alt="Ino Logo" width="30" height="30" />
+      <LogoContainer>
+        <img
+          src="/images/logo.png"
+          alt="Ino Logo"
+          width="28"
+          height="28"
+          style={{
+            filter: mode === 'dark' ? 'brightness(1.2) contrast(1.2)' : 'none',
+            transition: 'all 0.3s ease'
+          }}
+        />
       </LogoContainer>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -185,15 +226,23 @@ const Sidebar: React.FC<SidebarProps> = ({ toggleNotifications }) => {
           </NavButton>
         </Tooltip>
 
-        {/* Bouton pour changer de thème */}
+        {/* Theme toggle button */}
         <ThemeToggle tooltipPlacement="right" />
       </Box>
 
       <Tooltip title="Your Profile" placement="right" arrow>
-        <AvatarContainer sx={{ 
-          backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f0f0f0' 
-        }}>
-          <img src="/images/avatar.png" alt="User Avatar" width="40" height="40" />
+        <AvatarContainer>
+          <img
+            src="/images/avatar.png"
+            alt="User Avatar"
+            width="40"
+            height="40"
+            style={{
+              borderRadius: '50%',
+              objectFit: 'cover',
+              transition: 'all 0.3s ease'
+            }}
+          />
         </AvatarContainer>
       </Tooltip>
     </SidebarContainer>
