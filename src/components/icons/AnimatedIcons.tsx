@@ -18,6 +18,7 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import GroupIcon from '@mui/icons-material/Group';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
 
 // Define props interface for our animated icons
 interface AnimatedIconProps extends SvgIconProps {
@@ -72,6 +73,7 @@ export const AnimatedMoreVertIcon = createAnimatedIcon(MoreVertIcon);
 export const AnimatedGroupIcon = createAnimatedIcon(GroupIcon);
 export const AnimatedTrendingUpIcon = createAnimatedIcon(TrendingUpIcon);
 export const AnimatedAddIcon = createAnimatedIcon(AddIcon);
+export const AnimatedCloseIcon = createAnimatedIcon(CloseIcon);
 
 // Re-export the original icons for compatibility
 export {
@@ -91,5 +93,6 @@ export {
   MoreVertIcon,
   GroupIcon,
   TrendingUpIcon,
-  AddIcon
+  AddIcon,
+  CloseIcon
 };

@@ -29,7 +29,6 @@ export const PhoneIcon = createIcon('PhoneIcon');
 export const VideocamIcon = createIcon('VideocamIcon');
 export const SmartToyIcon = createIcon('SmartToyIcon');
 export const AutoAwesomeIcon = createIcon('AutoAwesomeIcon');
-export const ContentCopyIcon = createIcon('ContentCopyIcon');
 export const EditIcon = createIcon('EditIcon');
 export const DeleteIcon = createIcon('DeleteIcon');
 export const ShareIcon = createIcon('ShareIcon');

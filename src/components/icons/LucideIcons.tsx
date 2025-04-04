@@ -17,7 +17,8 @@ import {
   MoreVertical,
   Users,
   TrendingUp,
-  Plus
+  Plus,
+  X
 } from 'lucide-react';
 
 // Define props interface for our animated icons
@@ -130,6 +131,7 @@ export const MoreVertIcon = createAnimatedIcon(MoreVertical);
 export const GroupIcon = createAnimatedIcon(Users);
 export const TrendingUpIcon = createAnimatedIcon(TrendingUp);
 export const AddIcon = createAnimatedIcon(Plus);
+export const CloseIcon = createAnimatedIcon(X);
 
 // Export all icons for direct use
 export {
@@ -149,5 +151,6 @@ export {
   MoreVertical as MoreVertIconStatic,
   Users as GroupIconStatic,
   TrendingUp as TrendingUpIconStatic,
-  Plus as AddIconStatic
+  Plus as AddIconStatic,
+  X as CloseIconStatic
 };

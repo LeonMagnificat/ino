@@ -32,23 +32,18 @@ import {
   Snackbar,
   styled
 } from '@mui/material';
+import { CloseIcon, ContentCopyIcon } from '../icons/FallbackIcons';
+import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import AddIcon from '@mui/icons-material/Add';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import PeopleIcon from '@mui/icons-material/People';
+import GroupIcon from '@mui/icons-material/Group';
 import { useTheme } from '../../context/ThemeContext';
 import { BORDER_RADIUS, TRANSITIONS } from '../ui/common/constants';
-
-// Import our fallback Lucide icons directly
-import {
-  SearchIcon,
-  FilterListIcon,
-  AddIcon,
-  MoreVertIcon,
-  EditIcon,
-  DeleteIcon,
-  VisibilityIcon,
-  UsersIcon,
-  GroupIcon,
-  ContentCopyIcon,
-  CloseIcon
-} from '../icons/FallbackIcons';
 
 // Define the Account interface
 interface Account {
@@ -496,7 +491,7 @@ const AccountsNew: React.FC = () => {
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
             variant="outlined"
-            startIcon={<ContentCopyIcon size={20} />}
+            startIcon={<ContentCopyIcon sx={{ fontSize: 20 }} />}
             onClick={handleOpenImportDialog}
             sx={{
               borderRadius: BORDER_RADIUS.md,
@@ -519,7 +514,7 @@ const AccountsNew: React.FC = () => {
           </Button>
           <Button
             variant="contained"
-            startIcon={<AddIcon size={20} />}
+            startIcon={<AddIcon sx={{ fontSize: 20 }} />}
             onClick={handleOpenAddDialog}
             sx={{
               borderRadius: BORDER_RADIUS.md,
@@ -591,7 +586,7 @@ const AccountsNew: React.FC = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon size={20} color={mode === 'dark' ? '#aaaaaa' : '#666666'} />
+                  <SearchIcon sx={{ fontSize: 20, color: mode === 'dark' ? '#aaaaaa' : '#666666' }} />
                 </InputAdornment>
               ),
               sx: {
@@ -631,7 +626,7 @@ const AccountsNew: React.FC = () => {
               }
             }}
           >
-            <FilterListIcon size={20} color={mode === 'dark' ? '#ffffff' : '#000000'} />
+            <FilterListIcon sx={{ fontSize: 20, color: mode === 'dark' ? '#ffffff' : '#000000' }} />
           </IconButton>
         </Box>
 
@@ -709,7 +704,7 @@ const AccountsNew: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <UsersIcon size={16} color="currentColor" />
+                        <PeopleIcon sx={{ fontSize: 16 }} />
                         <Typography variant="body2">{account.contacts}</Typography>
                       </Box>
                     </TableCell>
@@ -724,19 +719,19 @@ const AccountsNew: React.FC = () => {
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                         <Tooltip title="View Details">
                           <IconButton size="small" sx={{ mr: 1 }}>
-                            <VisibilityIcon size={18} color="currentColor" />
+                            <VisibilityIcon sx={{ fontSize: 18 }} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Edit">
                           <IconButton size="small" sx={{ mr: 1 }}>
-                            <EditIcon size={18} color="currentColor" />
+                            <EditIcon sx={{ fontSize: 18 }} />
                           </IconButton>
                         </Tooltip>
                         <IconButton 
                           size="small"
                           onClick={(e) => handleMenuOpen(e, account.id)}
                         >
-                          <MoreVertIcon size={18} color="currentColor" />
+                          <MoreVertIcon sx={{ fontSize: 18 }} />
                         </IconButton>
                       </Box>
                     </TableCell>
@@ -762,16 +757,16 @@ const AccountsNew: React.FC = () => {
         }}
       >
         <MenuItem onClick={handleMenuClose}>
-          <VisibilityIcon size={18} color="currentColor" style={{ marginRight: 8 }} />
+          <VisibilityIcon sx={{ fontSize: 18, mr: 1 }} />
           View Details
         </MenuItem>
         <MenuItem onClick={handleMenuClose}>
-          <EditIcon size={18} color="currentColor" style={{ marginRight: 8 }} />
+          <EditIcon sx={{ fontSize: 18, mr: 1 }} />
           Edit Account
         </MenuItem>
         <Divider />
         <MenuItem onClick={handleDeleteAccount} sx={{ color: 'error.main' }}>
-          <DeleteIcon size={18} color="currentColor" style={{ marginRight: 8 }} />
+          <DeleteIcon sx={{ fontSize: 18, mr: 1 }} />
           Delete Account
         </MenuItem>
       </Menu>
@@ -796,7 +791,7 @@ const AccountsNew: React.FC = () => {
         }}>
           <Typography variant="h6" fontWeight="bold">Add New Account</Typography>
           <IconButton onClick={handleCloseAddDialog} size="small">
-            <CloseIcon size={20} color="currentColor" />
+            <CloseIcon size={18} />
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
@@ -981,7 +976,7 @@ const AccountsNew: React.FC = () => {
         }}>
           <Typography variant="h6" fontWeight="bold">Import Accounts from CSV</Typography>
           <IconButton onClick={handleCloseImportDialog} size="small">
-            <CloseIcon size={20} color="currentColor" />
+            <CloseIcon size={18} />
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
@@ -1013,7 +1008,7 @@ const AccountsNew: React.FC = () => {
                 onChange={handleFileSelect}
               />
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                <ContentCopyIcon size={32} color={mode === 'dark' ? '#aaaaaa' : '#666666'} />
+                <ContentCopyIcon sx={{ fontSize: 32, color: mode === 'dark' ? '#aaaaaa' : '#666666' }} />
                 <Typography variant="body1" fontWeight="medium">
                   {csvFile ? csvFile.name : 'Click to select a CSV file'}
                 </Typography>

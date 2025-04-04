@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
@@ -7,9 +7,14 @@ import Sidebar from './components/layout/Sidebar';
 import Dashboard from './components/dashboard/Dashboard';
 import Notifications from './components/notifications/Notifications';
 import Accounts from './components/accounts/Accounts';
+import AccountsNew from './components/accounts/AccountsNew';
 import Campaigns from './components/campaigns';
 import Settings from './components/settings/Settings';
+import ProfileSettings from './components/settings/ProfileSettings';
+import LandingPage from './components/auth/LandingPage';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider } from './context/AuthContext';
 
 function App() {
   const [showNotifications, setShowNotifications] = React.useState(false);
@@ -20,39 +25,127 @@ function App() {
 
   return (
     <ThemeProvider>
-      <Router>
-        <Box
-          sx={{
-            display: 'flex',
-            height: '100vh',
-            overflow: 'hidden',
-          }}
-        >
-          <Sidebar toggleNotifications={toggleNotifications} />
-          <Box
-            component="main"
-            sx={{
-              flexGrow: 1,
-              overflow: 'auto',
-              position: 'relative',
-              width: 'calc(100% - 80px)',
-            }}
-          >
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/accounts" element={<Accounts />} />
-              <Route path="/campaigns" element={<Campaigns />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<Dashboard />} />
-            </Routes>
-          </Box>
-          <div className={showNotifications ? 'open' : ''}>
-            <Notifications />
-          </div>
-        </Box>
-      </Router>
+      <AuthProvider>
+        <CssBaseline />
+        <Router>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<LandingPage />} />
+
+            {/* Protected routes */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                  <Dashboard />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/accounts" element={
+              <ProtectedRoute>
+                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                  <Accounts />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/accounts/new" element={
+              <ProtectedRoute>
+                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                  <AccountsNew />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/campaigns" element={
+              <ProtectedRoute>
+                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                  <Campaigns />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                  <Settings />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/settings/profile" element={
+              <ProtectedRoute>
+                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                  <ProfileSettings />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/settings/notifications" element={
+              <ProtectedRoute>
+                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                  <ProfileSettings />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/settings/security" element={
+              <ProtectedRoute>
+                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                  <ProfileSettings />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/help" element={
+              <ProtectedRoute>
+                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                  <Box sx={{ p: 4 }}>
+                    <h1>Help & Support</h1>
+                    <p>This page is under construction.</p>
+                  </Box>
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+
+            {/* Fallback route */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
     </ThemeProvider>
   );
 }
+
+// App layout component for authenticated pages
+interface AppLayoutProps {
+  children: React.ReactNode;
+  toggleNotifications: () => void;
+  showNotifications: boolean;
+}
+
+const AppLayout: React.FC<AppLayoutProps> = ({ children, toggleNotifications, showNotifications }) => {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        height: '100vh',
+        overflow: 'hidden',
+      }}
+    >
+      <Sidebar toggleNotifications={toggleNotifications} />
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          overflow: 'auto',
+          position: 'relative',
+          width: 'calc(100% - 80px)',
+        }}
+      >
+        {children}
+      </Box>
+      <div className={showNotifications ? 'open' : ''}>
+        <Notifications className={showNotifications ? 'open' : ''} />
+      </div>
+    </Box>
+  );
+};
 
 export default App;
