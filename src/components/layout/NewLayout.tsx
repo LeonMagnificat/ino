@@ -141,7 +141,7 @@ export function NewLayout({ children }: { children: React.ReactNode }) {
         </SidebarBody>
       </Sidebar>
       <div className="flex-1 md:ml-[60px] transition-all duration-300 ease-in-out">
-        <div className="p-4 md:p-8 h-full overflow-auto">
+        <div className="p-4 md:p-8 h-full overflow-auto px-6">
           {children}
         </div>
       </div>

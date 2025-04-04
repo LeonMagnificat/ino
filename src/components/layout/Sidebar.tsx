@@ -74,7 +74,9 @@ const LogoContainer = styled(Box)(({ theme }) => ({
   },
 }));
 
-const NavButton = styled(IconButton)<{ active?: boolean }>(({ theme, active }) => ({
+const NavButton = styled(IconButton, {
+  shouldForwardProp: (prop) => prop !== 'active'
+})<{ active?: boolean }>(({ theme, active }) => ({
   margin: theme.spacing(1.2, 0),
   padding: theme.spacing(1.5),
   color: active ? (theme.palette.mode === 'dark' ? '#ffffff' : '#000000') : theme.palette.text.secondary,

@@ -476,7 +476,9 @@ const AccountsNew: React.FC = () => {
       backgroundColor: 'background.default',
       display: 'flex',
       flexDirection: 'column',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      padding: '0 24px', // Add consistent horizontal padding
+      boxSizing: 'border-box'
     }}>
       {/* Header */}
       <Box sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

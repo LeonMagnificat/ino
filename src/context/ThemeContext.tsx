@@ -190,8 +190,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       components: {
         MuiCssBaseline: {
           styleOverrides: `
-            @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&display=swap');
-
+            /* Nunito font is loaded from index.html */
             body {
               font-family: 'Nunito', sans-serif;
               background-color: ${mode === 'dark' ? '#121212' : '#f5f7fa'};
@@ -419,7 +418,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         MuiDivider: {
           styleOverrides: {
             root: {
-              margin: '24px 0',
+              margin: '0',
               borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
             },
           },

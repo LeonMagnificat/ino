@@ -45,6 +45,7 @@ function App() {
                 </AppLayout>
               </ProtectedRoute>
             } />
+            {/* Advanced Analytics route removed - charts moved to main dashboard */}
             <Route path="/accounts" element={
               <ProtectedRoute>
                 <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
@@ -142,6 +143,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, toggleNotifications, sh
           overflow: 'auto',
           position: 'relative',
           width: 'calc(100% - 80px)',
+          padding: '0 24px', // Add consistent horizontal padding
+          boxSizing: 'border-box',
         }}
       >
         {children}

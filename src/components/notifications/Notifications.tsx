@@ -29,6 +29,7 @@ import DoneAllIcon from '@mui/icons-material/DoneAll';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import SettingsIcon from '@mui/icons-material/Settings';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useTheme } from '../../context/ThemeContext';
 import { BORDER_RADIUS } from '../ui/common/constants';
 

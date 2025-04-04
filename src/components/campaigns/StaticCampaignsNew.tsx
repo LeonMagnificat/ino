@@ -16,7 +16,8 @@ import {
   ListItem,
   ListItemText,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  Paper
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useTheme } from '../../context/ThemeContext';
@@ -340,14 +341,15 @@ const StaticCampaignsNew: React.FC = () => {
   return (
     <Box sx={{
       width: '100%',
-      height: '100vh',
+      height: '100%',
       backgroundColor: 'background.default',
       display: 'flex',
       flexDirection: 'column',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      p: 3
     }}>
       {/* Header */}
-      <Box sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
           <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>
             Campaigns
@@ -403,44 +405,57 @@ const StaticCampaignsNew: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Tabs */}
-      <Box sx={{ px: 3 }}>
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          sx={{
-            '& .MuiTabs-indicator': {
-              height: 3,
-              borderRadius: '3px 3px 0 0'
-            },
-            '& .MuiTab-root': {
-              textTransform: 'none',
-              fontWeight: 'bold',
-              fontSize: '0.9rem',
-              minWidth: 100,
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                color: 'primary.main',
-                opacity: 1
+      {/* White Container */}
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: '8px',
+          backgroundColor: 'background.paper',
+          boxShadow: mode === 'dark' ? '0 4px 20px rgba(0, 0, 0, 0.25)' : '0 4px 20px rgba(0, 0, 0, 0.05)',
+          overflow: 'hidden',
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        {/* Tabs */}
+        <Box sx={{ px: 3, pt: 2 }}>
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            sx={{
+              '& .MuiTabs-indicator': {
+                height: 3,
+                borderRadius: '3px 3px 0 0'
+              },
+              '& .MuiTab-root': {
+                textTransform: 'none',
+                fontWeight: 'bold',
+                fontSize: '0.9rem',
+                minWidth: 100,
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  color: 'primary.main',
+                  opacity: 1
+                }
               }
-            }
-          }}
-        >
-          <Tab label="All Campaigns" />
-          <Tab label="Email Templates" />
-          <Tab label="Call Scripts" />
-          <Tab label="Meeting Points" />
-          <Tab label="Proposals" />
-        </Tabs>
-      </Box>
+            }}
+          >
+            <Tab label="All Campaigns" />
+            <Tab label="Email Templates" />
+            <Tab label="Call Scripts" />
+            <Tab label="Meeting Points" />
+            <Tab label="Proposals" />
+          </Tabs>
+        </Box>
 
-      {/* Main content */}
-      <Box sx={{
-        display: 'flex',
-        flexGrow: 1,
-        overflow: 'hidden',
-        borderTop: `1px solid ${mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)'}`
-      }}>
+        {/* Main content */}
+        <Box sx={{
+          display: 'flex',
+          flexGrow: 1,
+          overflow: 'hidden',
+          borderTop: `1px solid ${mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)'}`
+        }}>
         {/* List of campaigns */}
         <Box sx={{
           width: '350px',
@@ -689,16 +704,10 @@ const StaticCampaignsNew: React.FC = () => {
                   </Box>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Avatar src={selectedCampaign.owner.avatar} sx={{ width: 32, height: 32 }} />
-                    <Box>
-                      <Typography variant="body2" fontWeight="medium">
-                        {selectedCampaign.owner.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Created on {new Date(selectedCampaign.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                      </Typography>
-                    </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Created on {new Date(selectedCampaign.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    </Typography>
                   </Box>
                   <Button
                     variant="outlined"
@@ -825,6 +834,7 @@ const StaticCampaignsNew: React.FC = () => {
           )}
         </Box>
       </Box>
+      </Paper>
 
       {/* Create Campaign Dialog */}
       <Dialog

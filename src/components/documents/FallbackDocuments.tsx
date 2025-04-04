@@ -652,18 +652,13 @@ const FallbackDocuments = () => {
                           </Box>
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <Tooltip title={`${campaign.engagement}% engagement rate`}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                 <TrendingUpIcon fontSize="small" sx={{ color: '#2ecc71' }} />
                                 <Typography variant="caption" sx={{ ml: 0.5, color: '#2ecc71', fontWeight: 'bold' }}>
                                   {campaign.engagement}%
                                 </Typography>
                               </Box>
                             </Tooltip>
-                            <Avatar 
-                              src={campaign.owner.avatar} 
-                              alt={campaign.owner.name}
-                              sx={{ width: 20, height: 20 }}
-                            />
                           </Box>
                         </Box>
                       </Box>
@@ -732,20 +727,10 @@ const FallbackDocuments = () => {
                 </Box>
                 
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Avatar 
-                      src={selectedCampaign.owner.avatar} 
-                      alt={selectedCampaign.owner.name}
-                      sx={{ width: 32, height: 32, mr: 1 }}
-                    />
-                    <Box>
-                      <Typography variant="body2" fontWeight="medium">
-                        {selectedCampaign.owner.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Created on {new Date(selectedCampaign.createdAt).toLocaleDateString()}
-                      </Typography>
-                    </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Created on {new Date(selectedCampaign.createdAt).toLocaleDateString()}
+                    </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Tooltip title="Engagement rate">

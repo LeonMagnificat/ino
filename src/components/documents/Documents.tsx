@@ -766,14 +766,9 @@ const Documents = () => {
                 </Box>
 
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Avatar
-                      src={selectedCampaign.owner.avatar}
-                      alt={selectedCampaign.owner.name}
-                      sx={{ width: 24, height: 24, mr: 1 }}
-                    />
+                  <Box>
                     <Typography variant="body2" color="text.secondary">
-                      {selectedCampaign.owner.name}
+                      Created on {new Date(selectedCampaign.createdAt).toLocaleDateString()}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', gap: 1 }}>
