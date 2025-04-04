@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
@@ -12,9 +12,11 @@ import Campaigns from './components/campaigns';
 import Settings from './components/settings/Settings';
 import ProfileSettings from './components/settings/ProfileSettings';
 import LandingPage from './components/auth/LandingPage';
+import LoginPage from './components/auth/LoginPage';
+import SignupPage from './components/auth/SignupPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { ThemeProvider } from './context/ThemeContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 function App() {
   const [showNotifications, setShowNotifications] = React.useState(false);
@@ -31,6 +33,9 @@ function App() {
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/logout" element={<LogoutRedirect />} />
 
             {/* Protected routes */}
             <Route path="/dashboard" element={
@@ -146,6 +151,21 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, toggleNotifications, sh
       </div>
     </Box>
   );
+};
+
+// Logout redirect component
+const LogoutRedirect: React.FC = () => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    logout();
+    navigate('/');
+  }, [logout, navigate]);
+
+  return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+    Logging out...
+  </Box>;
 };
 
 export default App;

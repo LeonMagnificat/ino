@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { Box, Typography, Paper, Switch, FormControlLabel, Button, Divider, TextField, MenuItem, Select, FormControl, InputLabel } from '@mui/material';
+import { Box, Typography, Paper, Switch, FormControlLabel, Button, Divider, TextField, MenuItem, Select, FormControl, InputLabel, Alert } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import LogoutIcon from '@mui/icons-material/Logout';
 
 const SettingsContainer = styled(Box)(({ theme }) => ({
   width: '100%',
@@ -18,10 +21,17 @@ const SettingsCard = styled(Paper)(({ theme }) => ({
 
 const Settings = () => {
   const { mode, toggleColorMode } = useTheme();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [language, setLanguage] = useState('en');
   const [timezone, setTimezone] = useState('UTC');
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   return (
     <SettingsContainer>
@@ -138,9 +148,9 @@ const Settings = () => {
               </Button>
             </Box>
           </Box>
-          
+
           <Divider sx={{ my: 2 }} />
-          
+
           <Box>
             <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
               Two-Factor Authentication
@@ -153,6 +163,46 @@ const Settings = () => {
               }
               label="Enable Two-Factor Authentication"
             />
+          </Box>
+        </Box>
+      </SettingsCard>
+
+      <SettingsCard>
+        <Typography variant="h6" fontWeight="bold" color="error" gutterBottom>
+          Account Actions
+        </Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <Box>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Logging out will end your current session. You will need to log in again to access your account.
+            </Typography>
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<LogoutIcon />}
+              onClick={handleLogout}
+              sx={{ mt: 1 }}
+            >
+              Logout
+            </Button>
+          </Box>
+
+          <Divider sx={{ my: 1 }} />
+
+          <Box>
+            <Typography variant="subtitle1" fontWeight="medium" color="error" gutterBottom>
+              Delete Account
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Permanently delete your account and all associated data. This action cannot be undone.
+            </Typography>
+            <Button
+              variant="outlined"
+              color="error"
+              sx={{ mt: 1 }}
+            >
+              Delete Account
+            </Button>
           </Box>
         </Box>
       </SettingsCard>

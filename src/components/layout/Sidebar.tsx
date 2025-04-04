@@ -1,8 +1,21 @@
-import React from 'react';
-import { Box, IconButton, styled, Tooltip } from '@mui/material';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import {
+  Box,
+  IconButton,
+  styled,
+  Tooltip,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Avatar,
+  Typography
+} from '@mui/material';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ThemeToggle from '../ui/ThemeToggle';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import {
   HomeIcon,
   UsersIcon,
@@ -10,6 +23,12 @@ import {
   SettingsIcon,
   BellIcon
 } from '../icons/FallbackIcons';
+import PersonIcon from '@mui/icons-material/Person';
+import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import SecurityIcon from '@mui/icons-material/Security';
+import HelpIcon from '@mui/icons-material/Help';
 
 const SidebarContainer = styled(Box)(({ theme }) => ({
   width: '80px',
@@ -155,11 +174,61 @@ interface SidebarProps {
   toggleNotifications: () => void;
 }
 
+const ProfileMenu = styled(Menu)(({ theme }) => ({
+  '& .MuiPaper-root': {
+    borderRadius: '12px',
+    minWidth: '240px',
+    boxShadow: theme.palette.mode === 'dark'
+      ? '0 8px 32px rgba(0, 0, 0, 0.5)'
+      : '0 8px 32px rgba(0, 0, 0, 0.15)',
+    padding: theme.spacing(1),
+    marginTop: theme.spacing(1.5),
+  },
+  '& .MuiMenuItem-root': {
+    borderRadius: '8px',
+    padding: theme.spacing(1, 2),
+    margin: theme.spacing(0.5, 0),
+    transition: 'all 0.2s ease-in-out',
+    '&:hover': {
+      backgroundColor: theme.palette.mode === 'dark'
+        ? 'rgba(255, 255, 255, 0.08)'
+        : 'rgba(0, 0, 0, 0.04)',
+      transform: 'translateX(4px)',
+    },
+  },
+}));
+
 const Sidebar: React.FC<SidebarProps> = ({ toggleNotifications }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const path = location.pathname;
-  const [hasNotifications, setHasNotifications] = React.useState(true);
+  const [hasNotifications, setHasNotifications] = useState(true);
   const { mode } = useTheme();
+  const { user, logout } = useAuth();
+
+  // Profile menu state
+  const [profileAnchorEl, setProfileAnchorEl] = useState<null | HTMLElement>(null);
+  const isProfileMenuOpen = Boolean(profileAnchorEl);
+
+  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setProfileAnchorEl(event.currentTarget);
+  };
+
+  const handleProfileMenuClose = () => {
+    setProfileAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    handleProfileMenuClose();
+    logout();
+    navigate('/');
+  };
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (!user) return 'U';
+    return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`;
+  };
 
   return (
     <SidebarContainer>
@@ -178,15 +247,15 @@ const Sidebar: React.FC<SidebarProps> = ({ toggleNotifications }) => {
 
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Tooltip title="Dashboard" placement="right" arrow>
-          <Link to="/">
+          <Link to="/dashboard">
             <NavButton
               aria-label="Home"
-              active={path === '/'}
+              active={path === '/dashboard'}
             >
               <HomeIcon
                 size={24}
                 color="currentColor"
-                animate={path === '/'}
+                animate={path === '/dashboard'}
                 animationVariant="pulse"
               />
             </NavButton>
@@ -197,12 +266,12 @@ const Sidebar: React.FC<SidebarProps> = ({ toggleNotifications }) => {
           <Link to="/accounts">
             <NavButton
               aria-label="Accounts"
-              active={path === '/accounts'}
+              active={path.includes('/accounts')}
             >
               <UsersIcon
                 size={24}
                 color="currentColor"
-                animate={path === '/accounts'}
+                animate={path.includes('/accounts')}
                 animationVariant="pulse"
               />
             </NavButton>
@@ -266,6 +335,7 @@ const Sidebar: React.FC<SidebarProps> = ({ toggleNotifications }) => {
 
       <Tooltip title="Your Profile" placement="right" arrow>
         <AvatarContainer
+          onClick={handleProfileMenuOpen}
           className="animate-pulse-slow hover:animate-none hover:scale-110 hover:-translate-y-1 transition-all duration-300"
           sx={{
             display: 'flex',
@@ -277,9 +347,85 @@ const Sidebar: React.FC<SidebarProps> = ({ toggleNotifications }) => {
             backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#ffffff' : '#000000'
           }}
         >
-          JD
+          {getUserInitials()}
         </AvatarContainer>
       </Tooltip>
+
+      <Tooltip title="Logout" placement="right" arrow>
+        <NavButton
+          onClick={handleLogout}
+          aria-label="Logout"
+          sx={{
+            marginTop: 2,
+            color: (theme) => theme.palette.error.main,
+            '&:hover': {
+              backgroundColor: (theme) => theme.palette.mode === 'dark'
+                ? 'rgba(244, 67, 54, 0.1)'
+                : 'rgba(244, 67, 54, 0.08)',
+            }
+          }}
+        >
+          <ExitToAppIcon fontSize="small" />
+        </NavButton>
+      </Tooltip>
+
+      {/* Profile Menu */}
+      <ProfileMenu
+        anchorEl={profileAnchorEl}
+        open={isProfileMenuOpen}
+        onClose={handleProfileMenuClose}
+        onClick={handleProfileMenuClose}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+      >
+        <Box sx={{ px: 2, py: 1.5 }}>
+          <Typography variant="subtitle1" fontWeight="bold">
+            {user?.firstName} {user?.lastName}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {user?.email}
+          </Typography>
+        </Box>
+
+        <Divider sx={{ my: 1 }} />
+
+        <MenuItem onClick={() => navigate('/settings/profile')}>
+          <ListItemIcon>
+            <AccountCircleIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Profile Settings</ListItemText>
+        </MenuItem>
+
+        <MenuItem onClick={() => navigate('/settings/notifications')}>
+          <ListItemIcon>
+            <NotificationsIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Notification Preferences</ListItemText>
+        </MenuItem>
+
+        <MenuItem onClick={() => navigate('/settings/security')}>
+          <ListItemIcon>
+            <SecurityIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Security & Privacy</ListItemText>
+        </MenuItem>
+
+        <MenuItem onClick={() => navigate('/help')}>
+          <ListItemIcon>
+            <HelpIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Help & Support</ListItemText>
+        </MenuItem>
+
+        <Divider sx={{ my: 1 }} />
+
+        <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
+          <ListItemIcon sx={{ color: 'error.main' }}>
+            <ExitToAppIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Logout</ListItemText>
+        </MenuItem>
+      </ProfileMenu>
     </SidebarContainer>
   );
 };
