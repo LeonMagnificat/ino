@@ -1286,7 +1286,10 @@ const Accounts: React.FC = () => {
         }
 
         // Parse CSV (simple implementation - would use a library in production)
-        const lines = content.split('\n');
+        // Handle different line endings (CRLF, LF) and remove BOM if present
+        const cleanContent = content.replace(/^\ufeff/, ''); // Remove BOM if present
+        const lines = cleanContent.split(/\r?\n/).filter(line => line.trim()); // Handle different line endings
+        
         if (lines.length < 2) {
           setImportErrors(['File must contain at least a header row and one data row']);
           return;
@@ -1300,10 +1303,10 @@ const Accounts: React.FC = () => {
         const initialMapping: {[key: string]: string} = {};
         headers.forEach(header => {
           const lowerHeader = header.toLowerCase();
-          if (lowerHeader.includes('name')) initialMapping[header] = 'accountName';
-          else if (lowerHeader.includes('location')) initialMapping[header] = 'location';
-          else if (lowerHeader.includes('type') || lowerHeader.includes('organization')) initialMapping[header] = 'organisationType';
-          else if (lowerHeader.includes('product') || lowerHeader.includes('family')) initialMapping[header] = 'productFamily';
+          if (lowerHeader.includes('name') || lowerHeader.includes('account')) initialMapping[header] = 'accountName';
+          else if (lowerHeader.includes('location') || lowerHeader.includes('city') || lowerHeader.includes('address')) initialMapping[header] = 'location';
+          else if (lowerHeader.includes('type') || lowerHeader.includes('organization') || lowerHeader.includes('company')) initialMapping[header] = 'organisationType';
+          else if (lowerHeader.includes('product') || lowerHeader.includes('family') || lowerHeader.includes('category')) initialMapping[header] = 'productFamily';
         });
         setCsvMapping(initialMapping);
 
@@ -1311,12 +1314,34 @@ const Accounts: React.FC = () => {
         const preview: string[][] = [];
         for (let i = 0; i < Math.min(5, lines.length); i++) {
           if (lines[i].trim()) {
-            preview.push(lines[i].split(',').map(cell => cell.trim()));
+            // Handle quoted values properly (simple implementation)
+            const row: string[] = [];
+            let inQuote = false;
+            let currentValue = '';
+            const chars = lines[i].split('');
+            
+            for (let j = 0; j < chars.length; j++) {
+              const char = chars[j];
+              if (char === '"' && (j === 0 || chars[j-1] !== '\\')) {
+                inQuote = !inQuote;
+              } else if (char === ',' && !inQuote) {
+                row.push(currentValue.trim());
+                currentValue = '';
+              } else {
+                currentValue += char;
+              }
+            }
+            
+            // Add the last value
+            row.push(currentValue.trim());
+            preview.push(row);
           }
         }
         setCsvPreview(preview);
 
+        console.log("Parsed CSV preview:", preview);
       } catch (error) {
+        console.error("CSV parsing error:", error);
         setImportErrors(['Error parsing CSV file. Please check the format.']);
       }
     };
@@ -1341,6 +1366,18 @@ const Accounts: React.FC = () => {
       return;
     }
 
+    if (Object.keys(csvMapping).length === 0) {
+      setImportErrors(['Please map at least one column to an account field']);
+      return;
+    }
+
+    // Check if account name is mapped
+    const hasAccountNameMapping = Object.values(csvMapping).includes('accountName');
+    if (!hasAccountNameMapping) {
+      setImportErrors(['Please map a column to Account Name']);
+      return;
+    }
+
     setImportInProgress(true);
     setImportErrors([]);
 
@@ -1356,14 +1393,38 @@ const Accounts: React.FC = () => {
             return;
           }
 
-          const lines = content.split('\n');
+          // Parse CSV using same logic as preview
+          const cleanContent = content.replace(/^\ufeff/, ''); // Remove BOM if present
+          const lines = cleanContent.split(/\r?\n/).filter(line => line.trim());
+          
           if (lines.length < 2) {
             setImportErrors(['File must contain at least a header row and one data row']);
             setImportInProgress(false);
             return;
           }
 
-          const headers = lines[0].split(',').map(h => h.trim());
+          // Parse header row using same logic as preview
+          const headerRow = lines[0];
+          const headers: string[] = [];
+          let inQuote = false;
+          let currentValue = '';
+          const headerChars = headerRow.split('');
+          
+          for (let j = 0; j < headerChars.length; j++) {
+            const char = headerChars[j];
+            if (char === '"' && (j === 0 || headerChars[j-1] !== '\\')) {
+              inQuote = !inQuote;
+            } else if (char === ',' && !inQuote) {
+              headers.push(currentValue.trim());
+              currentValue = '';
+            } else {
+              currentValue += char;
+            }
+          }
+          
+          // Add the last header
+          headers.push(currentValue.trim());
+
           const newAccounts: Account[] = [];
           const errors: string[] = [];
 
@@ -1371,9 +1432,29 @@ const Accounts: React.FC = () => {
           for (let i = 1; i < lines.length; i++) {
             if (!lines[i].trim()) continue; // Skip empty lines
 
-            const values = lines[i].split(',').map(v => v.trim());
-            if (values.length !== headers.length) {
-              errors.push(`Row ${i + 1}: Column count mismatch`);
+            // Parse row values
+            const rowValues: string[] = [];
+            inQuote = false;
+            currentValue = '';
+            const rowChars = lines[i].split('');
+            
+            for (let j = 0; j < rowChars.length; j++) {
+              const char = rowChars[j];
+              if (char === '"' && (j === 0 || rowChars[j-1] !== '\\')) {
+                inQuote = !inQuote;
+              } else if (char === ',' && !inQuote) {
+                rowValues.push(currentValue.trim());
+                currentValue = '';
+              } else {
+                currentValue += char;
+              }
+            }
+            
+            // Add the last value
+            rowValues.push(currentValue.trim());
+
+            if (rowValues.length !== headers.length) {
+              errors.push(`Row ${i + 1}: Column count mismatch (expected ${headers.length}, got ${rowValues.length})`);
               continue;
             }
 
@@ -1386,8 +1467,8 @@ const Accounts: React.FC = () => {
             // Map CSV values to account fields
             headers.forEach((header, index) => {
               const accountField = csvMapping[header];
-              if (accountField && values[index]) {
-                (accountData as any)[accountField] = values[index];
+              if (accountField && rowValues[index]) {
+                (accountData as any)[accountField] = rowValues[index];
               }
             });
 
@@ -1398,7 +1479,7 @@ const Accounts: React.FC = () => {
             }
 
             // Generate ID and add other required fields
-            const newId = Math.max(...mockAccounts.map(a => a.id), ...newAccounts.map(a => a.id)) + 1;
+            const newId = Math.max(...mockAccounts.map(a => a.id), ...newAccounts.map(a => a.id || 0)) + 1;
             const newAccount: Account = {
               id: newId,
               accountName: accountData.accountName || '',
@@ -1416,6 +1497,8 @@ const Accounts: React.FC = () => {
             newAccounts.push(newAccount);
           }
 
+          console.log(`Parsed ${newAccounts.length} accounts from CSV`);
+
           if (errors.length > 0) {
             setImportErrors(errors);
             if (newAccounts.length === 0) {
@@ -1425,29 +1508,34 @@ const Accounts: React.FC = () => {
           }
 
           // Add accounts to the mock data
-          mockAccounts.unshift(...newAccounts);
+          if (newAccounts.length > 0) {
+            mockAccounts.unshift(...newAccounts);
 
-          // Show success notification
-          setImportSuccess(`Successfully imported ${newAccounts.length} accounts`);
-          setNotification({
-            open: true,
-            message: `Successfully imported ${newAccounts.length} accounts`,
-            severity: 'success',
-            accountId: null
-          });
+            // Show success notification
+            setImportSuccess(`Successfully imported ${newAccounts.length} accounts`);
+            setNotification({
+              open: true,
+              message: `Successfully imported ${newAccounts.length} accounts`,
+              severity: 'success',
+              accountId: null
+            });
 
-          // Reset file input
-          if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-          }
+            // Reset file input
+            if (fileInputRef.current) {
+              fileInputRef.current.value = '';
+            }
 
-          // Close dialog after a delay
-          setTimeout(() => {
-            handleCloseAddAccountDialog();
+            // Close dialog after a delay
+            setTimeout(() => {
+              handleCloseAddAccountDialog();
+              setImportInProgress(false);
+            }, 1500);
+          } else {
+            setImportErrors(['No valid accounts found in the CSV file']);
             setImportInProgress(false);
-          }, 1500);
-
+          }
         } catch (error) {
+          console.error('Error processing CSV file:', error);
           setImportErrors(['Error processing CSV file']);
           setImportInProgress(false);
         }
@@ -1459,8 +1547,8 @@ const Accounts: React.FC = () => {
       };
 
       reader.readAsText(csvFile);
-
     } catch (error) {
+      console.error('Unexpected error during import:', error);
       setImportErrors(['Unexpected error during import']);
       setImportInProgress(false);
     }
@@ -3217,6 +3305,46 @@ const Accounts: React.FC = () => {
                     }
                   }}
                   onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const target = e.currentTarget as HTMLElement;
+                    target.style.backgroundColor = 'rgba(25, 118, 210, 0.04)';
+                    target.style.borderColor = (appTheme || muiTheme).palette.primary.main;
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const target = e.currentTarget as HTMLElement;
+                    target.style.backgroundColor = csvFile ? 'rgba(25, 118, 210, 0.04)' : 'transparent';
+                    target.style.borderColor = csvFile ? (appTheme || muiTheme).palette.primary.main : (appTheme || muiTheme).palette.divider;
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const target = e.currentTarget as HTMLElement;
+                    target.style.backgroundColor = csvFile ? 'rgba(25, 118, 210, 0.04)' : 'transparent';
+                    target.style.borderColor = csvFile ? (appTheme || muiTheme).palette.primary.main : (appTheme || muiTheme).palette.divider;
+                    
+                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                      const file = e.dataTransfer.files[0];
+                      if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+                        // Create a new event with the dropped file
+                        const fileInputEvent = {
+                          target: { 
+                            files: e.dataTransfer.files 
+                          }
+                        } as unknown as React.ChangeEvent<HTMLInputElement>;
+                        handleFileUpload(fileInputEvent);
+                      } else {
+                        setImportErrors(['Please upload a CSV file']);
+                      }
+                    }
+                  }}
                 >
                   <VisuallyHiddenInput
                     type="file"
@@ -3267,6 +3395,29 @@ const Accounts: React.FC = () => {
                   <InfoIcon sx={{ fontSize: 18, verticalAlign: 'text-bottom', mr: 0.5 }} />
                   Your CSV file should include columns for account name, location, organization type, and product family.
                 </Typography>
+                
+                <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="subtitle2" fontWeight="600" gutterBottom>
+                    CSV Format Tips:
+                  </Typography>
+                  <Box component="ul" sx={{ pl: 2, mb: 0, mt: 0 }}>
+                    <li>
+                      <Typography variant="body2">
+                        Headers should be in the first row (e.g., "Account Name", "Location", etc.)
+                      </Typography>
+                    </li>
+                    <li>
+                      <Typography variant="body2">
+                        Use quotes for values containing commas (e.g., "Acme, Inc.", "New York, USA")
+                      </Typography>
+                    </li>
+                    <li>
+                      <Typography variant="body2">
+                        Sample: Account Name,Location,Type,Product Family
+                      </Typography>
+                    </li>
+                  </Box>
+                </Box>
               </Box>
             )}
 
