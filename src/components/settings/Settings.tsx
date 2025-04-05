@@ -20,7 +20,8 @@ import {
   Tab,
   IconButton,
   Tooltip,
-  Badge
+  Badge,
+  CircularProgress
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useTheme } from '../../context/ThemeContext';
@@ -190,7 +191,7 @@ function TabPanel(props: TabPanelProps) {
 
 const Settings = () => {
   const { mode, toggleColorMode } = useTheme();
-  const { logout } = useAuth();
+  const { logout, updatePassword } = useAuth();
   const navigate = useNavigate();
 
   // State variables
@@ -203,9 +204,18 @@ const Settings = () => {
   const [timezone, setTimezone] = useState('UTC');
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Password form state
   const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+
+  // Password form errors
+  const [passwordErrors, setPasswordErrors] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
@@ -221,6 +231,98 @@ const Settings = () => {
       ...passwordForm,
       [name]: value,
     });
+
+    // Clear error when user types
+    if (passwordErrors[name as keyof typeof passwordErrors]) {
+      setPasswordErrors({
+        ...passwordErrors,
+        [name]: '',
+      });
+    }
+
+    // Check password match when typing confirm password
+    if (name === 'confirmPassword' && passwordForm.newPassword !== value) {
+      setPasswordErrors({
+        ...passwordErrors,
+        confirmPassword: 'Passwords do not match',
+      });
+    } else if (name === 'confirmPassword') {
+      setPasswordErrors({
+        ...passwordErrors,
+        confirmPassword: '',
+      });
+    }
+
+    // Update confirm password error when new password changes
+    if (name === 'newPassword' && passwordForm.confirmPassword && passwordForm.confirmPassword !== value) {
+      setPasswordErrors({
+        ...passwordErrors,
+        confirmPassword: 'Passwords do not match',
+      });
+    } else if (name === 'newPassword' && passwordForm.confirmPassword && passwordForm.confirmPassword === value) {
+      setPasswordErrors({
+        ...passwordErrors,
+        confirmPassword: '',
+      });
+    }
+  };
+
+  const validatePasswordForm = () => {
+    const errors = {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    };
+    let isValid = true;
+    
+    if (!passwordForm.currentPassword) {
+      errors.currentPassword = 'Current password is required';
+      isValid = false;
+    }
+    
+    if (!passwordForm.newPassword) {
+      errors.newPassword = 'New password is required';
+      isValid = false;
+    } else if (passwordForm.newPassword.length < 8) {
+      errors.newPassword = 'Password must be at least 8 characters';
+      isValid = false;
+    }
+    
+    if (!passwordForm.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password';
+      isValid = false;
+    } else if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+      isValid = false;
+    }
+    
+    setPasswordErrors(errors);
+    return isValid;
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!validatePasswordForm()) return;
+    
+    setIsSubmitting(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    try {
+      await updatePassword(passwordForm.currentPassword, passwordForm.newPassword);
+      
+      // Reset form
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+      
+      setSuccessMessage('Password updated successfully');
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Failed to update password');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSaveSettings = () => {
@@ -229,6 +331,7 @@ const Settings = () => {
     // Simulate API call
     setTimeout(() => {
       setIsSubmitting(false);
+      setSuccessMessage('Settings saved successfully');
     }, 1000);
   };
 
@@ -588,6 +691,18 @@ const Settings = () => {
                     Update your password to keep your account secure
                   </Typography>
 
+                  {successMessage && (
+                    <Alert severity="success" sx={{ mb: 2, borderRadius: BORDER_RADIUS.md }}>
+                      {successMessage}
+                    </Alert>
+                  )}
+
+                  {errorMessage && (
+                    <Alert severity="error" sx={{ mb: 2, borderRadius: BORDER_RADIUS.md }}>
+                      {errorMessage}
+                    </Alert>
+                  )}
+
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <StyledTextField
                       label="Current Password"
@@ -596,6 +711,8 @@ const Settings = () => {
                       value={passwordForm.currentPassword}
                       onChange={handlePasswordChange}
                       fullWidth
+                      error={!!passwordErrors.currentPassword}
+                      helperText={passwordErrors.currentPassword}
                     />
                     <StyledTextField
                       label="New Password"
@@ -604,6 +721,8 @@ const Settings = () => {
                       value={passwordForm.newPassword}
                       onChange={handlePasswordChange}
                       fullWidth
+                      error={!!passwordErrors.newPassword}
+                      helperText={passwordErrors.newPassword}
                     />
                     <StyledTextField
                       label="Confirm New Password"
@@ -612,13 +731,16 @@ const Settings = () => {
                       value={passwordForm.confirmPassword}
                       onChange={handlePasswordChange}
                       fullWidth
+                      error={!!passwordErrors.confirmPassword}
+                      helperText={passwordErrors.confirmPassword}
                     />
 
                     <Box sx={{ display: 'flex', gap: 2 }}>
                       <SaveButton
-                        disabled={!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword}
+                        onClick={handleUpdatePassword}
+                        disabled={isSubmitting || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword}
                       >
-                        Update Password
+                        {isSubmitting ? <CircularProgress size={24} color="inherit" /> : 'Update Password'}
                       </SaveButton>
                     </Box>
                   </Box>

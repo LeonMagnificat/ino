@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -168,7 +168,7 @@ function TabPanel(props: TabPanelProps) {
 
 const ProfileSettings: React.FC = () => {
   const { mode } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, logout, getProfile, updateProfile, updatePassword } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   
   // Profile form state
@@ -176,11 +176,11 @@ const ProfileSettings: React.FC = () => {
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
     email: user?.email || '',
-    jobTitle: 'Product Manager',
-    company: 'Acme Inc.',
-    location: 'San Francisco, CA',
-    bio: 'Product manager with 5+ years of experience in SaaS and fintech.',
-    website: 'https://example.com',
+    jobTitle: user?.jobTitle || '',
+    company: user?.company || '',
+    location: user?.location || '',
+    bio: user?.bio || '',
+    website: user?.website || '',
   });
   
   // Password form state
@@ -224,15 +224,56 @@ const ProfileSettings: React.FC = () => {
     confirmPassword: '',
   });
   
+  // Fetch user profile on component mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        await getProfile();
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+        setSnackbar({
+          open: true,
+          message: 'Failed to load profile information',
+          severity: 'error',
+        });
+      }
+    };
+
+    fetchProfile();
+  }, [getProfile]);
+
+  // Update form when user data changes
+  useEffect(() => {
+    if (user && !isEditing) { // Only update form if not in editing mode
+      console.log('Updating form with user data (from useEffect):', user);
+      setProfileForm({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        jobTitle: user.jobTitle || '',
+        company: user.company || '',
+        location: user.location || '',
+        bio: user.bio || '',
+        website: user.website || '',
+      });
+    }
+  }, [user]); // Remove isEditing from the dependency array to prevent recursive updates
+  
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
   
   const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setProfileForm({
-      ...profileForm,
-      [name]: value,
+    console.log(`Input changed - field: ${name}, value: ${value}`);
+    
+    setProfileForm(prevForm => {
+      const newForm = {
+        ...prevForm,
+        [name]: value,
+      };
+      console.log('Updated form state:', newForm);
+      return newForm;
     });
     
     // Clear error when user types
@@ -358,22 +399,31 @@ const ProfileSettings: React.FC = () => {
   };
   
   const handleEditProfile = () => {
+    console.log('Edit profile button clicked - enabling edit mode');
+    // Make a backup of the current form data in case user cancels
+    console.log('Current form data before editing:', profileForm);
     setIsEditing(true);
   };
   
   const handleCancelEdit = () => {
+    console.log('Cancel edit button clicked');
     setIsEditing(false);
     // Reset form to original values
-    setProfileForm({
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
-      email: user?.email || '',
-      jobTitle: 'Product Manager',
-      company: 'Acme Inc.',
-      location: 'San Francisco, CA',
-      bio: 'Product manager with 5+ years of experience in SaaS and fintech.',
-      website: 'https://example.com',
-    });
+    if (user) {
+      console.log('Resetting form with user data:', user);
+      setProfileForm({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        jobTitle: user.jobTitle || '',
+        company: user.company || '',
+        location: user.location || '',
+        bio: user.bio || '',
+        website: user.website || '',
+      });
+    } else {
+      console.log('No user data available to reset form');
+    }
     setProfileErrors({
       firstName: '',
       lastName: '',
@@ -382,28 +432,52 @@ const ProfileSettings: React.FC = () => {
   };
   
   const handleSaveProfile = async () => {
+    console.log('Save profile button clicked');
+    console.log('Final profile form state before validation:', profileForm);
+    
     if (validateProfileForm()) {
+      console.log('Profile form validated successfully');
       setIsSubmitting(true);
       
+      // Create the data object we'll send to the API
+      const profileData = {
+        firstName: profileForm.firstName.trim(),
+        lastName: profileForm.lastName.trim(),
+        email: profileForm.email.trim(),
+        jobTitle: profileForm.jobTitle?.trim() || undefined,
+        company: profileForm.company?.trim() || undefined,
+        location: profileForm.location?.trim() || undefined,
+        bio: profileForm.bio?.trim() || undefined,
+        website: profileForm.website?.trim() || undefined,
+      };
+      
+      console.log('Formatted profile data for API:', profileData);
+      
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('Calling updateProfile with data:', profileData);
         
+        // Call API to update profile
+        await updateProfile(profileData);
+        
+        console.log('Profile updated successfully');
         setIsEditing(false);
         setSnackbar({
           open: true,
           message: 'Profile updated successfully',
           severity: 'success',
         });
-      } catch (error) {
+      } catch (error: any) {
+        console.error('Error updating profile:', error);
         setSnackbar({
           open: true,
-          message: 'Failed to update profile',
+          message: error.message || 'Failed to update profile',
           severity: 'error',
         });
       } finally {
         setIsSubmitting(false);
       }
+    } else {
+      console.log('Profile form validation failed with errors:', profileErrors);
     }
   };
   
@@ -412,8 +486,11 @@ const ProfileSettings: React.FC = () => {
       setIsSubmitting(true);
       
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Call API to update password
+        await updatePassword(
+          passwordForm.currentPassword,
+          passwordForm.newPassword
+        );
         
         // Reset password form
         setPasswordForm({
@@ -427,10 +504,10 @@ const ProfileSettings: React.FC = () => {
           message: 'Password changed successfully',
           severity: 'success',
         });
-      } catch (error) {
+      } catch (error: any) {
         setSnackbar({
           open: true,
-          message: 'Failed to change password',
+          message: error.message || 'Failed to change password',
           severity: 'error',
         });
       } finally {
@@ -472,6 +549,43 @@ const ProfileSettings: React.FC = () => {
   const handleLogout = () => {
     logout();
     // Redirect will happen automatically via the ProtectedRoute component
+  };
+  
+  const handleRefreshProfile = async () => {
+    console.log('Refreshing profile data');
+    setIsSubmitting(true);
+    
+    try {
+      const refreshedProfile = await getProfile();
+      console.log('Profile refreshed successfully:', refreshedProfile);
+      
+      // Update form with refreshed data
+      setProfileForm({
+        firstName: refreshedProfile.firstName || '',
+        lastName: refreshedProfile.lastName || '',
+        email: refreshedProfile.email || '',
+        jobTitle: refreshedProfile.jobTitle || '',
+        company: refreshedProfile.company || '',
+        location: refreshedProfile.location || '',
+        bio: refreshedProfile.bio || '',
+        website: refreshedProfile.website || '',
+      });
+      
+      setSnackbar({
+        open: true,
+        message: 'Profile refreshed successfully',
+        severity: 'success',
+      });
+    } catch (error: any) {
+      console.error('Error refreshing profile:', error);
+      setSnackbar({
+        open: true,
+        message: error.message || 'Failed to refresh profile',
+        severity: 'error',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (
@@ -565,19 +679,32 @@ const ProfileSettings: React.FC = () => {
                   <Typography variant="h6" fontWeight="bold">
                     Personal Information
                   </Typography>
-                  {!isEditing ? (
+                  <Box sx={{ display: 'flex', gap: 2 }}>
                     <Button
-                      startIcon={<EditIcon />}
-                      onClick={handleEditProfile}
+                      onClick={handleRefreshProfile}
+                      disabled={isSubmitting}
                       sx={{
                         borderRadius: BORDER_RADIUS.md,
                         textTransform: 'none',
                         fontWeight: 600,
                       }}
                     >
-                      Edit Profile
+                      Refresh Profile
                     </Button>
-                  ) : null}
+                    {!isEditing ? (
+                      <Button
+                        startIcon={<EditIcon />}
+                        onClick={handleEditProfile}
+                        sx={{
+                          borderRadius: BORDER_RADIUS.md,
+                          textTransform: 'none',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Edit Profile
+                      </Button>
+                    ) : null}
+                  </Box>
                 </Box>
                 
                 <Grid container spacing={2}>

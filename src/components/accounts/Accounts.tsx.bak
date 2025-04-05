@@ -81,8 +81,6 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import BusinessIcon from '@mui/icons-material/Business';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import FilePresentIcon from '@mui/icons-material/FilePresent';
-import InfoIcon from '@mui/icons-material/Info';
 
 // Use the global theme from ThemeContext
 
@@ -322,6 +320,97 @@ const stringToColor = (string: string) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
+// Function to generate a large number of dummy accounts
+const generateDummyAccounts = (count: number, baseAccounts: Account[]): Account[] => {
+  const dummyAccounts: Account[] = [...baseAccounts]; // Start with the base accounts
+
+  // Company name prefixes and suffixes for generating unique names
+  const prefixes = ['Global', 'Advanced', 'Premier', 'Elite', 'Future', 'Smart', 'Innovative', 'Strategic', 'Dynamic', 'Precision'];
+  const industries = ['Tech', 'Finance', 'Health', 'Energy', 'Media', 'Retail', 'Logistics', 'Consulting', 'Manufacturing', 'Services'];
+  const suffixes = ['Solutions', 'Systems', 'Group', 'Partners', 'Inc', 'Corp', 'Technologies', 'Enterprises', 'Networks', 'International'];
+
+  // Locations for random assignment
+  const locations = [
+    'New York, USA',
+    'London, UK',
+    'Tokyo, Japan',
+    'Berlin, Germany',
+    'Paris, France',
+    'Singapore',
+    'Sydney, Australia',
+    'Toronto, Canada',
+    'Dubai, UAE',
+    'Mumbai, India',
+    'São Paulo, Brazil',
+    'Amsterdam, Netherlands',
+    'Stockholm, Sweden',
+    'Hong Kong',
+    'Seoul, South Korea'
+  ];
+
+  // Organization types
+  const orgTypes = ['Technology', 'Finance', 'Healthcare', 'Manufacturing', 'Retail', 'Media', 'Consulting', 'Education', 'Energy', 'Transportation'];
+
+  // Product families
+  const productFamilies = [
+    'Enterprise Solutions',
+    'Cloud Services',
+    'Data Analytics',
+    'Security Systems',
+    'Mobile Platforms',
+    'Customer Experience',
+    'Business Intelligence',
+    'Infrastructure',
+    'Digital Transformation',
+    'IoT Solutions'
+  ];
+
+  // Update statuses
+  const statuses: ('completed' | 'pending' | 'failed' | 'loading')[] = ['completed', 'pending', 'failed', 'loading'];
+
+  // Generate additional accounts
+  for (let i = baseAccounts.length; i < count; i++) {
+    // Pick random elements to create a unique company name
+    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+    const industry = industries[Math.floor(Math.random() * industries.length)];
+    const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+    const companyName = `${prefix} ${industry} ${suffix}`;
+
+    // Random number of assets between 2 and 15
+    const assetCount = Math.floor(Math.random() * 14) + 2;
+
+    // Generate assets based on a template account
+    const templateAccount = baseAccounts[i % baseAccounts.length];
+    const assets = Array.from({ length: assetCount }, (_, index) => {
+      const templateAsset = templateAccount.assets[index % templateAccount.assets.length];
+      return {
+        id: i * 1000 + index,
+        name: `${prefix} ${templateAsset.name}`,
+        type: Math.random() > 0.7 ? 'Data Service' : 'Software',
+        status: 'active',
+        lastUpdated: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      };
+    });
+
+    // Create the account
+    dummyAccounts.push({
+      id: i + 1,
+      accountName: companyName,
+      location: locations[Math.floor(Math.random() * locations.length)],
+      organisationType: orgTypes[Math.floor(Math.random() * orgTypes.length)],
+      activeAssets: `${assetCount} Assets`,
+      assets,
+      productFamily: productFamilies[Math.floor(Math.random() * productFamilies.length)],
+      exitRate: (Math.floor(Math.random() * 5000) + 500).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      updates: statuses[Math.floor(Math.random() * statuses.length)],
+      logoSrc: '/images/avatar.png',
+      color: stringToColor(companyName)
+    });
+  }
+
+  return dummyAccounts;
+};
+
 // Function to generate initials from a name
 const getInitials = (name: string) => {
   // Safety check to avoid errors
@@ -394,7 +483,7 @@ const baseAccounts: Account[] = [
     exitRate: '3,219.44',
     updates: 'completed',
     logoSrc: '/images/apple.png',
-    color: '#555555', // Couleur sobre para Apple
+    color: '#555555', // Couleur sobre pour Apple
   },
   {
     id: 4,
@@ -800,7 +889,6 @@ const Accounts: React.FC = () => {
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [importInProgress, setImportInProgress] = useState(false);
-  const [importMethod, setImportMethod] = useState<'single' | 'csv' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Handle click outside to close assets dropdown
@@ -823,16 +911,18 @@ const Accounts: React.FC = () => {
   React.useEffect(() => {
     // Only run this effect once when the component mounts
     const timer = setTimeout(() => {
-      // Create updated accounts by changing Twitter's status
+      // Find the Twitter account (id: 2) and update its status
       const updatedAccounts = mockAccounts.map(account => {
         if (account.id === 2) {
-          // Randomly decide if update was successful
-          const success = Math.random() > 0.3;
-          
-          // Set custom notification
+          // Randomly decide if the AI processing was successful or not
+          const success = Math.random() > 0.3; // 70% chance of success
+
+          // Show notification
           setNotification({
             open: true,
-            message: success ? "Twitter's update has been successfully completed" : "Failed to update Twitter's account",
+            message: success
+              ? "Analysis completed successfully for Twitter account"
+              : "Analysis completed but no results found for Twitter account",
             severity: success ? 'success' : 'error',
             accountId: 2
           });
@@ -840,7 +930,7 @@ const Accounts: React.FC = () => {
           // Return updated account
           return {
             ...account,
-            updates: success ? 'completed' : 'failed' as Account['updates']
+            updates: success ? 'completed' : 'failed'
           };
         }
         return account;
@@ -1158,7 +1248,6 @@ const Accounts: React.FC = () => {
     setCsvMapping({});
     setImportErrors([]);
     setImportSuccess(null);
-    setImportMethod(null); // Reset import method
   };
 
   const handleCloseAddAccountDialog = () => {
@@ -1241,7 +1330,7 @@ const Accounts: React.FC = () => {
       activeAssets: '0 Assets',
       assets: [],
       exitRate: '0.00',
-      updates: 'pending' as const, // Ensure updates is properly typed
+      updates: 'pending',
       logoSrc: '/images/avatar.png',
       color: stringToColor(newAccount.accountName || '')
     };
@@ -2998,15 +3087,15 @@ const Accounts: React.FC = () => {
           </DialogTitle>
 
           <DialogContent sx={{ p: 3 }}>
-            <Stepper activeStep={addAccountStep} alternativeLabel sx={{ mt: 2, mb: 4 }}>
+            <Stepper activeStep={addAccountStep} sx={{ mb: 4, mt: 1 }}>
               <Step>
                 <StepLabel>Select Method</StepLabel>
               </Step>
               <Step>
-                <StepLabel>{importMethod === 'csv' ? 'Configure Import' : 'Account Details'}</StepLabel>
+                <StepLabel>Account Details</StepLabel>
               </Step>
               <Step>
-                <StepLabel>{importMethod === 'csv' ? 'Import Accounts' : 'Review & Create'}</StepLabel>
+                <StepLabel>Review & Create</StepLabel>
               </Step>
             </Stepper>
 
@@ -3030,22 +3119,20 @@ const Accounts: React.FC = () => {
                         borderRadius: (appTheme || muiTheme).shape.borderRadius,
                         cursor: 'pointer',
                         transition: 'all 0.2s',
-                        backgroundColor: importMethod === 'single' ? 'rgba(25, 118, 210, 0.05)' : 'transparent',
-                        borderColor: importMethod === 'single' ? (appTheme || muiTheme).palette.primary.main : (appTheme || muiTheme).palette.divider,
                         '&:hover': {
                           borderColor: (appTheme || muiTheme).palette.primary.main,
                           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
                         }
                       }}
-                      onClick={() => setImportMethod('single')}
+                      onClick={() => setAddAccountStep(1)}
                     >
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                         <Avatar
                           sx={{
                             width: 56,
                             height: 56,
-                            backgroundColor: importMethod === 'single' ? (appTheme || muiTheme).palette.primary.main : 'rgba(25, 118, 210, 0.1)',
-                            color: importMethod === 'single' ? 'white' : (appTheme || muiTheme).palette.primary.main,
+                            backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                            color: (appTheme || muiTheme).palette.primary.main,
                             mb: 2
                           }}
                         >
@@ -3070,16 +3157,17 @@ const Accounts: React.FC = () => {
                         borderRadius: (appTheme || muiTheme).shape.borderRadius,
                         cursor: 'pointer',
                         transition: 'all 0.2s',
-                        backgroundColor: importMethod === 'csv' ? 'rgba(25, 118, 210, 0.05)' : 'transparent',
-                        borderColor: importMethod === 'csv' ? (appTheme || muiTheme).palette.primary.main : (appTheme || muiTheme).palette.divider,
                         '&:hover': {
                           borderColor: (appTheme || muiTheme).palette.primary.main,
                           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
                         }
                       }}
                       onClick={() => {
-                        setImportMethod('csv');
-                        // Don't auto-trigger file dialog - let user click next first
+                        setAddAccountStep(1);
+                        // Trigger file input click
+                        if (fileInputRef.current) {
+                          fileInputRef.current.click();
+                        }
                       }}
                     >
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
@@ -3087,8 +3175,8 @@ const Accounts: React.FC = () => {
                           sx={{
                             width: 56,
                             height: 56,
-                            backgroundColor: importMethod === 'csv' ? (appTheme || muiTheme).palette.primary.main : 'rgba(25, 118, 210, 0.1)',
-                            color: importMethod === 'csv' ? 'white' : (appTheme || muiTheme).palette.primary.main,
+                            backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                            color: (appTheme || muiTheme).palette.primary.main,
                             mb: 2
                           }}
                         >
@@ -3100,6 +3188,12 @@ const Accounts: React.FC = () => {
                         <Typography variant="body2" color="text.secondary">
                           Upload a CSV file to import multiple accounts at once.
                         </Typography>
+                        <VisuallyHiddenInput
+                          type="file"
+                          accept=".csv"
+                          ref={fileInputRef}
+                          onChange={handleFileUpload}
+                        />
                       </Box>
                     </Paper>
                   </Grid>
@@ -3107,8 +3201,8 @@ const Accounts: React.FC = () => {
               </Box>
             )}
 
-            {/* Step 2A: Account Details Form */}
-            {addAccountStep === 1 && importMethod === 'single' && (
+            {/* Step 2: Account Details Form */}
+            {addAccountStep === 1 && !csvFile && (
               <Box>
                 <Typography variant="subtitle1" fontWeight="600" gutterBottom>
                   Enter Account Details
@@ -3189,161 +3283,11 @@ const Accounts: React.FC = () => {
               </Box>
             )}
 
-            {/* Step 2B: CSV File Upload */}
-            {addAccountStep === 1 && importMethod === 'csv' && (
+            {/* Step 2 (Alternative): CSV Import */}
+            {addAccountStep === 1 && csvFile && (
               <Box>
                 <Typography variant="subtitle1" fontWeight="600" gutterBottom>
-                  Upload CSV File
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Select a CSV file containing account data. The file should include headers for account name, location, organization type, and product family.
-                </Typography>
-
-                <Box 
-                  sx={{ 
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    border: `2px dashed ${csvFile ? (appTheme || muiTheme).palette.primary.main : (appTheme || muiTheme).palette.divider}`,
-                    borderRadius: (appTheme || muiTheme).shape.borderRadius,
-                    p: 5,
-                    mb: 3,
-                    transition: 'all 0.2s',
-                    backgroundColor: csvFile ? 'rgba(25, 118, 210, 0.04)' : 'transparent',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                      borderColor: (appTheme || muiTheme).palette.primary.main
-                    }
-                  }}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <VisuallyHiddenInput
-                    type="file"
-                    accept=".csv"
-                    ref={fileInputRef}
-                    onChange={handleFileUpload}
-                  />
-                  
-                  <Box sx={{ textAlign: 'center' }}>
-                    {csvFile ? (
-                      <>
-                        <FilePresentIcon sx={{ fontSize: 56, color: (appTheme || muiTheme).palette.primary.main, mb: 2 }} />
-                        <Typography variant="subtitle1" fontWeight="600" gutterBottom>
-                          {csvFile.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {(csvFile.size / 1024).toFixed(1)} KB • Click to change file
-                        </Typography>
-                      </>
-                    ) : (
-                      <>
-                        <CloudUploadIcon sx={{ fontSize: 56, color: (appTheme || muiTheme).palette.text.secondary, mb: 2 }} />
-                        <Typography variant="subtitle1" fontWeight="600" gutterBottom>
-                          Click to upload CSV file
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          or drag and drop file here
-                        </Typography>
-                      </>
-                    )}
-                  </Box>
-                </Box>
-
-                {importErrors.length > 0 && (
-                  <Alert severity="error" sx={{ mb: 3 }}>
-                    <Typography variant="body2" fontWeight="medium">
-                      There were errors with your CSV file:
-                    </Typography>
-                    <Box component="ul" sx={{ pl: 2, mt: 1, mb: 0 }}>
-                      {importErrors.map((error, index) => (
-                        <li key={index}>{error}</li>
-                      ))}
-                    </Box>
-                  </Alert>
-                )}
-
-                <Typography variant="body2" color="text.secondary">
-                  <InfoIcon sx={{ fontSize: 18, verticalAlign: 'text-bottom', mr: 0.5 }} />
-                  Your CSV file should include columns for account name, location, organization type, and product family.
-                </Typography>
-              </Box>
-            )}
-
-            {/* Step 3A: Review & Create Single Account */}
-            {addAccountStep === 2 && importMethod === 'single' && (
-              <Box>
-                <Typography variant="subtitle1" fontWeight="600" gutterBottom>
-                  Review Account Details
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Please review the account information before creating.
-                </Typography>
-
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 3,
-                    border: `1px solid ${(appTheme || muiTheme).palette.divider}`,
-                    borderRadius: (appTheme || muiTheme).shape.borderRadius,
-                    mb: 3
-                  }}
-                >
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} display="flex" alignItems="center" sx={{ mb: 1 }}>
-                      <Avatar
-                        sx={{
-                          width: 48,
-                          height: 48,
-                          fontWeight: 600,
-                          fontSize: '1rem',
-                          backgroundColor: stringToColor(newAccount.accountName || ''),
-                          mr: 2
-                        }}
-                      >
-                        {getInitials(newAccount.accountName || '')}
-                      </Avatar>
-                      <Typography variant="h6" fontWeight="600">
-                        {newAccount.accountName}
-                      </Typography>
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="body2" color="text.secondary">
-                        Location
-                      </Typography>
-                      <Typography variant="body1" fontWeight="medium">
-                        {newAccount.location}
-                      </Typography>
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="body2" color="text.secondary">
-                        Organization Type
-                      </Typography>
-                      <Typography variant="body1" fontWeight="medium">
-                        {newAccount.organisationType}
-                      </Typography>
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <Typography variant="body2" color="text.secondary">
-                        Product Family
-                      </Typography>
-                      <Typography variant="body1" fontWeight="medium">
-                        {newAccount.productFamily}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                </Paper>
-              </Box>
-            )}
-
-            {/* Step 3B: CSV Mapping & Import */}
-            {addAccountStep === 2 && importMethod === 'csv' && csvFile && (
-              <Box>
-                <Typography variant="subtitle1" fontWeight="600" gutterBottom>
-                  CSV Import Configuration
+                  CSV Import
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                   Map the columns from your CSV file to account fields.
@@ -3421,9 +3365,81 @@ const Accounts: React.FC = () => {
                       >
                         Change File
                       </Button>
+                      <Typography variant="body2" color="text.secondary">
+                        {csvFile.name} ({(csvFile.size / 1024).toFixed(1)} KB)
+                      </Typography>
                     </Box>
                   </>
                 )}
+              </Box>
+            )}
+
+            {/* Step 3: Review & Create */}
+            {addAccountStep === 2 && !csvFile && (
+              <Box>
+                <Typography variant="subtitle1" fontWeight="600" gutterBottom>
+                  Review Account Details
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  Please review the account information before creating.
+                </Typography>
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 3,
+                    border: `1px solid ${(appTheme || muiTheme).palette.divider}`,
+                    borderRadius: (appTheme || muiTheme).shape.borderRadius,
+                    mb: 3
+                  }}
+                >
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} display="flex" alignItems="center" sx={{ mb: 1 }}>
+                      <Avatar
+                        sx={{
+                          width: 48,
+                          height: 48,
+                          fontWeight: 600,
+                          fontSize: '1rem',
+                          backgroundColor: stringToColor(newAccount.accountName || ''),
+                          mr: 2
+                        }}
+                      >
+                        {getInitials(newAccount.accountName || '')}
+                      </Avatar>
+                      <Typography variant="h6" fontWeight="600">
+                        {newAccount.accountName}
+                      </Typography>
+                    </Grid>
+
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        Location
+                      </Typography>
+                      <Typography variant="body1" fontWeight="medium">
+                        {newAccount.location}
+                      </Typography>
+                    </Grid>
+
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        Organization Type
+                      </Typography>
+                      <Typography variant="body1" fontWeight="medium">
+                        {newAccount.organisationType}
+                      </Typography>
+                    </Grid>
+
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">
+                        Product Family
+                      </Typography>
+                      <Typography variant="body1" fontWeight="medium">
+                        {newAccount.productFamily}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Paper>
               </Box>
             )}
           </DialogContent>
@@ -3445,28 +3461,17 @@ const Accounts: React.FC = () => {
               Cancel
             </Button>
 
-            {addAccountStep === 0 && (
+            {addAccountStep < 2 && (
               <Button
                 variant="contained"
                 onClick={handleNextStep}
-                disabled={!importMethod}
+                disabled={addAccountStep === 1 && csvFile && csvPreview.length === 0}
               >
                 Next
               </Button>
             )}
 
-            {addAccountStep === 1 && (
-              <Button
-                variant="contained"
-                onClick={handleNextStep}
-                disabled={(importMethod === 'csv' && !csvFile) || 
-                         (importMethod === 'single' && (!newAccount.accountName || !newAccount.location || !newAccount.organisationType || !newAccount.productFamily))}
-              >
-                Next
-              </Button>
-            )}
-
-            {addAccountStep === 2 && importMethod === 'single' && (
+            {addAccountStep === 2 && !csvFile && (
               <Button
                 variant="contained"
                 onClick={handleCreateAccount}
@@ -3476,14 +3481,14 @@ const Accounts: React.FC = () => {
               </Button>
             )}
 
-            {addAccountStep === 2 && importMethod === 'csv' && (
+            {addAccountStep === 2 && csvFile && (
               <Button
                 variant="contained"
                 onClick={handleImportAccounts}
                 startIcon={importInProgress ? <CircularProgress size={16} color="inherit" /> : <FileUploadIcon />}
-                disabled={importInProgress || csvPreview.length === 0 || Object.keys(csvMapping).length === 0}
+                disabled={importInProgress}
               >
-                Import Accounts
+                {importInProgress ? 'Importing...' : 'Import Accounts'}
               </Button>
             )}
           </DialogActions>

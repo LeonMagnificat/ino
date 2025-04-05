@@ -19,14 +19,14 @@ import {
 } from '@mui/material';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { BORDER_RADIUS, TRANSITIONS } from '../ui/common/constants';
+import { BORDER_RADIUS } from '../ui/common/constants';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 
-// Styled components
+// Styled components remain the same
 const AuthContainer = styled(Box)(({ theme }) => ({
   minHeight: '100vh',
   display: 'flex',
@@ -178,19 +178,44 @@ const LoginPage: React.FC = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateLoginForm()) {
-      setIsSubmitting(true);
-      setAuthError('');
+    if (!validateLoginForm()) return;
 
-      try {
-        await login(loginForm.email, loginForm.password);
-        // Redirect will happen automatically via the useEffect
-      } catch (error) {
-        console.error('Login error:', error);
-        setAuthError('Invalid email or password. Please try again.');
-      } finally {
-        setIsSubmitting(false);
+    setIsSubmitting(true);
+    setAuthError('');
+
+    try {
+      const response = await fetch('https://ino-by-sam-be-production.up.railway.app/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: loginForm.email,
+          password: loginForm.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
       }
+
+      // Assuming the API returns a token
+      const { token } = data;
+      
+      // Save token to localStorage
+      localStorage.setItem('token', token);
+
+      // Call the login function from AuthContext with email and password
+      await login(loginForm.email, loginForm.password);
+
+      // Redirect will happen automatically via useEffect
+    } catch (error: any) {
+      console.error('Login error:', error);
+      setAuthError(error.message || 'Invalid email or password. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -205,7 +230,6 @@ const LoginPage: React.FC = () => {
 
   return (
     <AuthContainer>
-      {/* Hero Section */}
       <HeroSection>
         <Container maxWidth="md">
           <Typography 
@@ -232,7 +256,6 @@ const LoginPage: React.FC = () => {
             Log in to your account to manage client accounts, track interactions, and grow your business relationships.
           </Typography>
           
-          {/* Auth Card */}
           <AuthCard>
             <Typography variant="h5" fontWeight="bold" gutterBottom sx={{ mb: 3 }}>
               Login to Your Account

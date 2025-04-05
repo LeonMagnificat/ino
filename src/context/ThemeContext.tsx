@@ -5,11 +5,13 @@ import CssBaseline from '@mui/material/CssBaseline';
 type ThemeContextType = {
   mode: PaletteMode;
   toggleColorMode: () => void;
+  theme: any;
 };
 
 const ThemeContext = createContext<ThemeContextType>({
   mode: 'light',
   toggleColorMode: () => {},
+  theme: {},
 });
 
 export const useTheme = () => useContext(ThemeContext);
@@ -519,6 +521,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const contextValue = useMemo(() => ({
     mode,
     toggleColorMode,
+    theme,
   }), [mode]);
 
   return (

@@ -20,14 +20,14 @@ import {
 } from '@mui/material';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { BORDER_RADIUS, TRANSITIONS } from '../ui/common/constants';
+import { BORDER_RADIUS } from '../ui/common/constants';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 
-// Styled components
+// Styled components remain the same
 const AuthContainer = styled(Box)(({ theme }) => ({
   minHeight: '100vh',
   display: 'flex',
@@ -247,24 +247,53 @@ const SignupPage: React.FC = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateSignupForm()) {
-      setIsSubmitting(true);
-      setAuthError('');
+    if (!validateSignupForm()) return;
 
-      try {
-        await signup(
-          signupForm.firstName,
-          signupForm.lastName,
-          signupForm.email,
-          signupForm.password
-        );
-        // Redirect will happen automatically via the useEffect
-      } catch (error) {
-        console.error('Signup error:', error);
-        setAuthError('Failed to create account. Please try again.');
-      } finally {
-        setIsSubmitting(false);
+    setIsSubmitting(true);
+    setAuthError('');
+
+    try {
+      const response = await fetch('https://ino-by-sam-be-production.up.railway.app/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          first_name: signupForm.firstName,
+          last_name: signupForm.lastName,
+          email: signupForm.email,
+          password: signupForm.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to register');
       }
+
+      // Extract token from response if available
+      const token = data.token;
+
+      // Call the signup function from AuthContext
+      await signup(
+        signupForm.firstName,
+        signupForm.lastName,
+        signupForm.email,
+        signupForm.password
+      );
+      
+      // If token is available, store it
+      if (token) {
+        localStorage.setItem('token', token);
+      }
+
+      // Redirect will happen via useEffect
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      setAuthError(error.message || 'Failed to create account. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -279,7 +308,6 @@ const SignupPage: React.FC = () => {
 
   return (
     <AuthContainer>
-      {/* Hero Section */}
       <HeroSection>
         <Container maxWidth="md">
           <Typography 
@@ -306,7 +334,6 @@ const SignupPage: React.FC = () => {
             Join our platform to manage client accounts, track interactions, and grow your business relationships.
           </Typography>
           
-          {/* Auth Card */}
           <AuthCard>
             <Typography variant="h5" fontWeight="bold" gutterBottom sx={{ mb: 3 }}>
               Sign Up
