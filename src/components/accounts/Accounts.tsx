@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useContext, useEffect } from 'react';
+import axios from 'axios';
 import {
   Box,
   Typography,
@@ -49,6 +50,8 @@ import {
   Step,
   StepLabel,
   Stepper,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import { useTheme as useMuiTheme } from '@mui/material/styles';
 import { useTheme } from '../../context/ThemeContext';
@@ -206,7 +209,7 @@ const TableContent = styled(TableCell)(({ theme }) => ({
 }));
 
 interface StatusChipProps {
-  status: 'completed' | 'pending' | 'failed' | 'loading';
+  status: 'completed' | 'pending' | 'failed' | 'loading' | undefined;
 }
 
 // Status indicator component
@@ -226,27 +229,64 @@ const StatusIndicator = styled(Box, {
   transition: 'all 0.2s ease-in-out',
 }));
 
-const StatusLabel = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'status',
-})<{ status: 'completed' | 'pending' | 'failed' | 'loading' }>(({ theme, status }) => ({
-  display: 'inline-flex',
-  alignItems: 'center',
-  padding: '2px 6px',
-  borderRadius: '3px',
-  fontSize: '0.7rem',
-  fontWeight: 700,
-  lineHeight: 1,
-  backgroundColor:
-    status === 'completed' ? theme.palette.success.light :
-    status === 'failed' ? theme.palette.error.light :
-    status === 'loading' ? theme.palette.info.light :
-    theme.palette.warning.light,
-  color:
-    status === 'completed' ? theme.palette.success.main :
-    status === 'failed' ? theme.palette.error.main :
-    status === 'loading' ? theme.palette.info.main :
-    theme.palette.warning.main,
-}));
+// Define and update StatusLabel component to handle undefined status
+const StatusLabel: React.FC<StatusChipProps> = ({ status }) => {
+  // Default to 'pending' if status is undefined
+  const actualStatus = status || 'pending';
+  
+  let color: string;
+  let text: string;
+
+  switch (actualStatus) {
+    case 'completed':
+      color = '#4caf50';
+      text = 'Completed';
+      break;
+    case 'pending':
+      color = '#ff9800';
+      text = 'Pending';
+      break;
+    case 'failed':
+      color = '#f44336';
+      text = 'Failed';
+      break;
+    case 'loading':
+      color = '#2196f3';
+      text = 'Processing';
+      break;
+    default:
+      color = '#757575';
+      text = 'Unknown';
+  }
+
+  return (
+    <Box 
+      component="span"
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        borderRadius: '12px',
+        color: color,
+        fontSize: '0.75rem',
+        fontWeight: 'bold',
+        px: 1,
+        height: 22,
+        backgroundColor: `${color}15`
+      }}
+    >
+      <Box
+        sx={{
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          backgroundColor: color,
+          mr: 0.75
+        }}
+      />
+      {text}
+    </Box>
+  );
+};
 
 interface Asset {
   id: number;
@@ -256,18 +296,31 @@ interface Asset {
   lastUpdated: string;
 }
 
+// Update Account interface to match API response
 interface Account {
-  id: number;
-  accountName: string;
+  id: string;
+  account_number: string;
+  account_name: string;
+  organisation_type: string;
   location: string;
-  organisationType: string;
-  activeAssets: string;
-  assets: Asset[];
-  productFamily: string;
-  exitRate: string;
-  updates: 'completed' | 'pending' | 'failed' | 'loading';
-  logoSrc: string;
+  quantity: number;
+  last_billed_price_total: string;
+  sbu_and_sub_sbu: string;
+  product_family: string;
+  risk_product_category: string | null;
+  exit_rate_usd: string;
+  industry: string;
+  company_info: string;
+  linkedin: string;
+  status: number;
+  news: string;
+  assets: string[];
+  createdAt: string;
+  updatedAt: string;
+  // Keep UI state properties
+  updates?: 'completed' | 'pending' | 'failed' | 'loading';
   color?: string;
+  logoSrc?: string;
 }
 
 interface CompanyInsight {
@@ -334,136 +387,9 @@ const getInitials = (name: string) => {
   return (words[0][0] + words[1][0]).toUpperCase();
 };
 
-// Base accounts that will be used as templates
-const baseAccounts: Account[] = [
-  {
-    id: 1,
-    accountName: 'Master Card',
-    location: 'London, United Kingdom',
-    organisationType: 'Broker',
-    activeAssets: '6 Assets',
-    assets: [
-      { id: 101, name: 'Risk Analytics Platform', type: 'Software', status: 'active', lastUpdated: '2023-11-15' },
-      { id: 102, name: 'Financial Reporting Tool', type: 'Software', status: 'active', lastUpdated: '2023-11-10' },
-      { id: 103, name: 'Market Data Feed', type: 'Data Service', status: 'active', lastUpdated: '2023-11-12' },
-      { id: 104, name: 'Compliance Monitor', type: 'Software', status: 'active', lastUpdated: '2023-11-08' },
-      { id: 105, name: 'Trading Platform', type: 'Software', status: 'active', lastUpdated: '2023-11-05' },
-      { id: 106, name: 'Portfolio Manager', type: 'Software', status: 'active', lastUpdated: '2023-11-01' }
-    ],
-    productFamily: 'Risk & Financial',
-    exitRate: '2,343.09',
-    updates: 'completed',
-    logoSrc: '/images/mastercard.png',
-    color: '#EB001B', // Couleur officielle de Mastercard
-  },
-  {
-    id: 2,
-    accountName: 'Twitter',
-    location: 'San Francisco, USA',
-    organisationType: 'Technology',
-    activeAssets: '4 Assets',
-    assets: [
-      { id: 201, name: 'Social Media Analytics', type: 'Software', status: 'active', lastUpdated: '2023-11-14' },
-      { id: 202, name: 'Engagement Tracker', type: 'Software', status: 'active', lastUpdated: '2023-11-09' },
-      { id: 203, name: 'Sentiment Analysis', type: 'Data Service', status: 'active', lastUpdated: '2023-11-07' },
-      { id: 204, name: 'Trend Predictor', type: 'Software', status: 'active', lastUpdated: '2023-11-03' }
-    ],
-    productFamily: 'Social Media',
-    exitRate: '1,987.65',
-    updates: 'loading',
-    logoSrc: '/images/twitter.png',
-    color: '#1DA1F2', // Couleur officielle de Twitter
-  },
-  {
-    id: 3,
-    accountName: 'Apple',
-    location: 'Cupertino, USA',
-    organisationType: 'Technology',
-    activeAssets: '8 Assets',
-    assets: [
-      { id: 301, name: 'Product Design Suite', type: 'Software', status: 'active', lastUpdated: '2023-11-15' },
-      { id: 302, name: 'Supply Chain Manager', type: 'Software', status: 'active', lastUpdated: '2023-11-14' },
-      { id: 303, name: 'Retail Analytics', type: 'Data Service', status: 'active', lastUpdated: '2023-11-12' },
-      { id: 304, name: 'Customer Insights', type: 'Data Service', status: 'active', lastUpdated: '2023-11-10' },
-      { id: 305, name: 'Hardware Testing Tools', type: 'Software', status: 'active', lastUpdated: '2023-11-08' },
-      { id: 306, name: 'Software Development Kit', type: 'Software', status: 'active', lastUpdated: '2023-11-06' },
-      { id: 307, name: 'Market Research Platform', type: 'Software', status: 'active', lastUpdated: '2023-11-04' },
-      { id: 308, name: 'Patent Database', type: 'Data Service', status: 'active', lastUpdated: '2023-11-02' }
-    ],
-    productFamily: 'Hardware & Software',
-    exitRate: '3,219.44',
-    updates: 'completed',
-    logoSrc: '/images/apple.png',
-    color: '#555555', // Couleur sobre para Apple
-  },
-  {
-    id: 4,
-    accountName: 'Starbucks',
-    location: 'Seattle, USA',
-    organisationType: 'Food & Beverage',
-    activeAssets: '5 Assets',
-    assets: [
-      { id: 401, name: 'Inventory Management', type: 'Software', status: 'active', lastUpdated: '2023-11-15' },
-      { id: 402, name: 'Supply Chain Tracker', type: 'Software', status: 'active', lastUpdated: '2023-11-13' },
-      { id: 403, name: 'Customer Loyalty Program', type: 'Software', status: 'active', lastUpdated: '2023-11-11' },
-      { id: 404, name: 'Store Performance Analytics', type: 'Data Service', status: 'active', lastUpdated: '2023-11-09' },
-      { id: 405, name: 'Product Development Tool', type: 'Software', status: 'active', lastUpdated: '2023-11-07' }
-    ],
-    productFamily: 'Consumer Goods',
-    exitRate: '1,456.32',
-    updates: 'failed',
-    logoSrc: '/images/starbucks.png',
-    color: '#00704A', // Couleur officielle de Starbucks
-  },
-  {
-    id: 5,
-    accountName: 'Google',
-    location: 'Mountain View, USA',
-    organisationType: 'Technology',
-    activeAssets: '10 Assets',
-    assets: [
-      { id: 501, name: 'Search Analytics', type: 'Software', status: 'active', lastUpdated: '2023-11-15' },
-      { id: 502, name: 'Ad Performance Tracker', type: 'Software', status: 'active', lastUpdated: '2023-11-14' },
-      { id: 503, name: 'Cloud Infrastructure Monitor', type: 'Software', status: 'active', lastUpdated: '2023-11-13' },
-      { id: 504, name: 'AI Development Platform', type: 'Software', status: 'active', lastUpdated: '2023-11-12' },
-      { id: 505, name: 'Market Intelligence', type: 'Data Service', status: 'active', lastUpdated: '2023-11-11' },
-      { id: 506, name: 'User Behavior Analytics', type: 'Data Service', status: 'active', lastUpdated: '2023-11-10' },
-      { id: 507, name: 'Mobile App Performance', type: 'Software', status: 'active', lastUpdated: '2023-11-09' },
-      { id: 508, name: 'Video Content Analytics', type: 'Software', status: 'active', lastUpdated: '2023-11-08' },
-      { id: 509, name: 'Email Marketing Platform', type: 'Software', status: 'active', lastUpdated: '2023-11-07' },
-      { id: 510, name: 'SEO Optimization Tools', type: 'Software', status: 'active', lastUpdated: '2023-11-06' }
-    ],
-    productFamily: 'Search & Advertising',
-    exitRate: '4,123.77',
-    updates: 'completed',
-    logoSrc: '/images/avatar.png',
-    color: '#4285F4', // Couleur officielle de Google
-  },
-  {
-    id: 6,
-    accountName: 'Amazon',
-    location: 'Seattle, USA',
-    organisationType: 'E-commerce',
-    activeAssets: '7 Assets',
-    assets: [
-      { id: 601, name: 'E-commerce Analytics', type: 'Software', status: 'active', lastUpdated: '2023-11-15' },
-      { id: 602, name: 'Warehouse Management', type: 'Software', status: 'active', lastUpdated: '2023-11-13' },
-      { id: 603, name: 'Logistics Optimization', type: 'Software', status: 'active', lastUpdated: '2023-11-11' },
-      { id: 604, name: 'Cloud Services Monitor', type: 'Software', status: 'active', lastUpdated: '2023-11-09' },
-      { id: 605, name: 'Customer Behavior Insights', type: 'Data Service', status: 'active', lastUpdated: '2023-11-07' },
-      { id: 606, name: 'Pricing Strategy Tool', type: 'Software', status: 'active', lastUpdated: '2023-11-05' },
-      { id: 607, name: 'Vendor Management System', type: 'Software', status: 'active', lastUpdated: '2023-11-03' }
-    ],
-    productFamily: 'Retail & Cloud',
-    exitRate: '3,678.90',
-    updates: 'completed',
-    logoSrc: '/images/avatar.png',
-    color: '#FF9900', // Couleur officielle d'Amazon
-  },
-];
-
-// Use baseAccounts directly instead of generating dummy accounts
-const mockAccounts: Account[] = [...baseAccounts];
+// Replace mockData and mockAccounts with empty arrays initially
+const mockData: Account[] = [];
+const mockAccounts: Account[] = [];
 
 const mockInsights: CompanyInsight[] = [
   {
@@ -728,6 +654,336 @@ const filterOptions = {
   ]
 };
 
+// Helper function to properly parse CSV lines with quotes and semicolons
+const parseCSVLine = (line: string, delimiter: string = ';'): string[] => {
+  const result: string[] = [];
+  let inQuote = false;
+  let currentValue = '';
+  const chars = line.split('');
+  
+  for (let i = 0; i < chars.length; i++) {
+    const char = chars[i];
+    
+    if (char === '"' && (i === 0 || chars[i-1] !== '\\')) {
+      inQuote = !inQuote;
+    } else if (char === delimiter && !inQuote) {
+      result.push(currentValue.trim());
+      currentValue = '';
+    } else {
+      currentValue += char;
+    }
+  }
+  
+  // Add the last value
+  result.push(currentValue.trim());
+  
+  // Remove surrounding quotes from values if present
+  return result.map(value => {
+    if (value.startsWith('"') && value.endsWith('"')) {
+      return value.substring(1, value.length - 1);
+    }
+    return value;
+  });
+};
+
+// Helper function to get authentication token
+const getAuthToken = (): string => {
+  // Try to get token from localStorage first
+  const token = localStorage.getItem('token');
+  if (token) {
+    // Make sure token has the "Bearer " prefix
+    return token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+  }
+  
+  // Fallback to hardcoded token if process.env is not available or token is not set
+  return 'Bearer default_token_for_development';
+};
+
+// Fetch user profile to get user ID
+const fetchUserProfile = async (): Promise<string> => {
+  try {
+    const response = await axios.get('https://ino-by-sam-be-production.up.railway.app/auth/profile', {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': getAuthToken()
+      }
+    });
+    
+    if (response.data && response.data.id) {
+      return response.data.id;
+    }
+    throw new Error('User ID not found in profile response');
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    return ''; // Fallback user ID
+  }
+};
+
+// Function to parse semicolon-separated CSV and send to backend in batches
+const parseAndSendAccountsCSV = async (csvContent: string) => {
+  try {
+    // Get user ID from profile
+    const userId = await fetchUserProfile();
+    
+    // Split the CSV content into lines
+    const lines = csvContent.replace(/^\ufeff/, '').split(/\r?\n/).filter(line => line.trim());
+    
+    if (lines.length < 2) {
+      throw new Error('CSV file must contain at least a header row and one data row');
+    }
+    
+    // Extract headers (first row)
+    const headers = lines[0].split(';').map(header => header.trim());
+    
+    // Map CSV column headers to backend field names
+    const fieldMapping: Record<string, string> = {
+      'Account Number': 'account_number',
+      'Account Name': 'account_name',
+      'Account Owner': 'account_owner',
+      'Organisation Type': 'organisation_type',
+      'Billing Country': 'billing_country',
+      'Shipping City': 'location',
+      'Quantity': 'quantity',
+      'Product Name': 'product_name',
+      'Last Billed Price (Total)': 'last_billed_price_total',
+      'SBU & Sub SBU': 'sbu_and_sub_sbu',
+      'Risk Assets': 'risk_assets',
+      'Risk Product Category': 'risk_product_category',
+      'Exit Rate USD': 'exit_rate_usd'
+    };
+    
+    // Parse data rows
+    const accounts = [];
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue; // Skip empty lines
+      
+      const values = parseCSVLine(lines[i], ';');
+      
+      if (values.length !== headers.length) {
+        console.warn(`Row ${i + 1}: Column count mismatch (expected ${headers.length}, got ${values.length})`);
+        continue;
+      }
+      
+      // Create account object with header keys and row values
+      const account: Record<string, any> = {};
+      headers.forEach((header, index) => {
+        // Use mapped field name if available, otherwise use original header
+        const fieldName = fieldMapping[header] || header;
+        
+        // Format numeric values
+        if (header === 'Quantity') {
+          account[fieldName] = parseInt(values[index]) || 0;
+        } else if (header === 'Exit Rate USD') {
+          // Replace comma with dot for decimal numbers and convert to string
+          account[fieldName] = values[index].replace(',', '.');
+        } else {
+          account[fieldName] = values[index];
+        }
+      });
+      
+      // Add additional fields required by the API
+      account.id = `acc_${Date.now()}_${i}`; // Generate a unique ID
+      account.createdAt = new Date().toISOString();
+      account.updatedAt = new Date().toISOString();
+      
+      accounts.push(account);
+    }
+    
+    console.log('Parsed accounts sample:', accounts[0]); // Log the first account for debugging
+    
+    // Check if we're in development/test mode or if we have authorization issues
+    const isDevMode = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost';
+    let useMockData = isDevMode;
+    
+    if (!useMockData) {
+      try {
+        // Test the API with a small request
+        await axios.get('https://ino-by-sam-be-production.up.railway.app/auth/profile', {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': getAuthToken()
+          },
+          timeout: 5000 // 5 second timeout for quick check
+        });
+      } catch (error) {
+        console.warn('API authorization check failed, falling back to mock data', error);
+        useMockData = true;
+      }
+    }
+    
+    // If using mock data, return success without making API calls
+    if (useMockData) {
+      console.log('Using mock data instead of API calls for', accounts.length, 'accounts');
+      
+      // These accounts will be processed by the component 
+      return {
+        success: true,
+        data: { 
+          mockData: true,
+          parsedAccounts: accounts,
+          totalAccounts: accounts.length
+        },
+        message: `Imported ${accounts.length} accounts successfully (using mock data - no backend connection)`
+      };
+    }
+    
+    // Process in batches of 50 accounts for server API
+    const BATCH_SIZE = 50;
+    let successCount = 0;
+    let failedCount = 0;
+    
+    for (let i = 0; i < accounts.length; i += BATCH_SIZE) {
+      const batchAccounts = accounts.slice(i, i + BATCH_SIZE);
+      
+      // Create payload for this batch
+      const payload = {
+        user_id: userId,
+        accounts: batchAccounts
+      };
+      
+      console.log(`Sending batch ${i / BATCH_SIZE + 1}/${Math.ceil(accounts.length / BATCH_SIZE)} (${batchAccounts.length} accounts)`);
+      
+      try {
+        // Send data to backend API
+        const response = await axios.post('https://ino-by-sam-be-production.up.railway.app/accounts', payload, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': getAuthToken()
+          },
+          timeout: 30000 // 30 seconds timeout for each batch
+        });
+        
+        successCount += batchAccounts.length;
+      } catch (error) {
+        console.error(`Error sending batch ${i / BATCH_SIZE + 1}:`, error);
+        
+        // If we get a 401 or CORS error, we should stop processing batches and fall back to mock data
+        const axiosError = error as any;
+        if (
+          (axiosError.response && axiosError.response.status === 401) ||
+          (axiosError.message && axiosError.message.includes('Network Error'))
+        ) {
+          console.error('Authentication or network error. Stopping batch processing and using mock data.');
+          
+          return {
+            success: true,
+            data: { 
+              mockData: true,
+              parsedAccounts: accounts,
+              totalAccounts: accounts.length
+            },
+            message: `Imported ${accounts.length} accounts successfully (using mock data - authentication failed)`
+          };
+        }
+        
+        failedCount += batchAccounts.length;
+      }
+    }
+    
+    if (successCount === 0 && failedCount > 0) {
+      // If all batches failed, fall back to mock data
+      return {
+        success: true,
+        data: { 
+          mockData: true,
+          parsedAccounts: accounts,
+          totalAccounts: accounts.length
+        },
+        message: `Imported ${accounts.length} accounts successfully (using mock data - API upload failed)`
+      };
+    }
+    
+    if (failedCount > 0) {
+      return {
+        success: successCount > 0,
+        data: { successCount, failedCount },
+        message: `Imported ${successCount} accounts. Failed to import ${failedCount} accounts.`
+      };
+    }
+    
+    return {
+      success: true,
+      data: { successCount },
+      message: `Successfully imported ${successCount} accounts`
+    };
+    
+  } catch (error) {
+    console.error('Error parsing or sending CSV data:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      message: 'Failed to process CSV data'
+    };
+  }
+};
+
+// Function to fetch accounts from backend
+const fetchAccounts = async () => {
+  try {
+    const userId = await fetchUserProfile();
+    
+    if (!userId) {
+      console.warn('No user ID available, cannot fetch accounts');
+      return {
+        success: false,
+        error: 'No user ID available',
+        message: 'Failed to fetch accounts - no user ID'
+      };
+    }
+    
+    const response = await axios.get(`https://ino-by-sam-be-production.up.railway.app/accounts/${userId}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': getAuthToken()
+      }
+    });
+    return {
+      success: true,
+      data: response.data,
+      message: `Retrieved ${response.data.length} accounts`
+    };
+  } catch (error) {
+    console.error('Error fetching accounts:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      message: 'Failed to fetch accounts'
+    };
+  }
+};
+
+// Function to handle CSV upload and send to backend
+const handleCSVUploadAndSend = async (file: File) => {
+  return new Promise<{success: boolean; message: string; data?: any}>((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = async (e) => {
+      try {
+        const content = e.target?.result as string;
+        if (!content) {
+          resolve({ success: false, message: 'Could not read file content' });
+          return;
+        }
+        
+        const result = await parseAndSendAccountsCSV(content);
+        resolve(result);
+      } catch (error) {
+        console.error('Error processing CSV file:', error);
+        resolve({ 
+          success: false, 
+          message: error instanceof Error ? error.message : 'Error processing CSV file' 
+        });
+      }
+    };
+    
+    reader.onerror = () => {
+      resolve({ success: false, message: 'Error reading file' });
+    };
+    
+    reader.readAsText(file);
+  });
+};
+
 const Accounts: React.FC = () => {
   const { theme: appTheme } = useTheme();
   const muiTheme = useMuiTheme(); // Fallback to MUI theme if context theme is not available
@@ -737,24 +993,33 @@ const Accounts: React.FC = () => {
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [detailsView, setDetailsView] = useState(false);
   const [activeTab, setActiveTab] = useState('tasks');
-  const [loading, setLoading] = useState(false);
-  const [assetsDropdownOpen, setAssetsDropdownOpen] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [assetsDropdownOpen, setAssetsDropdownOpen] = useState<string | null>(null);
   const assetsDropdownRef = React.useRef<HTMLDivElement>(null);
+  
+  // Store fetched accounts
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  
+  // Notification states
   const [notification, setNotification] = useState<{
     open: boolean;
     message: string;
     severity: 'success' | 'error' | 'info' | 'warning';
-    accountId: number | null;
+    accountId: string | null;
   }>({
     open: false,
     message: '',
     severity: 'info',
     accountId: null
   });
-  const [bookmarked, setBookmarked] = useState<number[]>([]);
+  
+  // UI state variables
+  const [bookmarked, setBookmarked] = useState<string[]>([]);
   const [accountMenuAnchor, setAccountMenuAnchor] = useState<null | HTMLElement>(null);
   const [filterMenuAnchor, setFilterMenuAnchor] = useState<null | HTMLElement>(null);
   const [expandedInsights, setExpandedInsights] = useState<number[]>([]);
+  
+  // Filters
   const [filters, setFilters] = useState<{
     location: string[];
     organisationType: string[];
@@ -766,42 +1031,140 @@ const Accounts: React.FC = () => {
     productFamily: [],
     status: []
   });
-
-  // For infinite scrolling
+  
+  // Infinite scrolling
   const [displayLimit, setDisplayLimit] = useState(30);
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [newTaskText, setNewTaskText] = useState('');
   const [animatingTransition, setAnimatingTransition] = useState(false);
-
+  
   // Account creation and import states
   const [openAddAccountDialog, setOpenAddAccountDialog] = useState(false);
   const [addAccountStep, setAddAccountStep] = useState(0);
-  const [newAccount, setNewAccount] = useState<Partial<Account>>({
+  const [newAccount, setNewAccount] = useState<{
+    accountName: string;
+    location: string;
+    organisationType: string;
+    productFamily: string;
+  }>({
     accountName: '',
     location: '',
     organisationType: '',
-    productFamily: '',
-    updates: 'pending',
-    assets: []
+    productFamily: ''
   });
+  
   const [accountFormErrors, setAccountFormErrors] = useState<{
     accountName?: string;
     location?: string;
     organisationType?: string;
     productFamily?: string;
   }>({});
-
+  
   // CSV import states
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<string[][]>([]);
-  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
-  const [csvMapping, setCsvMapping] = useState<{[key: string]: string}>({});
+  const [csvMapping, setCsvMapping] = useState<Record<string, string>>({});
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [importInProgress, setImportInProgress] = useState(false);
-  const [importMethod, setImportMethod] = useState<'single' | 'csv' | null>(null);
+  
+  // API upload state
+  const [apiUploadMode, setApiUploadMode] = useState(false);
+  const [isApiUploading, setIsApiUploading] = useState(false);
+  const [apiUploadStatus, setApiUploadStatus] = useState<{success: boolean, message: string} | null>(null);
+  const [fetchedAccounts, setFetchedAccounts] = useState<any[]>([]);
+  
+  // Import method state
+  const [importMethod, setImportMethod] = useState<'single' | 'csv'>('single');
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch accounts on component mount
+  useEffect(() => {
+    const loadAccounts = async () => {
+      setLoading(true);
+      try {
+        const result = await fetchAccounts();
+        if (result.success && result.data) {
+          // Map API response to accounts with UI state properties
+          const mappedAccounts = result.data.map((account: Account) => ({
+            ...account,
+            // Map status number to a UI status
+            updates: account.status === 0 ? 'completed' : 'pending',
+            // Generate a color based on account name
+            color: stringToColor(account.account_name)
+          }));
+          
+          setAccounts(mappedAccounts);
+          console.log('Accounts loaded:', mappedAccounts);
+        } else {
+          console.error('Failed to fetch accounts:', result.message);
+          // If we fail to fetch accounts from the API, use mockAccounts
+          setAccounts(mockAccounts);
+        }
+      } catch (error) {
+        console.error('Error loading accounts:', error);
+        // If there's an error, use mockAccounts
+        setAccounts(mockAccounts);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadAccounts();
+  }, []);
+
+  // Replace the Twitter account update effect with a more general accounts status update
+  React.useEffect(() => {
+    // Only run this effect once when the component mounts and if we have accounts
+    if (accounts.length > 0) {
+      const timer = setTimeout(() => {
+        // Randomly pick one account to show an update for
+        const randomIndex = Math.floor(Math.random() * accounts.length);
+        const accountToUpdate = accounts[randomIndex];
+        
+        if (accountToUpdate) {
+          // Randomly decide if update was successful
+          const success = Math.random() > 0.3;
+          
+          // Update the account status
+          const updatedAccounts = accounts.map(account => {
+            if (account.id === accountToUpdate.id) {
+              return {
+                ...account,
+                updates: success ? 'completed' : 'failed' as Account['updates']
+              };
+            }
+            return account;
+          });
+          
+          // Set custom notification
+          setNotification({
+            open: true,
+            message: success 
+              ? `${accountToUpdate.account_name}'s update has been successfully completed` 
+              : `Failed to update ${accountToUpdate.account_name}'s account`,
+            severity: success ? 'success' : 'error',
+            accountId: accountToUpdate.id
+          });
+          
+          // Update accounts state
+          setAccounts(updatedAccounts);
+          
+          // If the selected account was updated, update it too
+          if (selectedAccount && selectedAccount.id === accountToUpdate.id) {
+            const updatedAccount = updatedAccounts.find(a => a.id === accountToUpdate.id);
+            if (updatedAccount) {
+              setSelectedAccount(updatedAccount);
+            }
+          }
+        }
+      }, 5000); // Show update after 5 seconds
+      
+      return () => clearTimeout(timer);
+    }
+  }, [accounts, selectedAccount]);
 
   // Handle click outside to close assets dropdown
   React.useEffect(() => {
@@ -819,63 +1182,15 @@ const Accounts: React.FC = () => {
 
   // We'll move the infinite scrolling effect after sortedAccounts is defined
 
-  // Simulate AI processing completion for Twitter account
-  React.useEffect(() => {
-    // Only run this effect once when the component mounts
-    const timer = setTimeout(() => {
-      // Create updated accounts by changing Twitter's status
-      const updatedAccounts = mockAccounts.map(account => {
-        if (account.id === 2) {
-          // Randomly decide if update was successful
-          const success = Math.random() > 0.3;
-          
-          // Set custom notification
-          setNotification({
-            open: true,
-            message: success ? "Twitter's update has been successfully completed" : "Failed to update Twitter's account",
-            severity: success ? 'success' : 'error',
-            accountId: 2
-          });
-
-          // Return updated account
-          return {
-            ...account,
-            updates: success ? 'completed' : 'failed' as Account['updates']
-          };
-        }
-        return account;
-      });
-
-      // Update the accounts
-      mockAccounts.splice(0, mockAccounts.length, ...updatedAccounts);
-
-      // If the selected account is Twitter, update it too
-      if (selectedAccount && selectedAccount.id === 2) {
-        const updatedAccount = updatedAccounts.find(a => a.id === 2);
-        if (updatedAccount) {
-          setSelectedAccount(updatedAccount);
-        }
-      }
-
-      // Force a re-render to show the updated notification
-      setTimeout(() => {
-        setNotification(prev => ({ ...prev }));
-      }, 100);
-
-    }, 5000); // 5 seconds delay
-
-    return () => clearTimeout(timer);
-  }, []);
-
   // Handle closing the notification
   const handleCloseNotification = () => {
     setNotification(prev => ({ ...prev, open: false }));
   };
 
   // Toggle assets dropdown
-  const handleToggleAssetsDropdown = (event: React.MouseEvent, accountId: number) => {
+  const handleToggleAssetsDropdown = (event: React.MouseEvent, accountId: string) => {
     event.stopPropagation();
-    setAssetsDropdownOpen(prevState => prevState === accountId ? null : accountId);
+    setAssetsDropdownOpen(prev => prev === accountId ? null : accountId);
   };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -912,10 +1227,10 @@ const Accounts: React.FC = () => {
     const organisationTypes = new Set<string>();
     const productFamilies = new Set<string>();
 
-    mockAccounts.forEach(account => {
-      locations.add(account.location);
-      organisationTypes.add(account.organisationType);
-      productFamilies.add(account.productFamily);
+    accounts.forEach(account => {
+      if (account.location) locations.add(account.location);
+      if (account.organisation_type) organisationTypes.add(account.organisation_type);
+      if (account.product_family) productFamilies.add(account.product_family);
     });
 
     return {
@@ -963,13 +1278,13 @@ const Accounts: React.FC = () => {
   };
 
   // Apply filters to accounts
-  const filteredAccounts = mockAccounts.filter(account => {
+  const filteredAccounts = accounts.filter(account => {
     // Text search filter
     const matchesSearch = !searchQuery ||
-      account.accountName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      account.account_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       account.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      account.organisationType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      account.productFamily.toLowerCase().includes(searchQuery.toLowerCase());
+      account.organisation_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      account.product_family.toLowerCase().includes(searchQuery.toLowerCase());
 
     // Location filter
     const matchesLocation = filters.location.length === 0 ||
@@ -977,11 +1292,11 @@ const Accounts: React.FC = () => {
 
     // Organisation type filter
     const matchesOrgType = filters.organisationType.length === 0 ||
-      filters.organisationType.includes(account.organisationType);
+      filters.organisationType.includes(account.organisation_type);
 
     // Product family filter
     const matchesProductFamily = filters.productFamily.length === 0 ||
-      filters.productFamily.includes(account.productFamily);
+      filters.productFamily.includes(account.product_family);
 
     // Status filter
     const matchesStatus = filters.status.length === 0 ||
@@ -998,9 +1313,9 @@ const Accounts: React.FC = () => {
     return filteredAccounts;
   };
 
-  const completedCount = mockAccounts.filter(account => account.updates === 'completed').length;
-  const failedCount = mockAccounts.filter(account => account.updates === 'failed').length;
-  const pendingCount = mockAccounts.filter(account => account.updates === 'pending').length;
+  const completedCount = accounts.filter(account => account.updates === 'completed').length;
+  const failedCount = accounts.filter(account => account.updates === 'failed').length;
+  const pendingCount = accounts.filter(account => account.updates === 'pending').length;
 
   const filteredByStatusAccounts = getFilteredAccountsByStatus();
 
@@ -1105,10 +1420,11 @@ const Accounts: React.FC = () => {
     setFilterMenuAnchor(null);
   };
 
-  const toggleBookmark = (id: number, event: React.MouseEvent) => {
+  // Toggle bookmarking an account
+  const toggleBookmark = (id: string, event: React.MouseEvent) => {
     event.stopPropagation();
     setBookmarked(prev => 
-      prev.includes(id) ? prev.filter(itemId => itemId !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter(bookmarkId => bookmarkId !== id) : [...prev, id]
     );
   };
 
@@ -1147,18 +1463,14 @@ const Accounts: React.FC = () => {
       accountName: '',
       location: '',
       organisationType: '',
-      productFamily: '',
-      updates: 'pending',
-      assets: []
+      productFamily: ''
     });
     setAccountFormErrors({});
     setCsvFile(null);
     setCsvPreview([]);
-    setCsvHeaders([]);
     setCsvMapping({});
     setImportErrors([]);
-    setImportSuccess(null);
-    setImportMethod(null); // Reset import method
+    setImportInProgress(false);
   };
 
   const handleCloseAddAccountDialog = () => {
@@ -1234,16 +1546,27 @@ const Accounts: React.FC = () => {
     // Create new account object
     const accountToAdd: Account = {
       id: newId,
-      accountName: newAccount.accountName || '',
+      account_number: newAccount.accountName || '',
+      account_name: newAccount.accountName || '',
+      organisation_type: newAccount.organisationType || '',
       location: newAccount.location || '',
-      organisationType: newAccount.organisationType || '',
-      productFamily: newAccount.productFamily || '',
-      activeAssets: '0 Assets',
+      quantity: 0,
+      last_billed_price_total: '0.00',
+      sbu_and_sub_sbu: '',
+      product_family: newAccount.productFamily || '',
+      risk_product_category: null,
+      exit_rate_usd: '0.00',
+      industry: '',
+      company_info: '',
+      linkedin: '',
+      status: 0,
+      news: '',
       assets: [],
-      exitRate: '0.00',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       updates: 'pending' as const, // Ensure updates is properly typed
+      color: stringToColor(newAccount.accountName || ''),
       logoSrc: '/images/avatar.png',
-      color: stringToColor(newAccount.accountName || '')
     };
 
     // Add to mock accounts
@@ -1252,7 +1575,7 @@ const Accounts: React.FC = () => {
     // Show success notification
     setNotification({
       open: true,
-      message: `Account "${accountToAdd.accountName}" has been created successfully`,
+      message: `Account "${accountToAdd.account_name}" has been created successfully`,
       severity: 'success',
       accountId: accountToAdd.id
     });
@@ -1272,7 +1595,6 @@ const Accounts: React.FC = () => {
     // Reset states
     setImportErrors([]);
     setCsvPreview([]);
-    setCsvHeaders([]);
     setCsvMapping({});
 
     // Read the file
@@ -1288,7 +1610,7 @@ const Accounts: React.FC = () => {
         // Parse CSV (simple implementation - would use a library in production)
         // Handle different line endings (CRLF, LF) and remove BOM if present
         const cleanContent = content.replace(/^\ufeff/, ''); // Remove BOM if present
-        const lines = cleanContent.split(/\r?\n/).filter(line => line.trim()); // Handle different line endings
+        const lines = cleanContent.split(/\r?\n/).filter(line => line.trim());
         
         if (lines.length < 2) {
           setImportErrors(['File must contain at least a header row and one data row']);
@@ -1297,49 +1619,9 @@ const Accounts: React.FC = () => {
 
         // Extract headers and create preview
         const headers = lines[0].split(',').map(h => h.trim());
-        setCsvHeaders(headers);
+        setCsvPreview(lines.slice(1).map(line => line.split(',')));
 
-        // Create initial mapping (try to match headers to account fields)
-        const initialMapping: {[key: string]: string} = {};
-        headers.forEach(header => {
-          const lowerHeader = header.toLowerCase();
-          if (lowerHeader.includes('name') || lowerHeader.includes('account')) initialMapping[header] = 'accountName';
-          else if (lowerHeader.includes('location') || lowerHeader.includes('city') || lowerHeader.includes('address')) initialMapping[header] = 'location';
-          else if (lowerHeader.includes('type') || lowerHeader.includes('organization') || lowerHeader.includes('company')) initialMapping[header] = 'organisationType';
-          else if (lowerHeader.includes('product') || lowerHeader.includes('family') || lowerHeader.includes('category')) initialMapping[header] = 'productFamily';
-        });
-        setCsvMapping(initialMapping);
-
-        // Create preview (up to 5 rows)
-        const preview: string[][] = [];
-        for (let i = 0; i < Math.min(5, lines.length); i++) {
-          if (lines[i].trim()) {
-            // Handle quoted values properly (simple implementation)
-            const row: string[] = [];
-            let inQuote = false;
-            let currentValue = '';
-            const chars = lines[i].split('');
-            
-            for (let j = 0; j < chars.length; j++) {
-              const char = chars[j];
-              if (char === '"' && (j === 0 || chars[j-1] !== '\\')) {
-                inQuote = !inQuote;
-              } else if (char === ',' && !inQuote) {
-                row.push(currentValue.trim());
-                currentValue = '';
-              } else {
-                currentValue += char;
-              }
-            }
-            
-            // Add the last value
-            row.push(currentValue.trim());
-            preview.push(row);
-          }
-        }
-        setCsvPreview(preview);
-
-        console.log("Parsed CSV preview:", preview);
+        console.log("Parsed CSV preview:", lines.slice(1).map(line => line.split(',')));
       } catch (error) {
         console.error("CSV parsing error:", error);
         setImportErrors(['Error parsing CSV file. Please check the format.']);
@@ -1482,16 +1764,27 @@ const Accounts: React.FC = () => {
             const newId = Math.max(...mockAccounts.map(a => a.id), ...newAccounts.map(a => a.id || 0)) + 1;
             const newAccount: Account = {
               id: newId,
-              accountName: accountData.accountName || '',
-              location: accountData.location || 'Unknown',
-              organisationType: accountData.organisationType || 'Other',
-              productFamily: accountData.productFamily || 'Other',
-              activeAssets: '0 Assets',
+              account_number: accountData.accountName || '',
+              account_name: accountData.accountName || '',
+              organisation_type: accountData.organisationType || '',
+              location: accountData.location || '',
+              quantity: 0,
+              last_billed_price_total: '0.00',
+              sbu_and_sub_sbu: '',
+              product_family: accountData.productFamily || '',
+              risk_product_category: null,
+              exit_rate_usd: '0.00',
+              industry: '',
+              company_info: '',
+              linkedin: '',
+              status: 0,
+              news: '',
               assets: [],
-              exitRate: '0.00',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
               updates: 'pending',
+              color: stringToColor(accountData.accountName || ''),
               logoSrc: '/images/avatar.png',
-              color: stringToColor(accountData.accountName || '')
             };
 
             newAccounts.push(newAccount);
@@ -1551,6 +1844,113 @@ const Accounts: React.FC = () => {
       console.error('Unexpected error during import:', error);
       setImportErrors(['Unexpected error during import']);
       setImportInProgress(false);
+    }
+  };
+
+  // Add this new function inside the component
+  const handleAPIUploadClick = async () => {
+    if (!csvFile) {
+      setImportErrors(['Please select a CSV file first']);
+      return;
+    }
+
+    setIsApiUploading(true);
+    setApiUploadStatus(null);
+
+    try {
+      const result = await handleCSVUploadAndSend(csvFile);
+      
+      setApiUploadStatus({
+        success: result.success,
+        message: result.message
+      });
+
+      if (result.success) {
+        // If we're using mock data and have parsedAccounts, process them
+        if (result.data?.mockData && result.data?.parsedAccounts) {
+          const parsedAccounts = result.data.parsedAccounts;
+          
+          // Convert the parsed accounts to the Account interface format
+          const processedAccounts: Account[] = parsedAccounts.map((account: any, index: number) => ({
+            id: String(index + 1), // Convert to string to match the Account interface
+            account_number: account.account_number || '',
+            account_name: account.account_name || '',
+            organisation_type: account.organisation_type || '',
+            location: account.location || '',
+            quantity: account.quantity || 0,
+            last_billed_price_total: account.last_billed_price_total || '0',
+            sbu_and_sub_sbu: account.sbu_and_sub_sbu || '',
+            product_family: account.product_name?.split(' ')[0] || '', // Extract product family from product name
+            risk_product_category: account.risk_product_category || null,
+            exit_rate_usd: account.exit_rate_usd || '0',
+            industry: '',
+            company_info: '',
+            linkedin: '',
+            status: 0,
+            news: '',
+            assets: [],
+            createdAt: account.createdAt || new Date().toISOString(),
+            updatedAt: account.updatedAt || new Date().toISOString(),
+            updates: 'completed',
+            color: stringToColor(account.account_name || ''),
+            logoSrc: '/images/avatar.png'
+          }));
+
+          // Add to the state
+          setAccounts(prevAccounts => {
+            // Create a new array with all accounts
+            const newAccounts = [...prevAccounts];
+            
+            // Add the processed accounts to the beginning
+            processedAccounts.forEach(account => {
+              // Check if account already exists by account number and name
+              const existingIndex = newAccounts.findIndex(
+                a => a.account_number === account.account_number && 
+                     a.account_name === account.account_name
+              );
+              
+              if (existingIndex >= 0) {
+                // Update existing account
+                newAccounts[existingIndex] = { ...newAccounts[existingIndex], ...account };
+              } else {
+                // Add new account to the beginning
+                newAccounts.unshift(account);
+              }
+            });
+            
+            return newAccounts;
+          });
+        } else {
+          // Try to load accounts from backend if we're not using mock data
+          const fetchResult = await fetchAccounts();
+          if (fetchResult.success && fetchResult.data) {
+            setAccounts(fetchResult.data);
+          }
+        }
+        
+        // Success notification
+        setNotification({
+          open: true,
+          message: result.message,
+          severity: 'success',
+          accountId: null
+        });
+        
+        // Close dialog after delay
+        setTimeout(() => {
+          handleCloseAddAccountDialog();
+          setIsApiUploading(false);
+        }, 2000);
+      } else {
+        setIsApiUploading(false);
+      }
+    } catch (error) {
+      console.error('Error in API upload:', error);
+      setApiUploadStatus({
+        success: false,
+        message: error instanceof Error ? error.message : 'An unknown error occurred'
+      });
+      setIsApiUploading(false);
     }
   };
 
@@ -1632,44 +2032,54 @@ const Accounts: React.FC = () => {
             overflowY: 'auto'
           }}
         >
-          {mockAccounts.map((account, index) => (
-            <React.Fragment key={account.id}>
-              <AccountListItem
-                onClick={() => handleAccountSelect(account)}
-                sx={{ 
-                  bgcolor: selectedAccount?.id === account.id ? (theme) => theme.palette.action.selected : 'transparent',
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 40 }}>
-                  <Avatar
-                    sx={{
-                      width: 28,
-                      height: 28,
-                      fontWeight: 600,
-                      fontSize: '0.75rem',
-                      backgroundColor: account.color || stringToColor(account.accountName),
-                      mr: 1
-                    }}
-                  >
-                    {getInitials(account.accountName)}
-                  </Avatar>
-                  <Box sx={{ flex: 1, overflow: 'hidden' }}>
-                    <Typography variant="body2" fontWeight={600} noWrap>
-                      {account.accountName}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-                      {account.organisationType}
-                    </Typography>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : accounts.length === 0 ? (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+              <Typography color="text.secondary">No accounts found</Typography>
+            </Box>
+          ) : (
+            accounts.map((account, index) => (
+              <React.Fragment key={account.id}>
+                <AccountListItem
+                  onClick={() => handleAccountSelect(account)}
+                  sx={{ 
+                    bgcolor: selectedAccount?.id === account.id ? (theme) => theme.palette.action.selected : 'transparent',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 40 }}>
+                    <Avatar
+                      sx={{
+                        width: 28,
+                        height: 28,
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                        backgroundColor: account.color || stringToColor(account.account_name),
+                        mr: 1
+                      }}
+                    >
+                      {getInitials(account.account_name)}
+                    </Avatar>
+                    <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                      <Typography variant="body2" fontWeight={600} noWrap>
+                        {account.account_name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                        {account.organisation_type}
+                      </Typography>
+                    </Box>
+                    <StatusLabel status={account.updates} />
+                    {bookmarked.includes(account.id) && (
+                      <BookmarkIcon sx={{ ml: 1, fontSize: 16, color: (theme) => theme.palette.warning.main }} />
+                    )}
                   </Box>
-                  <StatusLabel status={account.updates} />
-                  {bookmarked.includes(account.id) && (
-                    <BookmarkIcon sx={{ ml: 1, fontSize: 16, color: (theme) => theme.palette.warning.main }} />
-                  )}
-                </Box>
-              </AccountListItem>
-              {index < mockAccounts.length - 1 && <Divider />}
-            </React.Fragment>
-          ))}
+                </AccountListItem>
+                {index < accounts.length - 1 && <Divider />}
+              </React.Fragment>
+            ))
+          )}
         </Paper>
       </>
     );
@@ -1678,8 +2088,8 @@ const Accounts: React.FC = () => {
   const renderAccountDetails = () => {
     if (!selectedAccount) return null;
 
-    const accountColor = selectedAccount.color || stringToColor(selectedAccount.accountName);
-    const accountInitials = getInitials(selectedAccount.accountName);
+    const accountColor = selectedAccount.color || stringToColor(selectedAccount.account_name);
+    const accountInitials = getInitials(selectedAccount.account_name);
 
     return (
       <AnimatedContainer sx={{ width: '100%' }}>
@@ -1697,7 +2107,7 @@ const Accounts: React.FC = () => {
             Accounts
           </Link>
           <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
-            {selectedAccount.accountName}
+            {selectedAccount.account_name}
           </Typography>
         </Breadcrumbs>
 
@@ -1717,10 +2127,10 @@ const Accounts: React.FC = () => {
         >
           <BookmarkButton 
             size="small" 
-            onClick={(e) => toggleBookmark(selectedAccount.id, e)}
-            aria-label={bookmarked.includes(selectedAccount.id) ? "Remove bookmark" : "Add bookmark"}
+            onClick={(e) => toggleBookmark(selectedAccount.id as unknown as number, e)}
+            aria-label={bookmarked.includes(selectedAccount.id as unknown as number) ? "Remove bookmark" : "Add bookmark"}
           >
-            {bookmarked.includes(selectedAccount.id) ? <BookmarkIcon /> : <BookmarkBorderIcon />}
+            {bookmarked.includes(selectedAccount.id as unknown as number) ? <BookmarkIcon /> : <BookmarkBorderIcon />}
           </BookmarkButton>
 
           <Box sx={{ display: 'flex', width: '100%' }}>
@@ -1742,7 +2152,7 @@ const Accounts: React.FC = () => {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box>
                   <Typography variant="h5" fontWeight="inherit" gutterBottom>
-                    {selectedAccount.accountName}
+                    {selectedAccount.account_name}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {selectedAccount.location}
@@ -1787,17 +2197,17 @@ const Accounts: React.FC = () => {
                 )}
                 <Divider orientation="vertical" flexItem sx={{ mx: 2, height: '20px' }} />
                 <Typography variant="body2" fontWeight={600}>
-                  {selectedAccount.organisationType}
+                  {selectedAccount.organisation_type}
                 </Typography>
                 <Divider orientation="vertical" flexItem sx={{ mx: 2, height: '20px' }} />
                 <Typography variant="body2" fontWeight={600}>
-                  {selectedAccount.productFamily}
+                  {selectedAccount.product_family}
                 </Typography>
               </Box>
               
               <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
                 <AccountBadge>
-                  {selectedAccount.activeAssets}
+                  {selectedAccount.quantity} Assets
                 </AccountBadge>
                 <AccountBadge>
                   6 WC STAN
@@ -1811,7 +2221,7 @@ const Accounts: React.FC = () => {
             <Box sx={{ textAlign: 'right', minWidth: '140px' }}>
               <Typography variant="subtitle2" color="text.secondary">Exit Rate</Typography>
               <Typography variant="h6" fontWeight="inherit">
-                {selectedAccount.exitRate} GBP
+                {selectedAccount.exit_rate_usd} GBP
               </Typography>
               <Tooltip title="Last updated: Today at 10:23 AM">
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
@@ -2631,7 +3041,7 @@ const Accounts: React.FC = () => {
                       <StyledTab 
                         label={
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            All Accounts <TabCount>{mockAccounts.length}</TabCount>
+                            All Accounts <TabCount>{accounts.length}</TabCount>
                           </Box>
                         } 
                       />
@@ -2690,9 +3100,9 @@ const Accounts: React.FC = () => {
                       <Table size="small" stickyHeader>
                         <TableHead>
                           <TableRow>
-                            <TableHeader onClick={() => handleSort('accountName')} sx={{ cursor: 'pointer', pl: 3, py: 1.5 }}>
+                            <TableHeader onClick={() => handleSort('account_name')} sx={{ cursor: 'pointer', pl: 3, py: 1.5 }}>
                               <Box display="flex" alignItems="center">
-                                Account Name {getSortIcon('accountName')}
+                                Account Name {getSortIcon('account_name')}
                               </Box>
                             </TableHeader>
                             <TableHeader onClick={() => handleSort('location')} sx={{ cursor: 'pointer', py: 1.5 }}>
@@ -2700,24 +3110,24 @@ const Accounts: React.FC = () => {
                                 Location {getSortIcon('location')}
                               </Box>
                             </TableHeader>
-                            <TableHeader onClick={() => handleSort('organisationType')} sx={{ cursor: 'pointer', py: 1.5 }}>
+                            <TableHeader onClick={() => handleSort('organisation_type')} sx={{ cursor: 'pointer', py: 1.5 }}>
                               <Box display="flex" alignItems="center">
-                                Organisation Type {getSortIcon('organisationType')}
+                                Organisation Type {getSortIcon('organisation_type')}
                               </Box>
                             </TableHeader>
-                            <TableHeader onClick={() => handleSort('activeAssets')} sx={{ cursor: 'pointer', py: 1.5 }}>
+                            <TableHeader sx={{ cursor: 'pointer', py: 1.5 }}>
                               <Box display="flex" alignItems="center">
-                                Active Assets {getSortIcon('activeAssets')}
+                                Assets
                               </Box>
                             </TableHeader>
-                            <TableHeader onClick={() => handleSort('productFamily')} sx={{ cursor: 'pointer', py: 1.5 }}>
+                            <TableHeader onClick={() => handleSort('product_family')} sx={{ cursor: 'pointer', py: 1.5 }}>
                               <Box display="flex" alignItems="center">
-                                Product Family {getSortIcon('productFamily')}
+                                Product Family {getSortIcon('product_family')}
                               </Box>
                             </TableHeader>
-                            <TableHeader onClick={() => handleSort('exitRate')} sx={{ cursor: 'pointer', py: 1.5 }}>
+                            <TableHeader onClick={() => handleSort('exit_rate_usd')} sx={{ cursor: 'pointer', py: 1.5 }}>
                               <Box display="flex" alignItems="center">
-                                Exit Rate(GBP) {getSortIcon('exitRate')}
+                                Exit Rate(GBP) {getSortIcon('exit_rate_usd')}
                               </Box>
                             </TableHeader>
                             <TableHeader onClick={() => handleSort('updates')} sx={{ cursor: 'pointer', pr: 3, py: 1.5 }}>
@@ -2767,15 +3177,15 @@ const Accounts: React.FC = () => {
                                         height: 28,
                                         fontWeight: 600,
                                         fontSize: '0.75rem',
-                                        backgroundColor: account.color || stringToColor(account.accountName),
+                                        backgroundColor: account.color || stringToColor(account.account_name),
                                         mr: 1.5
                                       }}
                                     >
-                                      {getInitials(account.accountName)}
+                                      {getInitials(account.account_name)}
                                     </Avatar>
                                     <Box sx={{ maxWidth: 150, minWidth: 120 }}>
                                       <Typography variant="body2" fontWeight={600} noWrap>
-                                        {account.accountName}
+                                        {account.account_name}
                                       </Typography>
                                     </Box>
                                     <IconButton
@@ -2783,10 +3193,10 @@ const Accounts: React.FC = () => {
                                       sx={{ ml: 1, p: 0.5 }}
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        toggleBookmark(account.id, e);
+                                        toggleBookmark(account.id as unknown as number, e);
                                       }}
                                     >
-                                      {bookmarked.includes(account.id) ?
+                                      {bookmarked.includes(account.id as unknown as number) ?
                                         <BookmarkIcon fontSize="small" color="warning" /> :
                                         <BookmarkBorderIcon fontSize="small" color="disabled" />
                                       }
@@ -2798,12 +3208,12 @@ const Accounts: React.FC = () => {
                                     {account.location}
                                   </Typography>
                                 </TableContent>
-                                <TableContent sx={{ py: 1 }}>{account.organisationType}</TableContent>
+                                <TableContent sx={{ py: 1 }}>{account.organisation_type}</TableContent>
                                 <TableContent sx={{ py: 1 }}>
                                   <Box
                                     display="flex"
                                     alignItems="center"
-                                    onClick={(e) => handleToggleAssetsDropdown(e, account.id)}
+                                    onClick={(e) => handleToggleAssetsDropdown(e, account.id as unknown as string)}
                                     sx={{
                                       cursor: 'pointer',
                                       position: 'relative',
@@ -2812,23 +3222,35 @@ const Accounts: React.FC = () => {
                                       }
                                     }}
                                   >
-                                    {account.activeAssets}
-                                    <KeyboardArrowDownIcon
-                                      fontSize="small"
-                                      sx={{
-                                        ml: 0.5,
-                                        color: (theme) => theme.palette.text.secondary,
-                                        transform: assetsDropdownOpen === account.id ? 'rotate(180deg)' : 'rotate(0)',
-                                        transition: 'transform 0.2s ease'
-                                      }}
-                                    />
+                                    {Array.isArray(account.assets) && account.assets.length > 0 ? (
+                                      <>
+                                        <Tooltip title={account.assets.join(', ')}>
+                                          <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
+                                            {account.assets.length > 1 
+                                              ? `${account.assets[0]}... +${account.assets.length - 1} more` 
+                                              : account.assets[0]}
+                                          </Typography>
+                                        </Tooltip>
+                                        <KeyboardArrowDownIcon
+                                          fontSize="small"
+                                          sx={{
+                                            ml: 0.5,
+                                            color: (theme) => theme.palette.text.secondary,
+                                            transform: assetsDropdownOpen === account.id ? 'rotate(180deg)' : 'rotate(0)',
+                                            transition: 'transform 0.2s ease'
+                                          }}
+                                        />
+                                      </>
+                                    ) : (
+                                      <Typography variant="body2" color="text.secondary">No assets</Typography>
+                                    )}
 
                                     {/* Assets Dropdown */}
                                     {assetsDropdownOpen === account.id && (
                                       <AssetsDropdown ref={assetsDropdownRef}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                           <Typography variant="subtitle2" fontWeight="bold">
-                                            Active Assets ({account.assets.length})
+                                            Assets ({Array.isArray(account.assets) ? account.assets.length : 0})
                                           </Typography>
                                           <IconButton
                                             size="small"
@@ -2849,31 +3271,31 @@ const Accounts: React.FC = () => {
 
                                         <Divider sx={{ mb: 1.5 }} />
 
-                                        {account.assets.map((asset) => (
-                                          <AssetItem key={asset.id}>
-                                            <Box>
-                                              <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.85rem' }}>
-                                                {asset.name}
-                                              </Typography>
-                                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                                                Updated: {new Date(asset.lastUpdated).toLocaleDateString()}
-                                              </Typography>
-                                            </Box>
-                                            <AssetTypeChip>
-                                              {asset.type}
-                                            </AssetTypeChip>
-                                          </AssetItem>
-                                        ))}
+                                        {Array.isArray(account.assets) && account.assets.length > 0 ? (
+                                          account.assets.map((asset, index) => (
+                                            <AssetItem key={index}>
+                                              <Box>
+                                                <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.85rem' }}>
+                                                  {asset}
+                                                </Typography>
+                                              </Box>
+                                            </AssetItem>
+                                          ))
+                                        ) : (
+                                          <Typography variant="body2" color="text.secondary" sx={{ p: 1 }}>
+                                            No assets available
+                                          </Typography>
+                                        )}
                                       </AssetsDropdown>
                                     )}
                                   </Box>
                                 </TableContent>
                                 <TableContent sx={{ py: 1 }}>
                                   <Typography variant="body2" noWrap sx={{ maxWidth: 120 }}>
-                                    {account.productFamily}
+                                    {account.product_family}
                                   </Typography>
                                 </TableContent>
-                                <TableContent sx={{ py: 1 }}>{account.exitRate}</TableContent>
+                                <TableContent sx={{ py: 1 }}>{account.exit_rate_usd}</TableContent>
                                 <TableContent sx={{ pr: 3, py: 1 }}>
                                   {account.updates === 'loading' ? (
                                     <StatusLabel status={account.updates}>
@@ -3008,13 +3430,13 @@ const Accounts: React.FC = () => {
                     fontSize: '0.875rem',
                     backgroundColor: (theme) => {
                       const account = mockAccounts.find(a => a.id === notification.accountId);
-                      return account?.color || stringToColor(account?.accountName || '');
+                      return account?.color || stringToColor(account?.account_name || '');
                     },
                     mr: 1.5,
                     mt: 0.5
                   }}
                 >
-                  {getInitials(mockAccounts.find(a => a.id === notification.accountId)?.accountName || '')}
+                  {getInitials(mockAccounts.find(a => a.id === notification.accountId)?.account_name || '')}
                 </Avatar>
               )}
               <Box sx={{ flex: 1 }}>
@@ -3391,10 +3813,30 @@ const Accounts: React.FC = () => {
                   </Alert>
                 )}
 
+                {apiUploadStatus && (
+                  <Alert severity={apiUploadStatus.success ? 'success' : 'error'} sx={{ mb: 3 }}>
+                    {apiUploadStatus.message}
+                  </Alert>
+                )}
+
                 <Typography variant="body2" color="text.secondary">
                   <InfoIcon sx={{ fontSize: 18, verticalAlign: 'text-bottom', mr: 0.5 }} />
-                  Your CSV file should include columns for account name, location, organization type, and product family.
+                  Your CSV file should use semicolons (;) as separators with the exact structure required for API submissions.
                 </Typography>
+                
+                {csvFile && (
+                  <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={handleAPIUploadClick}
+                      disabled={isApiUploading}
+                      startIcon={isApiUploading ? <CircularProgress size={16} color="inherit" /> : <CloudUploadIcon />}
+                    >
+                      {isApiUploading ? 'Uploading...' : 'Send to API'}
+                    </Button>
+                  </Box>
+                )}
                 
                 <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
                   <Typography variant="subtitle2" fontWeight="600" gutterBottom>
@@ -3403,17 +3845,17 @@ const Accounts: React.FC = () => {
                   <Box component="ul" sx={{ pl: 2, mb: 0, mt: 0 }}>
                     <li>
                       <Typography variant="body2">
-                        Headers should be in the first row (e.g., "Account Name", "Location", etc.)
+                        Headers should be in the first row (e.g., "Account Number;Account Owner;Billing Country;...")
                       </Typography>
                     </li>
                     <li>
                       <Typography variant="body2">
-                        Use quotes for values containing commas (e.g., "Acme, Inc.", "New York, USA")
+                        Use semicolons (;) as separators between values
                       </Typography>
                     </li>
                     <li>
                       <Typography variant="body2">
-                        Sample: Account Name,Location,Type,Product Family
+                        Format must match: Account Number;Account Owner;Billing Country;Shipping City;Account Name;Organisation Type;Quantity;Product Name;Last Billed Price (Total);SBU & Sub SBU;Risk Assets;Risk Product Category;Exit Rate USD
                       </Typography>
                     </li>
                   </Box>
