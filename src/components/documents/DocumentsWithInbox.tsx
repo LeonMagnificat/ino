@@ -26,10 +26,9 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  ListItemAvatar,
   Switch,
-  FormControlLabel,
-  Snackbar,
-  Alert
+  FormControlLabel
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useTheme } from '../../context/ThemeContext';
@@ -57,7 +56,8 @@ import {
   AutoAwesomeIcon,
   ContentCopyIcon,
   EditIcon,
-  DeleteIcon
+  DeleteIcon,
+  CloseIcon
 } from '../icons/LucideIcons';
 
 // Create motion variants for animations
@@ -237,7 +237,7 @@ interface Campaign {
   };
 }
 
-const Documents = () => {
+const DocumentsWithInbox = () => {
   const { mode } = useTheme();
   const [tabValue, setTabValue] = useState<number>(0);
   const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
@@ -246,57 +246,13 @@ const Documents = () => {
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editedContent, setEditedContent] = useState<string>('');
-
+  
   // Campaign inbox state
   const [campaignFilter, setCampaignFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [hasNewNotification, setHasNewNotification] = useState<boolean>(true);
-
-  // Templates state
-  const [savedTemplates, setSavedTemplates] = useState<Campaign[]>([]);
-  const [showSaveSuccess, setShowSaveSuccess] = useState<boolean>(false);
-
+  
   // Sample data for AI-suggested campaigns
   const [campaigns, setCampaigns] = useState<Campaign[]>([
-    {
-      id: 8,
-      title: 'AI-Powered Sales Strategy for SaaS',
-      description: 'Comprehensive sales strategy for SaaS products leveraging AI insights.',
-      image: 'https://images.unsplash.com/photo-1661956602116-aa6865609028?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
-      clientGroup: 'SaaS',
-      solution: 'Sales Strategy',
-      type: 'meeting',
-      status: 'active',
-      progress: 100,
-      engagement: 95,
-      createdAt: '2023-11-15',
-      aiGenerated: true,
-      isRead: false,
-      content: `# AI-Powered Sales Strategy for SaaS Companies\n\n## Executive Summary\nThis strategy leverages AI analysis of market trends and customer behavior to optimize the sales process for SaaS products, resulting in a projected 35% increase in conversion rates and 28% reduction in sales cycle length.\n\n## Key Components\n\n1. **AI-Driven Lead Scoring**\n   - Implement machine learning algorithms to analyze prospect behavior\n   - Score leads based on engagement patterns, company profile, and digital footprint\n   - Prioritize outreach to leads with >80% likelihood of conversion\n\n2. **Personalized Outreach Automation**\n   - Deploy NLP to analyze prospect communications and online presence\n   - Generate customized messaging highlighting specific pain points\n   - A/B test messaging variations with automated optimization\n\n3. **Predictive Sales Forecasting**\n   - Utilize time-series analysis to predict quarterly performance\n   - Identify potential pipeline gaps before they impact revenue\n   - Recommend resource allocation adjustments in real-time\n\n4. **Competitive Intelligence Dashboard**\n   - Monitor competitor pricing, feature releases, and market positioning\n   - Alert sales team to competitive threats and opportunities\n   - Provide AI-generated battle cards for common competitive scenarios\n\n## Implementation Timeline\n- Phase 1 (Weeks 1-2): Data integration and system setup\n- Phase 2 (Weeks 3-4): Model training and validation\n- Phase 3 (Weeks 5-6): Team training and pilot program\n- Phase 4 (Weeks 7-8): Full deployment and optimization`,
-      owner: {
-        name: 'Jordan Rivera',
-        avatar: 'https://randomuser.me/api/portraits/men/42.jpg'
-      }
-    },
-    {
-      id: 7,
-      title: 'Customer Success Playbook for Tech Startups',
-      description: 'Strategic playbook for building and scaling customer success operations.',
-      image: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
-      clientGroup: 'Tech Startups',
-      solution: 'Customer Success',
-      type: 'email',
-      status: 'active',
-      progress: 100,
-      engagement: 91,
-      createdAt: '2023-11-12',
-      aiGenerated: true,
-      isRead: false,
-      content: `Subject: Building a Scalable Customer Success Function - Strategic Playbook\n\nDear [Client Name],\n\nFollowing our discussion about establishing a customer success function at [Company Name], I've prepared this strategic playbook to guide your team through the process.\n\n**CUSTOMER SUCCESS PLAYBOOK: FROM STARTUP TO SCALE**\n\n**1. Foundation (Month 1)**\n- Define success metrics for different customer segments\n- Establish health score methodology using product usage, NPS, and support interactions\n- Create customer journey maps with key touchpoints and ownership\n- Implement a dedicated CS platform integrated with your CRM\n\n**2. Early Operations (Months 2-3)**\n- Develop proactive outreach cadences based on health scores\n- Create standardized onboarding processes with clear milestones\n- Build knowledge base and self-service resources\n- Establish QBR (Quarterly Business Review) templates\n\n**3. Growth Phase (Months 4-6)**\n- Implement automated customer health monitoring\n- Develop expansion playbooks for cross-sell/upsell opportunities\n- Create customer advocacy program to generate referrals\n- Establish voice-of-customer feedback loops to product teams\n\n**4. Scaling (Months 7-12)**\n- Segment customers for tiered service models\n- Develop specialized CS roles (Onboarding, Technical CS, Strategic CS)\n- Implement predictive churn models\n- Create customer success operations function\n\nI've attached detailed implementation guides for each phase. Would you like to schedule a workshop next week to customize this playbook for your specific needs?\n\nBest regards,\n[Your Name]`,
-      owner: {
-        name: 'Taylor Wong',
-        avatar: 'https://randomuser.me/api/portraits/women/28.jpg'
-      }
-    },
     {
       id: 1,
       title: 'Cloud Migration Email for Enterprise',
@@ -423,12 +379,12 @@ const Documents = () => {
   const handleCampaignSelect = (campaignId: number) => {
     setSelectedCampaignId(campaignId);
     setIsEditing(false);
-
+    
     // Mark the campaign as read
-    setCampaigns(prevCampaigns =>
-      prevCampaigns.map(campaign =>
-        campaign.id === campaignId
-          ? { ...campaign, isRead: true }
+    setCampaigns(prevCampaigns => 
+      prevCampaigns.map(campaign => 
+        campaign.id === campaignId 
+          ? { ...campaign, isRead: true } 
           : campaign
       )
     );
@@ -461,68 +417,10 @@ const Documents = () => {
         avatar: 'https://randomuser.me/api/portraits/lego/1.jpg'
       }
     };
-
+    
     setCampaigns(prevCampaigns => [newCampaign, ...prevCampaigns]);
     setHasNewNotification(true);
   };
-
-  // Function to save a template to the templates page
-  const handleSaveTemplate = (campaign: Campaign) => {
-    // Create a copy of the campaign with a new ID to avoid duplicates
-    const templateToSave = {
-      ...campaign,
-      id: Date.now(),
-      isRead: true, // Mark as read since it's now saved
-      createdAt: new Date().toISOString().split('T')[0], // Update creation date to today
-    };
-
-    // Add to saved templates
-    setSavedTemplates(prevTemplates => [templateToSave, ...prevTemplates]);
-
-    // Show success message
-    setShowSaveSuccess(true);
-
-    // Hide success message after 3 seconds
-    setTimeout(() => {
-      setShowSaveSuccess(false);
-    }, 3000);
-  };
-      solution: 'Analytics',
-      type: 'call',
-      status: 'active',
-      progress: 100,
-      engagement: 81,
-      createdAt: '2023-11-08',
-      aiGenerated: true,
-      content: `1. Introduction:\n"Hello [Name], I'm calling regarding the healthcare analytics challenges we discussed at [Previous Interaction]. Has your organization made any progress in addressing patient outcome predictions and resource optimization?"\n\n2. Industry Context:\n"Many healthcare providers are struggling with the increasing demands for data-driven care while maintaining HIPAA compliance. Is this something your team is experiencing?"\n\n3. Pain Point Exploration:\n"Are you currently able to predict patient readmissions effectively? How about optimizing staff scheduling based on predicted patient volumes?"\n\n4. Solution Overview:\n"Our healthcare analytics platform combines clinical data with operational metrics to provide actionable insights while maintaining strict HIPAA compliance."\n\n5. Key Differentiators:\n"What makes our solution unique is its ability to integrate with all major EHR systems and provide predictive models specifically trained on healthcare data."\n\n6. Success Story:\n"We recently implemented this for [Similar Healthcare Provider], resulting in a 28% reduction in readmissions and 15% improvement in resource utilization."\n\n7. Call to Action:\n"I'd like to arrange a demonstration with your clinical and IT teams. Would next Wednesday work for a 30-minute session?"`,
-      owner: {
-        name: 'Sophia Williams',
-        avatar: 'https://randomuser.me/api/portraits/women/23.jpg'
-      }
-    },
-    {
-      id: 9,
-      title: 'Retail Digital Transformation Email',
-      description: 'Email template for retail businesses about digital transformation.',
-      image: 'https://images.unsplash.com/photo-1556742031-c6961e8560b0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
-      clientGroup: 'Retail',
-      solution: 'Digital Transformation',
-      type: 'email',
-      status: 'active',
-      progress: 100,
-      engagement: 79,
-      createdAt: '2023-10-30',
-      aiGenerated: true,
-      content: `Subject: Transforming [Retail Company] for the Digital-First Consumer\n\nDear [Decision Maker],\n\nAs consumer shopping behaviors continue to evolve rapidly, I wanted to share how our Retail Digital Transformation solution could help [Retail Company] adapt and thrive in this changing landscape.\n\nBased on our analysis of your current digital presence and the specific challenges you mentioned during our last conversation, we've identified several opportunities:\n\n• Unified omnichannel experience connecting your physical and online stores\n• AI-powered personalization increasing average order value by 26%\n• Inventory optimization reducing carrying costs by 31%\n• Streamlined checkout process decreasing cart abandonment by 42%\n\nRetailers similar to yours have seen an average ROI of 3.2x within the first 12 months of implementation.\n\nI've attached a brief case study of how we helped [Similar Retailer] achieve a 47% increase in digital revenue while maintaining their brand identity and customer loyalty.\n\nWould you be available for a 30-minute call next week to discuss how we could tailor this approach for [Retail Company]?\n\nBest regards,\n[Your Name]\n[Your Contact Information]`,
-      owner: {
-        name: 'Daniel Park',
-        avatar: 'https://randomuser.me/api/portraits/men/57.jpg'
-      }
-    }
-  ];
-
-  // Get the selected campaign
-  const selectedCampaign: Campaign | null = campaigns.find(c => c.id === selectedCampaignId) || null;
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -545,11 +443,6 @@ const Documents = () => {
     setMenuAnchorEl(null);
   };
 
-  const handleCampaignSelect = (campaignId: number) => {
-    setSelectedCampaignId(campaignId);
-    setIsEditing(false);
-  };
-
   const handleEditClick = () => {
     if (selectedCampaign) {
       setEditedContent(selectedCampaign.content);
@@ -568,20 +461,32 @@ const Documents = () => {
     setEditedContent('');
   };
 
-  // Filter campaigns based on tab and search query
+  // Filter campaigns based on tab, search query, and read/unread filter
   const filteredCampaigns: Campaign[] = campaigns.filter(campaign => {
+    // Filter by search query
     const matchesSearch = campaign.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          campaign.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          campaign.clientGroup.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          campaign.solution.toLowerCase().includes(searchQuery.toLowerCase());
 
-    if (tabValue === 0) return matchesSearch; // All types
-    if (tabValue === 1) return campaign.type === 'email' && matchesSearch; // Email templates
-    if (tabValue === 2) return campaign.type === 'call' && matchesSearch; // Call scripts
-    if (tabValue === 3) return campaign.type === 'meeting' && matchesSearch; // Meeting talking points
+    // Filter by tab (type)
+    const matchesTab = 
+      tabValue === 0 || // All types
+      (tabValue === 1 && campaign.type === 'email') || // Email templates
+      (tabValue === 2 && campaign.type === 'call') || // Call scripts
+      (tabValue === 3 && campaign.type === 'meeting'); // Meeting talking points
 
-    return matchesSearch;
+    // Filter by read/unread status
+    const matchesReadStatus = 
+      campaignFilter === 'all' || 
+      (campaignFilter === 'unread' && !campaign.isRead) || 
+      (campaignFilter === 'read' && campaign.isRead);
+
+    return matchesSearch && matchesTab && matchesReadStatus;
   });
+
+  // Get the selected campaign
+  const selectedCampaign: Campaign | null = campaigns.find(c => c.id === selectedCampaignId) || null;
 
   // Define TypeInfo interface
   interface TypeInfo {
@@ -625,6 +530,16 @@ const Documents = () => {
     }
   };
 
+  // Count unread campaigns
+  const unreadCount = campaigns.filter(c => !c.isRead).length;
+
+  // Clear notification when viewing campaigns
+  useEffect(() => {
+    if (selectedCampaignId) {
+      setHasNewNotification(false);
+    }
+  }, [selectedCampaignId]);
+
   return (
     <CampaignsContainer>
       {/* Header with title and actions */}
@@ -632,8 +547,21 @@ const Documents = () => {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="h5" fontWeight="bold">
-              AI-Suggested Campaigns
+              Campaign Inbox
             </Typography>
+            {unreadCount > 0 && (
+              <Chip
+                label={unreadCount}
+                size="small"
+                sx={{
+                  bgcolor: 'error.main',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  height: 20,
+                  minWidth: 20
+                }}
+              />
+            )}
             <Tooltip title="AI-powered suggestions">
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <SmartToyIcon size={24} color={mode === 'dark' ? '#ffffff' : '#000000'} />
@@ -641,27 +569,10 @@ const Documents = () => {
             </Tooltip>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={true}
-                  size="small"
-                  sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': {
-                      color: mode === 'dark' ? 'white' : 'black',
-                    },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                      backgroundColor: mode === 'dark' ? 'white' : 'black',
-                    }
-                  }}
-                />
-              }
-              label="Auto-generate"
-            />
             <Button
               variant="contained"
-              size="small"
               startIcon={<AutoAwesomeIcon size={18} color={mode === 'dark' ? '#000000' : '#ffffff'} />}
+              onClick={handleAddNewCampaign}
               sx={{
                 bgcolor: mode === 'dark' ? 'white' : 'black',
                 color: mode === 'dark' ? 'black' : 'white',
@@ -670,13 +581,13 @@ const Documents = () => {
                 }
               }}
             >
-              Generate New
+              Generate New Template
             </Button>
           </Box>
         </Box>
 
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Personalized email templates and talking points for your clients
+          Your AI-generated templates and talking points for client interactions
         </Typography>
 
         {/* Tabs for filtering */}
@@ -749,6 +660,60 @@ const Documents = () => {
             />
           </Box>
 
+          {/* Filter buttons */}
+          <Box sx={{ display: 'flex', p: 1, borderBottom: 1, borderColor: 'divider' }}>
+            <Button
+              variant={campaignFilter === 'all' ? 'contained' : 'outlined'}
+              size="small"
+              onClick={() => handleCampaignFilterChange('all')}
+              sx={{ 
+                mr: 1, 
+                textTransform: 'none',
+                bgcolor: campaignFilter === 'all' ? (mode === 'dark' ? 'white' : 'black') : 'transparent',
+                color: campaignFilter === 'all' ? (mode === 'dark' ? 'black' : 'white') : (mode === 'dark' ? 'white' : 'black'),
+                borderColor: mode === 'dark' ? 'white' : 'black',
+                '&:hover': {
+                  bgcolor: campaignFilter === 'all' ? (mode === 'dark' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)') : 'rgba(0, 0, 0, 0.04)'
+                }
+              }}
+            >
+              All
+            </Button>
+            <Button
+              variant={campaignFilter === 'unread' ? 'contained' : 'outlined'}
+              size="small"
+              onClick={() => handleCampaignFilterChange('unread')}
+              sx={{ 
+                mr: 1, 
+                textTransform: 'none',
+                bgcolor: campaignFilter === 'unread' ? (mode === 'dark' ? 'white' : 'black') : 'transparent',
+                color: campaignFilter === 'unread' ? (mode === 'dark' ? 'black' : 'white') : (mode === 'dark' ? 'white' : 'black'),
+                borderColor: mode === 'dark' ? 'white' : 'black',
+                '&:hover': {
+                  bgcolor: campaignFilter === 'unread' ? (mode === 'dark' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)') : 'rgba(0, 0, 0, 0.04)'
+                }
+              }}
+            >
+              Unread
+            </Button>
+            <Button
+              variant={campaignFilter === 'read' ? 'contained' : 'outlined'}
+              size="small"
+              onClick={() => handleCampaignFilterChange('read')}
+              sx={{ 
+                textTransform: 'none',
+                bgcolor: campaignFilter === 'read' ? (mode === 'dark' ? 'white' : 'black') : 'transparent',
+                color: campaignFilter === 'read' ? (mode === 'dark' ? 'black' : 'white') : (mode === 'dark' ? 'white' : 'black'),
+                borderColor: mode === 'dark' ? 'white' : 'black',
+                '&:hover': {
+                  bgcolor: campaignFilter === 'read' ? (mode === 'dark' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)') : 'rgba(0, 0, 0, 0.04)'
+                }
+              }}
+            >
+              Read
+            </Button>
+          </Box>
+
           <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
             <List disablePadding>
               {filteredCampaigns.length === 0 ? (
@@ -761,68 +726,177 @@ const Documents = () => {
                   </Typography>
                 </Box>
               ) : (
-                filteredCampaigns.map((campaign) => {
-                  const typeInfo = getTypeInfo(campaign.type);
-                  const isSelected = campaign.id === selectedCampaignId;
-
-                  return (
-                    <ListItemStyled
-                      key={campaign.id}
-                      selected={isSelected}
-                      onClick={() => handleCampaignSelect(campaign.id)}
-                      sx={{
-                        cursor: 'pointer',
-                        py: 1.5,
-                      }}
-                    >
-                      <ListItemIcon sx={{ minWidth: 40 }}>
-                        {typeInfo.icon}
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={
-                          <Typography
-                            variant="body1"
-                            fontWeight={isSelected ? 'bold' : 'normal'}
-                            noWrap
-                          >
-                            {campaign.title}
-                          </Typography>
-                        }
-                        secondary={
-                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 0.5 }}>
-                            <Typography variant="caption" color="text.secondary" noWrap>
-                              {campaign.description}
-                            </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.5 }}>
-                              <TypeBadge
-                                label={campaign.clientGroup}
-                                type={campaign.type}
+                <>
+                  {/* Unread Campaigns Section */}
+                  {filteredCampaigns.filter(c => !c.isRead).length > 0 && 
+                   (campaignFilter === 'all' || campaignFilter === 'unread') && (
+                    <>
+                      <Box sx={{ 
+                        p: 1.5, 
+                        bgcolor: 'rgba(25, 118, 210, 0.05)', 
+                        borderBottom: (theme) => `1px solid ${theme.palette.divider}`
+                      }}>
+                        <Typography variant="caption" fontWeight="bold" color="primary">
+                          NEW ({filteredCampaigns.filter(c => !c.isRead).length})
+                        </Typography>
+                      </Box>
+                      {filteredCampaigns
+                        .filter(campaign => !campaign.isRead)
+                        .map(campaign => {
+                          const typeInfo = getTypeInfo(campaign.type);
+                          const isSelected = campaign.id === selectedCampaignId;
+                          
+                          return (
+                            <ListItemStyled
+                              key={campaign.id}
+                              selected={isSelected}
+                              onClick={() => handleCampaignSelect(campaign.id)}
+                              sx={{
+                                cursor: 'pointer',
+                                py: 1.5,
+                                bgcolor: 'rgba(25, 118, 210, 0.05)',
+                              }}
+                              variants={listItemVariants}
+                              initial="hidden"
+                              animate="visible"
+                              whileHover="hover"
+                              whileTap="tap"
+                            >
+                              <ListItemAvatar sx={{ minWidth: 40 }}>
+                                {typeInfo.icon}
+                              </ListItemAvatar>
+                              <ListItemText
+                                primary={
+                                  <Typography
+                                    variant="body1"
+                                    fontWeight="bold"
+                                    noWrap
+                                  >
+                                    {campaign.title}
+                                  </Typography>
+                                }
+                                secondary={
+                                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 0.5 }}>
+                                    <Typography variant="caption" color="text.secondary" noWrap>
+                                      {campaign.description}
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                      <TypeBadge
+                                        label={campaign.clientGroup}
+                                        type={campaign.type}
+                                      />
+                                      <Chip
+                                        label={campaign.solution}
+                                        size="small"
+                                        sx={{
+                                          height: 20,
+                                          fontSize: '0.7rem',
+                                          backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                                        }}
+                                      />
+                                    </Box>
+                                  </Box>
+                                }
                               />
-                              <Chip
-                                label={campaign.solution}
-                                size="small"
+                              <Box
                                 sx={{
-                                  height: 20,
-                                  fontSize: '0.7rem',
-                                  bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: '50%',
+                                  bgcolor: 'error.main',
+                                  ml: 1
                                 }}
                               />
-                            </Box>
-                          </Box>
-                        }
-                        secondaryTypographyProps={{ component: 'div' }}
-                      />
-                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', ml: 1 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          {new Date(campaign.createdAt).toLocaleDateString()}
+                            </ListItemStyled>
+                          );
+                        })}
+                    </>
+                  )}
+                  
+                  {/* Read Campaigns Section */}
+                  {filteredCampaigns.filter(c => c.isRead).length > 0 && 
+                   (campaignFilter === 'all' || campaignFilter === 'read') && (
+                    <>
+                      <Box sx={{ 
+                        p: 1.5, 
+                        bgcolor: 'rgba(0, 0, 0, 0.02)', 
+                        borderBottom: (theme) => `1px solid ${theme.palette.divider}`
+                      }}>
+                        <Typography variant="caption" fontWeight="bold" color="text.secondary">
+                          EARLIER ({filteredCampaigns.filter(c => c.isRead).length})
                         </Typography>
-                        {campaign.aiGenerated && (
-                          <SmartToyIcon size={14} color={mode === 'dark' ? '#aaaaaa' : '#666666'} />
-                        )}
                       </Box>
-                    </ListItemStyled>
-                  );
-                })
+                      {filteredCampaigns
+                        .filter(campaign => campaign.isRead)
+                        .map(campaign => {
+                          const typeInfo = getTypeInfo(campaign.type);
+                          const isSelected = campaign.id === selectedCampaignId;
+                          
+                          return (
+                            <ListItemStyled
+                              key={campaign.id}
+                              selected={isSelected}
+                              onClick={() => handleCampaignSelect(campaign.id)}
+                              sx={{
+                                cursor: 'pointer',
+                                py: 1.5,
+                              }}
+                              variants={listItemVariants}
+                              initial="hidden"
+                              animate="visible"
+                              whileHover="hover"
+                              whileTap="tap"
+                            >
+                              <ListItemAvatar sx={{ minWidth: 40 }}>
+                                {typeInfo.icon}
+                              </ListItemAvatar>
+                              <ListItemText
+                                primary={
+                                  <Typography
+                                    variant="body1"
+                                    noWrap
+                                  >
+                                    {campaign.title}
+                                  </Typography>
+                                }
+                                secondary={
+                                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 0.5 }}>
+                                    <Typography variant="caption" color="text.secondary" noWrap>
+                                      {campaign.description}
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                      <TypeBadge
+                                        label={campaign.clientGroup}
+                                        type={campaign.type}
+                                      />
+                                      <Chip
+                                        label={campaign.solution}
+                                        size="small"
+                                        sx={{
+                                          height: 20,
+                                          fontSize: '0.7rem',
+                                          backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                                        }}
+                                      />
+                                    </Box>
+                                  </Box>
+                                }
+                              />
+                            </ListItemStyled>
+                          );
+                        })}
+                    </>
+                  )}
+                  
+                  {/* No Results Message */}
+                  {filteredCampaigns.length === 0 && (
+                    <Box sx={{ p: 3, textAlign: 'center' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        No {campaignFilter} campaigns found.
+                      </Typography>
+                    </Box>
+                  )}
+                </>
               )}
             </List>
           </Box>
@@ -831,85 +905,104 @@ const Documents = () => {
         {/* Right side with campaign details */}
         <DetailContainer>
           {selectedCampaign ? (
-            <>
-              {/* Detail header */}
+            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              {/* Campaign header */}
               <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                   <Box>
                     <Typography variant="h5" fontWeight="bold" gutterBottom>
                       {selectedCampaign.title}
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                      <TypeBadge
-                        label={getTypeInfo(selectedCampaign.type).label}
-                        type={selectedCampaign.type}
-                      />
-                      {selectedCampaign.aiGenerated && (
-                        <Chip
-                          icon={<SmartToyIcon size={16} color={mode === 'dark' ? '#ffffff' : '#000000'} />}
-                          label="AI Generated"
-                          size="small"
-                          sx={{
-                            bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
-                            color: mode === 'dark' ? 'white' : 'black',
-                          }}
-                        />
-                      )}
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body1" color="text.secondary">
                       {selectedCampaign.description}
                     </Typography>
                   </Box>
-                  <Box>
-                    <IconButton onClick={(e) => handleMenuClick(e, selectedCampaign.id)}>
-                      <MoreVertIcon />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip 
+                      icon={<AutoAwesomeIcon size={16} color="#9b59b6" />}
+                      label="AI Generated" 
+                      size="small"
+                      sx={{ 
+                        backgroundColor: mode === 'dark' ? 'rgba(155, 89, 182, 0.2)' : 'rgba(155, 89, 182, 0.1)',
+                        color: '#9b59b6',
+                        fontWeight: 'bold'
+                      }} 
+                    />
+                    <IconButton
+                      onClick={(e) => handleMenuClick(e, selectedCampaign.id)}
+                    >
+                      <MoreVertIcon size={20} color={mode === 'dark' ? '#ffffff' : '#000000'} />
                     </IconButton>
                   </Box>
                 </Box>
-
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+                
+                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                  <TypeBadge 
+                    type={selectedCampaign.type} 
+                    label={getTypeInfo(selectedCampaign.type).label} 
+                    size="medium" 
+                  />
+                  <Chip 
+                    label={selectedCampaign.clientGroup} 
+                    size="medium"
+                    sx={{ 
+                      backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                    }} 
+                  />
+                  <Chip 
+                    label={selectedCampaign.solution} 
+                    size="medium"
+                    sx={{ 
+                      backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                    }} 
+                  />
+                </Box>
+                
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Box>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary">
                       Created on {new Date(selectedCampaign.createdAt).toLocaleDateString()}
                     </Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Chip
-                      label={selectedCampaign.clientGroup}
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Tooltip title="Engagement rate">
+                      <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+                        <TrendingUpIcon size={16} color="#2ecc71" />
+                        <Typography variant="body2" sx={{ ml: 0.5, color: '#2ecc71', fontWeight: 'bold' }}>
+                          {selectedCampaign.engagement}%
+                        </Typography>
+                      </Box>
+                    </Tooltip>
+                    <Chip 
+                      icon={<CheckCircleIcon fontSize="small" sx={{ color: '#2ecc71' }} />}
+                      label="Active" 
                       size="small"
-                      sx={{
-                        bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
-                      }}
-                    />
-                    <Chip
-                      label={selectedCampaign.solution}
-                      size="small"
-                      sx={{
-                        bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
-                      }}
+                      sx={{ 
+                        backgroundColor: mode === 'dark' ? 'rgba(46, 204, 113, 0.2)' : 'rgba(46, 204, 113, 0.1)',
+                        color: '#2ecc71',
+                        fontWeight: 'bold'
+                      }} 
                     />
                   </Box>
                 </Box>
               </Box>
 
-              {/* Detail content */}
+              {/* Campaign content */}
               <Box sx={{ p: 3, flexGrow: 1, overflow: 'auto' }}>
                 {isEditing ? (
-                  <Box sx={{ height: '100%' }}>
+                  <>
                     <TextField
-                      fullWidth
                       multiline
-                      variant="outlined"
+                      fullWidth
+                      minRows={20}
                       value={editedContent}
                       onChange={(e) => setEditedContent(e.target.value)}
+                      variant="outlined"
                       sx={{
-                        height: 'calc(100% - 50px)',
-                        '& .MuiInputBase-root': {
-                          height: '100%',
-                        },
-                        '& .MuiInputBase-input': {
-                          height: '100%',
-                          overflow: 'auto',
+                        '& .MuiOutlinedInput-root': {
+                          fontFamily: 'monospace',
+                          fontSize: '0.9rem',
+                          lineHeight: 1.6
                         }
                       }}
                     />
@@ -917,7 +1010,7 @@ const Documents = () => {
                       <Button
                         variant="outlined"
                         onClick={handleCancelEdit}
-                        sx={{
+                        sx={{ 
                           borderColor: mode === 'dark' ? 'white' : 'black',
                           color: mode === 'dark' ? 'white' : 'black',
                         }}
@@ -938,38 +1031,34 @@ const Documents = () => {
                         Save Changes
                       </Button>
                     </Box>
-                  </Box>
+                  </>
                 ) : (
                   <>
-                    <Box sx={{ mb: 2 }}>
-                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                        {getTypeInfo(selectedCampaign.type).previewLabel}:
+                    <Typography variant="h6" fontWeight="bold" gutterBottom>
+                      {getTypeInfo(selectedCampaign.type).previewLabel}
+                    </Typography>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 3,
+                        backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                        borderRadius: 2,
+                        fontFamily: 'monospace',
+                        fontSize: '0.9rem',
+                        lineHeight: 1.6,
+                        whiteSpace: 'pre-wrap'
+                      }}
+                    >
+                      <Typography variant="body2" component="div" sx={{ fontFamily: 'monospace' }}>
+                        {selectedCampaign.content}
                       </Typography>
-                      <Paper
-                        variant="outlined"
-                        sx={{
-                          p: 3,
-                          bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.01)',
-                        }}
-                      >
-                        <Typography
-                          variant="body1"
-                          sx={{
-                            whiteSpace: 'pre-line',
-                            color: mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)',
-                            lineHeight: 1.6
-                          }}
-                        >
-                          {selectedCampaign.content}
-                        </Typography>
-                      </Paper>
-                    </Box>
+                    </Paper>
 
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 3 }}>
                       <Button
                         variant="outlined"
-                        startIcon={<ContentCopyIcon size={18} color={mode === 'dark' ? '#ffffff' : '#000000'} />}
-                        sx={{
+                        startIcon={<ContentCopyIcon size={16} color={mode === 'dark' ? '#ffffff' : '#000000'} />}
+                        sx={{ 
                           borderColor: mode === 'dark' ? 'white' : 'black',
                           color: mode === 'dark' ? 'white' : 'black',
                         }}
@@ -978,33 +1067,18 @@ const Documents = () => {
                       </Button>
                       <Button
                         variant="outlined"
-                        startIcon={<ShareIcon size={18} color={mode === 'dark' ? '#ffffff' : '#000000'} />}
-                        sx={{
+                        startIcon={<EditIcon size={16} color={mode === 'dark' ? '#ffffff' : '#000000'} />}
+                        onClick={handleEditClick}
+                        sx={{ 
                           borderColor: mode === 'dark' ? 'white' : 'black',
                           color: mode === 'dark' ? 'white' : 'black',
                         }}
                       >
-                        Share
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        startIcon={<FavoriteIcon fontSize="small" sx={{ color: '#e74c3c' }} />}
-                        onClick={() => selectedCampaign && handleSaveTemplate(selectedCampaign)}
-                        sx={{
-                          borderColor: '#e74c3c',
-                          color: '#e74c3c',
-                          '&:hover': {
-                            borderColor: '#c0392b',
-                            backgroundColor: 'rgba(231, 76, 60, 0.08)',
-                          }
-                        }}
-                      >
-                        Save to Templates
+                        Edit
                       </Button>
                       <Button
                         variant="contained"
-                        startIcon={<EditIcon size={18} color={mode === 'dark' ? '#000000' : '#ffffff'} />}
-                        onClick={handleEditClick}
+                        startIcon={<EmailIcon size={16} color={mode === 'dark' ? '#000000' : '#ffffff'} />}
                         sx={{
                           bgcolor: mode === 'dark' ? 'white' : 'black',
                           color: mode === 'dark' ? 'black' : 'white',
@@ -1013,111 +1087,102 @@ const Documents = () => {
                           }
                         }}
                       >
-                        Edit
+                        Use Template
                       </Button>
                     </Box>
                   </>
                 )}
               </Box>
-            </>
+            </Box>
           ) : (
-            <Box sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              p: 3
-            }}>
-              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                <SmartToyIcon size={60} color={mode === 'dark' ? '#aaaaaa' : '#666666'} />
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+              <Box sx={{ textAlign: 'center', p: 3 }}>
+                <EmailIcon size={60} color={mode === 'dark' ? '#aaaaaa' : '#666666'} />
+                <Typography variant="h6" color="text.secondary" sx={{ mt: 2 }}>
+                  Select a campaign to view
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  Your AI-generated templates will appear here
+                </Typography>
               </Box>
-              <Typography variant="h6" gutterBottom>
-                Select a campaign
-              </Typography>
-              <Typography variant="body2" color="text.secondary" align="center" sx={{ maxWidth: 400, mb: 3 }}>
-                Choose an AI-suggested campaign from the list to view and edit its content
-              </Typography>
             </Box>
           )}
         </DetailContainer>
       </InboxContainer>
 
-      {/* Campaign action menu */}
+      {/* Filter menu */}
+      <Menu
+        anchorEl={filterAnchorEl}
+        open={Boolean(filterAnchorEl)}
+        onClose={handleFilterClose}
+        PaperProps={{
+          sx: {
+            mt: 1,
+            width: 200,
+            boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)',
+            borderRadius: 2
+          }
+        }}
+      >
+        <MenuItem onClick={handleFilterClose}>
+          <Typography variant="body2">All Campaigns</Typography>
+        </MenuItem>
+        <MenuItem onClick={handleFilterClose}>
+          <Typography variant="body2">Recent First</Typography>
+        </MenuItem>
+        <MenuItem onClick={handleFilterClose}>
+          <Typography variant="body2">Oldest First</Typography>
+        </MenuItem>
+        <MenuItem onClick={handleFilterClose}>
+          <Typography variant="body2">Highest Engagement</Typography>
+        </MenuItem>
+      </Menu>
+
+      {/* Campaign actions menu */}
       <Menu
         anchorEl={menuAnchorEl}
         open={Boolean(menuAnchorEl)}
         onClose={handleMenuClose}
+        PaperProps={{
+          sx: {
+            mt: 1,
+            width: 200,
+            boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)',
+            borderRadius: 2
+          }
+        }}
       >
         <MenuItem onClick={handleMenuClose}>
           <ListItemIcon>
-            <ContentCopyIcon size={18} color="#666666" />
+            <ContentCopyIcon size={18} color={mode === 'dark' ? '#ffffff' : '#000000'} />
           </ListItemIcon>
-          <ListItemText>Copy to Clipboard</ListItemText>
+          <Typography variant="body2">Copy</Typography>
         </MenuItem>
-        <MenuItem onClick={handleEditClick}>
+        <MenuItem onClick={() => {
+          handleEditClick();
+          handleMenuClose();
+        }}>
           <ListItemIcon>
-            <EditIcon size={18} color="#666666" />
+            <EditIcon size={18} color={mode === 'dark' ? '#ffffff' : '#000000'} />
           </ListItemIcon>
-          <ListItemText>Edit Template</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
-          <ListItemIcon>
-            <AutoAwesomeIcon size={18} color="#666666" />
-          </ListItemIcon>
-          <ListItemText>Regenerate</ListItemText>
+          <Typography variant="body2">Edit</Typography>
         </MenuItem>
         <MenuItem onClick={handleMenuClose}>
           <ListItemIcon>
-            <ShareIcon size={18} color="#666666" />
+            <ShareIcon size={18} color={mode === 'dark' ? '#ffffff' : '#000000'} />
           </ListItemIcon>
-          <ListItemText>Share with Team</ListItemText>
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            if (selectedCampaign) {
-              handleSaveTemplate(selectedCampaign);
-              handleMenuClose();
-            }
-          }}
-        >
-          <ListItemIcon>
-            <FavoriteIcon fontSize="small" sx={{ color: '#e74c3c' }} />
-          </ListItemIcon>
-          <ListItemText>Save to Templates</ListItemText>
+          <Typography variant="body2">Share</Typography>
         </MenuItem>
         <Divider />
-        <MenuItem onClick={handleMenuClose} sx={{ color: 'error.main' }}>
+        <MenuItem onClick={handleMenuClose}>
           <ListItemIcon>
-            <DeleteIcon size={18} color="#f44336" />
+            <DeleteIcon size={18} color="#e74c3c" />
           </ListItemIcon>
-          <ListItemText>Delete Template</ListItemText>
+          <Typography variant="body2" color="#e74c3c">Delete</Typography>
         </MenuItem>
       </Menu>
-
-      {/* Success notification */}
-      <Snackbar
-        open={showSaveSuccess}
-        autoHideDuration={3000}
-        onClose={() => setShowSaveSuccess(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          severity="success"
-          variant="filled"
-          sx={{
-            width: '100%',
-            bgcolor: '#2ecc71',
-            '& .MuiAlert-icon': {
-              color: 'white'
-            }
-          }}
-        >
-          Template saved successfully to Templates page
-        </Alert>
-      </Snackbar>
     </CampaignsContainer>
   );
 };
 
-export default Documents;
+export default DocumentsWithInbox;

@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
-
+import { useEffect } from 'react';
 
 export default function LandingPage(): JSX.Element {
-const executeScroll = (id: string) => {
+  const executeScroll = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
       const navbarHeight = 80; // Height of your fixed navbar
@@ -13,12 +13,27 @@ const executeScroll = (id: string) => {
       });
     }
   };
+
+  // Enable smooth scrolling for the entire page
+  useEffect(() => {
+    // Add CSS to ensure the page is scrollable
+    document.body.style.overflowY = 'auto';
+
+    // Clean up function
+    return () => {
+      document.body.style.overflowY = '';
+    };
+  }, []);
+
   return (
-    <div className="bg-gradient-to-b from-[#0F051D] to-[#1A0B2E] text-white flex flex-col items-center px-6 overflow-x-hidden">
+    <div className="bg-gradient-to-b from-[#0F051D] to-[#1A0B2E] text-white flex flex-col items-center px-6 overflow-x-hidden min-h-screen">
       {/* Navbar */}
       <nav className="w-full max-w-6xl flex justify-between items-center py-6 fixed top-0 z-50 bg-gradient-to-b from-[#0F051D]/95 to-transparent backdrop-blur-sm">
         <h1 className="text-xl font-bold">Ino</h1>
         <div className="hidden md:flex items-center space-x-6">
+          <a href="#features" onClick={(e) => { e.preventDefault(); executeScroll('features'); }} className="text-white hover:text-gray-300">Features</a>
+          <a href="#testimonials" onClick={(e) => { e.preventDefault(); executeScroll('testimonials'); }} className="text-white hover:text-gray-300">Testimonials</a>
+          <a href="#how-it-works" onClick={(e) => { e.preventDefault(); executeScroll('how-it-works'); }} className="text-white hover:text-gray-300">How It Works</a>
           <Link to="/login" className="text-white bg-transparent px-4 py-2 hover:bg-white/10 rounded">Login</Link>
           <Link to="/signup" className="bg-white text-black px-4 py-2 rounded hover:bg-white/90">Sign Up</Link>
         </div>
@@ -30,9 +45,9 @@ const executeScroll = (id: string) => {
       </nav>
 
       {/* Hero Section */}
-      <div className="text-center mt-16 max-w-4xl">
+      <div className="text-center mt-24 pt-16 max-w-4xl">
         <div className="bg-[#6227A7] text-sm px-4 py-2 rounded-full inline-block">
-          New: AI-powered analytics now available! <a href="#" className="underline">See what's new</a>
+          New: AI-powered analytics now available! <a href="#features" onClick={(e) => { e.preventDefault(); executeScroll('features'); }} className="underline">See what's new</a>
         </div>
         <h2 className="text-5xl font-bold mt-6 leading-tight">
           Unlock business insights <br /> with powerful analytics
@@ -42,19 +57,19 @@ const executeScroll = (id: string) => {
         </p>
         <div className="mt-6 space-x-4">
           <button className="bg-white text-black px-6 py-3 rounded font-medium hover:bg-white/90">Start Free Trial</button>
-          <button className="text-white border border-white px-6 py-3 rounded font-medium hover:bg-white/10">Schedule Demo</button>
+          <button className="text-white border border-white px-6 py-3 rounded font-medium hover:bg-white/10" onClick={() => executeScroll('how-it-works')}>Schedule Demo</button>
         </div>
       </div>
 
       {/* Dashboard Preview */}
       <div className="mt-12 w-full max-w-5xl">
         <div style={{ backgroundColor: '#1A0B2E', padding: '24px', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' }}>
-          <img src="/dashboard_mockup.png" alt="Analytics dashboard preview" style={{ borderRadius: '8px', width: '100%' }} />
+          <img src="/dashboard.png" alt="Analytics dashboard preview" style={{ borderRadius: '8px', width: '100%' }} />
         </div>
       </div>
 
       {/* Key Features Section */}
-      <div className="mt-24 w-full max-w-6xl">
+      <div id="features" className="mt-24 w-full max-w-6xl">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold mb-4">Everything you need in one platform</h2>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
@@ -96,7 +111,7 @@ const executeScroll = (id: string) => {
       </div>
 
       {/* Testimonials with Humaaans */}
-      <div className="mt-24 w-full max-w-6xl">
+      <div id="testimonials" className="mt-24 w-full max-w-6xl">
         <h2 className="text-4xl font-bold text-center mb-12">Trusted by innovative teams</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Testimonial 1 */}
@@ -144,7 +159,7 @@ const executeScroll = (id: string) => {
       </div>
 
       {/* How It Works Section */}
-      <div className="mt-24 w-full max-w-6xl">
+      <div id="how-it-works" className="mt-24 w-full max-w-6xl">
         <h2 className="text-4xl font-bold text-center mb-16">How Vaultflow works for your business</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">

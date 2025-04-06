@@ -62,6 +62,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import ChatIcon from '@mui/icons-material/Chat';
@@ -81,6 +82,9 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import BusinessIcon from '@mui/icons-material/Business';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import EmailIcon from '@mui/icons-material/Email';
+import CallIcon from '@mui/icons-material/Call';
+import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 
 // Use the global theme from ThemeContext
 
@@ -235,15 +239,21 @@ const StatusLabel = styled(Box, {
   fontWeight: 700,
   lineHeight: 1,
   backgroundColor:
-    status === 'completed' ? theme.palette.success.light :
-    status === 'failed' ? theme.palette.error.light :
-    status === 'loading' ? theme.palette.info.light :
-    theme.palette.warning.light,
+    status === 'completed'
+      ? theme.palette.mode === 'dark' ? 'rgba(46, 204, 113, 0.3)' : theme.palette.success.light :
+    status === 'failed'
+      ? theme.palette.mode === 'dark' ? 'rgba(231, 76, 60, 0.3)' : theme.palette.error.light :
+    status === 'loading'
+      ? theme.palette.mode === 'dark' ? 'rgba(52, 152, 219, 0.3)' : theme.palette.info.light :
+    theme.palette.mode === 'dark' ? 'rgba(241, 196, 15, 0.3)' : theme.palette.warning.light,
   color:
-    status === 'completed' ? theme.palette.success.main :
-    status === 'failed' ? theme.palette.error.main :
-    status === 'loading' ? theme.palette.info.main :
-    theme.palette.warning.main,
+    status === 'completed'
+      ? theme.palette.mode === 'dark' ? '#2ecc71' : theme.palette.success.main :
+    status === 'failed'
+      ? theme.palette.mode === 'dark' ? '#e74c3c' : theme.palette.error.main :
+    status === 'loading'
+      ? theme.palette.mode === 'dark' ? '#3498db' : theme.palette.info.main :
+    theme.palette.mode === 'dark' ? '#f1c40f' : theme.palette.warning.main,
 }));
 
 interface Asset {
@@ -277,6 +287,26 @@ interface SuggestedSolution {
   title: string;
   description: string;
   tag: string;
+}
+
+interface AIDescription {
+  summary: string;
+  strengths: string[];
+  opportunities: string[];
+  isLoading: boolean;
+}
+
+// Campaign interface for storing generated templates
+interface Campaign {
+  id: number;
+  title: string;
+  description: string;
+  accountName: string;
+  accountId: number;
+  type: 'email' | 'call' | 'meeting';
+  content: string;
+  createdAt: string;
+  isRead: boolean;
 }
 
 // Function to generate a stable color based on a string
@@ -320,7 +350,113 @@ const stringToColor = (string: string) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-// Function to generate a large number of dummy accounts
+// Function to fetch accounts from CSV
+const fetchAccountsFromCSV = async (): Promise<Account[]> => {
+  try {
+    const response = await fetch('/accounts.csv');
+    const csvText = await response.text();
+
+    // Parse CSV
+    const lines = csvText.split('\n');
+    const headers = lines[0].split(',');
+
+    const accounts: Account[] = [];
+
+    // Define asset names for different organization types
+    const assetNamesByType: Record<string, string[]> = {
+      'Finance': [
+        'Financial Analytics', 'Risk Assessment Tool', 'Market Data Feed',
+        'Compliance Monitor', 'Trading Platform', 'Portfolio Manager',
+        'Investment Tracker', 'Fraud Detection System', 'Regulatory Reporting'
+      ],
+      'Technology': [
+        'Software Development Kit', 'Cloud Infrastructure', 'Data Analytics Platform',
+        'AI Development Tools', 'Mobile App Framework', 'Security Suite',
+        'API Management', 'DevOps Pipeline', 'User Experience Testing'
+      ],
+      'Healthcare': [
+        'Patient Management System', 'Clinical Analytics', 'Medical Records Database',
+        'Telemedicine Platform', 'Health Monitoring', 'Prescription Management',
+        'Lab Results Tracker', 'Healthcare Compliance', 'Medical Billing System'
+      ],
+      'Retail': [
+        'Inventory Management', 'Point of Sale System', 'Customer Loyalty Program',
+        'Supply Chain Tracker', 'Retail Analytics', 'E-commerce Platform',
+        'Product Catalog', 'Order Management', 'Store Performance Dashboard'
+      ],
+      'Media': [
+        'Content Management System', 'Media Analytics', 'Audience Engagement',
+        'Ad Performance Tracker', 'Content Distribution', 'Social Media Integration',
+        'Video Streaming Platform', 'Digital Rights Management', 'Subscriber Management'
+      ],
+      'Default': [
+        'Business Intelligence', 'Data Management', 'Analytics Dashboard',
+        'Reporting System', 'Workflow Automation', 'Customer Insights',
+        'Performance Monitoring', 'Resource Planning', 'Project Management'
+      ]
+    };
+
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+
+      const values = lines[i].split(',');
+      const account: any = {};
+
+      headers.forEach((header, index) => {
+        if (header === 'id') {
+          account[header] = parseInt(values[index]);
+        } else if (header === 'updates') {
+          account[header] = values[index] as 'completed' | 'pending' | 'failed' | 'loading';
+        } else {
+          account[header] = values[index];
+        }
+      });
+
+      // Format location to add comma if missing
+      if (account.location && !account.location.includes(',')) {
+        const parts = account.location.split(' ');
+        const city = parts.slice(0, -1).join(' ');
+        const country = parts[parts.length - 1];
+        account.location = `${city}, ${country}`;
+      }
+
+      // Add default assets based on activeAssets count
+      const assetCount = parseInt(account.activeAssets) || 4;
+      account.activeAssets = `${assetCount} Assets`;
+
+      // Get appropriate asset names based on organization type
+      const orgType = account.organisationType;
+      const assetNames = assetNamesByType[orgType] || assetNamesByType['Default'];
+
+      // Create assets with realistic names based on organization type
+      account.assets = Array.from({ length: assetCount }, (_, index) => {
+        // Use modulo to cycle through available asset names if we have more assets than names
+        const nameIndex = index % assetNames.length;
+        return {
+          id: account.id * 100 + index + 1,
+          name: assetNames[nameIndex],
+          type: index % 3 === 0 ? 'Data Service' : 'Software',
+          status: 'active',
+          lastUpdated: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        };
+      });
+
+      // Set default logo
+      account.logoSrc = account.accountName === 'Master Card' ? '/images/mastercard.png' :
+                        account.accountName === 'Twitter' ? '/images/twitter.png' :
+                        account.accountName === 'Apple' ? '/images/apple.png' : '/images/avatar.png';
+
+      accounts.push(account as Account);
+    }
+
+    return accounts;
+  } catch (error) {
+    console.error('Error fetching accounts from CSV:', error);
+    return [];
+  }
+};
+
+// Function to generate a large number of dummy accounts (fallback if CSV loading fails)
 const generateDummyAccounts = (count: number, baseAccounts: Account[]): Account[] => {
   const dummyAccounts: Account[] = [...baseAccounts]; // Start with the base accounts
 
@@ -423,17 +559,17 @@ const getInitials = (name: string) => {
   return (words[0][0] + words[1][0]).toUpperCase();
 };
 
-// Base accounts that will be used as templates
+// Base accounts that will be used as templates (fallback if CSV loading fails)
 const baseAccounts: Account[] = [
   {
     id: 1,
     accountName: 'Master Card',
     location: 'London, United Kingdom',
-    organisationType: 'Broker',
+    organisationType: 'Finance',
     activeAssets: '6 Assets',
     assets: [
-      { id: 101, name: 'Risk Analytics Platform', type: 'Software', status: 'active', lastUpdated: '2023-11-15' },
-      { id: 102, name: 'Financial Reporting Tool', type: 'Software', status: 'active', lastUpdated: '2023-11-10' },
+      { id: 101, name: 'Financial Analytics', type: 'Software', status: 'active', lastUpdated: '2023-11-15' },
+      { id: 102, name: 'Risk Assessment Tool', type: 'Software', status: 'active', lastUpdated: '2023-11-14' },
       { id: 103, name: 'Market Data Feed', type: 'Data Service', status: 'active', lastUpdated: '2023-11-12' },
       { id: 104, name: 'Compliance Monitor', type: 'Software', status: 'active', lastUpdated: '2023-11-08' },
       { id: 105, name: 'Trading Platform', type: 'Software', status: 'active', lastUpdated: '2023-11-05' },
@@ -443,7 +579,7 @@ const baseAccounts: Account[] = [
     exitRate: '2,343.09',
     updates: 'completed',
     logoSrc: '/images/mastercard.png',
-    color: '#EB001B', // Couleur officielle de Mastercard
+    color: '#EB001B',
   },
   {
     id: 2,
@@ -461,7 +597,7 @@ const baseAccounts: Account[] = [
     exitRate: '1,987.65',
     updates: 'loading',
     logoSrc: '/images/twitter.png',
-    color: '#1DA1F2', // Couleur officielle de Twitter
+    color: '#1DA1F2',
   },
   {
     id: 3,
@@ -470,89 +606,62 @@ const baseAccounts: Account[] = [
     organisationType: 'Technology',
     activeAssets: '8 Assets',
     assets: [
-      { id: 301, name: 'Product Design Suite', type: 'Software', status: 'active', lastUpdated: '2023-11-15' },
-      { id: 302, name: 'Supply Chain Manager', type: 'Software', status: 'active', lastUpdated: '2023-11-14' },
-      { id: 303, name: 'Retail Analytics', type: 'Data Service', status: 'active', lastUpdated: '2023-11-12' },
-      { id: 304, name: 'Customer Insights', type: 'Data Service', status: 'active', lastUpdated: '2023-11-10' },
-      { id: 305, name: 'Hardware Testing Tools', type: 'Software', status: 'active', lastUpdated: '2023-11-08' },
-      { id: 306, name: 'Software Development Kit', type: 'Software', status: 'active', lastUpdated: '2023-11-06' },
-      { id: 307, name: 'Market Research Platform', type: 'Software', status: 'active', lastUpdated: '2023-11-04' },
-      { id: 308, name: 'Patent Database', type: 'Data Service', status: 'active', lastUpdated: '2023-11-02' }
+      { id: 301, name: 'Software Development Kit', type: 'Software', status: 'active', lastUpdated: '2023-11-15' },
+      { id: 302, name: 'Cloud Infrastructure', type: 'Software', status: 'active', lastUpdated: '2023-11-14' },
+      { id: 303, name: 'Data Analytics Platform', type: 'Data Service', status: 'active', lastUpdated: '2023-11-12' },
+      { id: 304, name: 'AI Development Tools', type: 'Data Service', status: 'active', lastUpdated: '2023-11-10' },
+      { id: 305, name: 'Mobile App Framework', type: 'Software', status: 'active', lastUpdated: '2023-11-08' },
+      { id: 306, name: 'Security Suite', type: 'Software', status: 'active', lastUpdated: '2023-11-06' },
+      { id: 307, name: 'API Management', type: 'Software', status: 'active', lastUpdated: '2023-11-04' },
+      { id: 308, name: 'DevOps Pipeline', type: 'Data Service', status: 'active', lastUpdated: '2023-11-02' }
     ],
     productFamily: 'Hardware & Software',
     exitRate: '3,219.44',
     updates: 'completed',
     logoSrc: '/images/apple.png',
-    color: '#555555', // Couleur sobre pour Apple
+    color: '#555555',
   },
   {
     id: 4,
-    accountName: 'Starbucks',
-    location: 'Seattle, USA',
-    organisationType: 'Food & Beverage',
-    activeAssets: '5 Assets',
+    accountName: 'Financial Solutions',
+    location: 'London, UK',
+    organisationType: 'Finance',
+    activeAssets: '3 Assets',
     assets: [
-      { id: 401, name: 'Inventory Management', type: 'Software', status: 'active', lastUpdated: '2023-11-15' },
-      { id: 402, name: 'Supply Chain Tracker', type: 'Software', status: 'active', lastUpdated: '2023-11-13' },
-      { id: 403, name: 'Customer Loyalty Program', type: 'Software', status: 'active', lastUpdated: '2023-11-11' },
-      { id: 404, name: 'Store Performance Analytics', type: 'Data Service', status: 'active', lastUpdated: '2023-11-09' },
-      { id: 405, name: 'Product Development Tool', type: 'Software', status: 'active', lastUpdated: '2023-11-07' }
+      { id: 401, name: 'Financial Analytics', type: 'Software', status: 'active', lastUpdated: '2023-11-15' },
+      { id: 402, name: 'Risk Assessment Tool', type: 'Software', status: 'active', lastUpdated: '2023-11-13' },
+      { id: 403, name: 'Market Data Feed', type: 'Data Service', status: 'active', lastUpdated: '2023-11-11' }
     ],
-    productFamily: 'Consumer Goods',
-    exitRate: '1,456.32',
-    updates: 'failed',
-    logoSrc: '/images/starbucks.png',
-    color: '#00704A', // Couleur officielle de Starbucks
+    productFamily: 'Financial Services',
+    exitRate: '1,850.75',
+    updates: 'completed',
+    logoSrc: '/images/avatar.png',
+    color: '#4285F4',
   },
   {
     id: 5,
-    accountName: 'Google',
-    location: 'Mountain View, USA',
-    organisationType: 'Technology',
-    activeAssets: '10 Assets',
-    assets: [
-      { id: 501, name: 'Search Analytics', type: 'Software', status: 'active', lastUpdated: '2023-11-15' },
-      { id: 502, name: 'Ad Performance Tracker', type: 'Software', status: 'active', lastUpdated: '2023-11-14' },
-      { id: 503, name: 'Cloud Infrastructure Monitor', type: 'Software', status: 'active', lastUpdated: '2023-11-13' },
-      { id: 504, name: 'AI Development Platform', type: 'Software', status: 'active', lastUpdated: '2023-11-12' },
-      { id: 505, name: 'Market Intelligence', type: 'Data Service', status: 'active', lastUpdated: '2023-11-11' },
-      { id: 506, name: 'User Behavior Analytics', type: 'Data Service', status: 'active', lastUpdated: '2023-11-10' },
-      { id: 507, name: 'Mobile App Performance', type: 'Software', status: 'active', lastUpdated: '2023-11-09' },
-      { id: 508, name: 'Video Content Analytics', type: 'Software', status: 'active', lastUpdated: '2023-11-08' },
-      { id: 509, name: 'Email Marketing Platform', type: 'Software', status: 'active', lastUpdated: '2023-11-07' },
-      { id: 510, name: 'SEO Optimization Tools', type: 'Software', status: 'active', lastUpdated: '2023-11-06' }
-    ],
-    productFamily: 'Search & Advertising',
-    exitRate: '4,123.77',
-    updates: 'completed',
-    logoSrc: '/images/avatar.png',
-    color: '#4285F4', // Couleur officielle de Google
-  },
-  {
-    id: 6,
-    accountName: 'Amazon',
-    location: 'Seattle, USA',
-    organisationType: 'E-commerce',
+    accountName: 'Healthcare Plus',
+    location: 'Boston, USA',
+    organisationType: 'Healthcare',
     activeAssets: '7 Assets',
     assets: [
-      { id: 601, name: 'E-commerce Analytics', type: 'Software', status: 'active', lastUpdated: '2023-11-15' },
-      { id: 602, name: 'Warehouse Management', type: 'Software', status: 'active', lastUpdated: '2023-11-13' },
-      { id: 603, name: 'Logistics Optimization', type: 'Software', status: 'active', lastUpdated: '2023-11-11' },
-      { id: 604, name: 'Cloud Services Monitor', type: 'Software', status: 'active', lastUpdated: '2023-11-09' },
-      { id: 605, name: 'Customer Behavior Insights', type: 'Data Service', status: 'active', lastUpdated: '2023-11-07' },
-      { id: 606, name: 'Pricing Strategy Tool', type: 'Software', status: 'active', lastUpdated: '2023-11-05' },
-      { id: 607, name: 'Vendor Management System', type: 'Software', status: 'active', lastUpdated: '2023-11-03' }
+      { id: 501, name: 'Patient Management System', type: 'Software', status: 'active', lastUpdated: '2023-11-15' },
+      { id: 502, name: 'Clinical Analytics', type: 'Software', status: 'active', lastUpdated: '2023-11-14' },
+      { id: 503, name: 'Medical Records Database', type: 'Software', status: 'active', lastUpdated: '2023-11-13' },
+      { id: 504, name: 'Telemedicine Platform', type: 'Software', status: 'active', lastUpdated: '2023-11-12' },
+      { id: 505, name: 'Health Monitoring', type: 'Data Service', status: 'active', lastUpdated: '2023-11-11' },
+      { id: 506, name: 'Prescription Management', type: 'Data Service', status: 'active', lastUpdated: '2023-11-10' },
+      { id: 507, name: 'Lab Results Tracker', type: 'Software', status: 'active', lastUpdated: '2023-11-09' }
     ],
-    productFamily: 'Retail & Cloud',
-    exitRate: '3,678.90',
+    productFamily: 'Healthcare IT',
+    exitRate: '2,750.30',
     updates: 'completed',
     logoSrc: '/images/avatar.png',
-    color: '#FF9900', // Couleur officielle d'Amazon
-  },
+    color: '#34A853',
+  }
 ];
 
-// Generate 200 accounts for the application
-const mockAccounts: Account[] = generateDummyAccounts(200, baseAccounts);
+// We'll generate accounts dynamically in the component
 
 const mockInsights: CompanyInsight[] = [
   {
@@ -688,7 +797,8 @@ const AccountBadge = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   padding: theme.spacing(0.5, 1),
-  backgroundColor: theme.palette.action.hover,
+  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : theme.palette.action.hover,
+  color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : theme.palette.text.primary,
   borderRadius: theme.shape.borderRadius,
   marginRight: theme.spacing(1),
   fontSize: '0.75rem',
@@ -891,6 +1001,63 @@ const Accounts: React.FC = () => {
   const [importInProgress, setImportInProgress] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Accounts state
+  const [accounts, setAccounts] = useState<Account[]>([]);
+
+  // Selected accounts for multiple deletion
+  const [selectedAccounts, setSelectedAccounts] = useState<number[]>([]);
+
+  // AI-generated account description
+  const [aiDescription, setAiDescription] = useState<AIDescription>({
+    summary: '',
+    strengths: [],
+    opportunities: [],
+    isLoading: false
+  });
+
+  // AI template generation
+  const [templateDialog, setTemplateDialog] = useState<{
+    open: boolean;
+    type: 'email' | 'call' | 'meeting' | null;
+    content: string;
+    isLoading: boolean;
+  }>({
+    open: false,
+    type: null,
+    content: '',
+    isLoading: false
+  });
+
+  // Campaigns state for storing generated templates
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+
+  // Campaign view state
+  const [campaignView, setCampaignView] = useState<{
+    open: boolean;
+    filter: 'all' | 'unread' | 'read';
+    selectedCampaignId: number | null;
+    hasNewNotification: boolean;
+  }>({
+    open: false,
+    filter: 'all',
+    selectedCampaignId: null,
+    hasNewNotification: false
+  });
+
+  // Delete confirmation dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [accountToDelete, setAccountToDelete] = useState<number | null>(null);
+  const [multipleDeleteMode, setMultipleDeleteMode] = useState(false);
+
+  // Initialize accounts with colorful avatars
+  React.useEffect(() => {
+    setLoading(true);
+    // Generate a set of accounts with colorful avatars
+    const generatedAccounts = generateDummyAccounts(50, baseAccounts);
+    setAccounts(generatedAccounts);
+    setLoading(false);
+  }, []);
+
   // Handle click outside to close assets dropdown
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -909,11 +1076,13 @@ const Accounts: React.FC = () => {
 
   // Simulate AI processing completion for Twitter account
   React.useEffect(() => {
-    // Only run this effect once when the component mounts
-    const timer = setTimeout(() => {
-      // Find the Twitter account (id: 2) and update its status
-      const updatedAccounts = mockAccounts.map(account => {
-        if (account.id === 2) {
+    // Only run this effect once when the component mounts and when accounts are loaded
+    if (accounts.length > 0) {
+      const twitterAccount = accounts.find(account => account.id === 2);
+
+      // Only proceed if Twitter account exists and is in loading state
+      if (twitterAccount && twitterAccount.updates === 'loading') {
+        const timer = setTimeout(() => {
           // Randomly decide if the AI processing was successful or not
           const success = Math.random() > 0.3; // 70% chance of success
 
@@ -927,35 +1096,32 @@ const Accounts: React.FC = () => {
             accountId: 2
           });
 
-          // Return updated account
-          return {
-            ...account,
-            updates: success ? 'completed' : 'failed'
-          };
-        }
-        return account;
-      });
+          // Update the accounts
+          const updatedAccounts = accounts.map(account => {
+            if (account.id === 2) {
+              return {
+                ...account,
+                updates: success ? 'completed' : 'failed'
+              };
+            }
+            return account;
+          });
 
-      // Update the accounts
-      mockAccounts.splice(0, mockAccounts.length, ...updatedAccounts);
+          setAccounts(updatedAccounts);
 
-      // If the selected account is Twitter, update it too
-      if (selectedAccount && selectedAccount.id === 2) {
-        const updatedAccount = updatedAccounts.find(a => a.id === 2);
-        if (updatedAccount) {
-          setSelectedAccount(updatedAccount);
-        }
+          // If the selected account is Twitter, update it too
+          if (selectedAccount && selectedAccount.id === 2) {
+            const updatedAccount = updatedAccounts.find(a => a.id === 2);
+            if (updatedAccount) {
+              setSelectedAccount(updatedAccount);
+            }
+          }
+        }, 5000); // 5 seconds delay
+
+        return () => clearTimeout(timer);
       }
-
-      // Force a re-render to show the updated notification
-      setTimeout(() => {
-        setNotification(prev => ({ ...prev }));
-      }, 100);
-
-    }, 5000); // 5 seconds delay
-
-    return () => clearTimeout(timer);
-  }, []);
+    }
+  }, [accounts, selectedAccount]);
 
   // Handle closing the notification
   const handleCloseNotification = () => {
@@ -1002,7 +1168,7 @@ const Accounts: React.FC = () => {
     const organisationTypes = new Set<string>();
     const productFamilies = new Set<string>();
 
-    mockAccounts.forEach(account => {
+    accounts.forEach(account => {
       locations.add(account.location);
       organisationTypes.add(account.organisationType);
       productFamilies.add(account.productFamily);
@@ -1015,7 +1181,16 @@ const Accounts: React.FC = () => {
     };
   };
 
-  const filterOptions = getUniqueFilterOptions();
+  // Update filter options when accounts change
+  const [dynamicFilterOptions, setDynamicFilterOptions] = useState({
+    locations: [] as string[],
+    organisationTypes: [] as string[],
+    productFamilies: [] as string[]
+  });
+
+  React.useEffect(() => {
+    setDynamicFilterOptions(getUniqueFilterOptions());
+  }, [accounts]);
 
   // Handle filter changes
   const handleFilterChange = (filterType: 'location' | 'organisationType' | 'productFamily' | 'status', value: string) => {
@@ -1053,7 +1228,7 @@ const Accounts: React.FC = () => {
   };
 
   // Apply filters to accounts
-  const filteredAccounts = mockAccounts.filter(account => {
+  const filteredAccounts = accounts.filter(account => {
     // Text search filter
     const matchesSearch = !searchQuery ||
       account.accountName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1088,11 +1263,14 @@ const Accounts: React.FC = () => {
     return filteredAccounts;
   };
 
-  const completedCount = mockAccounts.filter(account => account.updates === 'completed').length;
-  const failedCount = mockAccounts.filter(account => account.updates === 'failed').length;
-  const pendingCount = mockAccounts.filter(account => account.updates === 'pending').length;
+  const completedCount = accounts.filter(account => account.updates === 'completed').length;
+  const failedCount = accounts.filter(account => account.updates === 'failed').length;
+  const pendingCount = accounts.filter(account => account.updates === 'pending').length;
 
   const filteredByStatusAccounts = getFilteredAccountsByStatus();
+
+  // Define mockAccounts as the filtered accounts for the account list view
+  const mockAccounts = filteredByStatusAccounts;
 
   const sortedAccounts = React.useMemo(() => {
     let sortableAccounts = [...filteredByStatusAccounts];
@@ -1144,21 +1322,102 @@ const Accounts: React.FC = () => {
     }
   }, [sortedAccounts.length]);
 
+  // Handle account selection
   const handleAccountSelect = (account: Account) => {
-    setAnimatingTransition(true);
-    setLoading(true);
-    setSelectedAccount(account);
+    if (multipleDeleteMode) {
+      // In multiple delete mode, toggle selection instead of showing details
+      handleToggleAccountSelection(account.id);
+    } else {
+      setAnimatingTransition(true);
+      setLoading(true);
+      setSelectedAccount(account);
 
-    // Delay for animation before displaying details
-    setTimeout(() => {
-      setDetailsView(true);
-      setLoading(false);
+      // Generate AI description for the selected account
+      generateAIDescription(account);
 
-      // Finish the animation
+      // Delay for animation before displaying details
       setTimeout(() => {
-        setAnimatingTransition(false);
-      }, 500);
-    }, 400);
+        setDetailsView(true);
+        setLoading(false);
+
+        // Finish the animation
+        setTimeout(() => {
+          setAnimatingTransition(false);
+        }, 500);
+      }, 400);
+    }
+  };
+
+  // Toggle account selection for multiple deletion
+  const handleToggleAccountSelection = (accountId: number) => {
+    setSelectedAccounts(prev =>
+      prev.includes(accountId)
+        ? prev.filter(id => id !== accountId)
+        : [...prev, accountId]
+    );
+  };
+
+  // Open delete confirmation dialog for a single account
+  const handleDeleteAccount = (accountId: number, event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation();
+    }
+    setAccountToDelete(accountId);
+    setMultipleDeleteMode(false);
+    setDeleteDialogOpen(true);
+  };
+
+  // Open delete confirmation dialog for multiple accounts
+  const handleDeleteMultipleAccounts = () => {
+    setMultipleDeleteMode(true);
+    setDeleteDialogOpen(true);
+  };
+
+  // Toggle multiple delete mode
+  const toggleMultipleDeleteMode = () => {
+    setMultipleDeleteMode(prev => !prev);
+    if (multipleDeleteMode) {
+      // Clear selections when exiting multiple delete mode
+      setSelectedAccounts([]);
+    }
+  };
+
+  // Confirm deletion of account(s)
+  const confirmDeleteAccounts = () => {
+    if (multipleDeleteMode) {
+      // Delete multiple accounts
+      if (selectedAccounts.length > 0) {
+        setAccounts(prev => prev.filter(account => !selectedAccounts.includes(account.id)));
+        setSelectedAccounts([]);
+        setNotification({
+          open: true,
+          message: `${selectedAccounts.length} accounts deleted successfully`,
+          severity: 'success',
+          accountId: null
+        });
+      }
+    } else if (accountToDelete) {
+      // Delete single account
+      setAccounts(prev => prev.filter(account => account.id !== accountToDelete));
+
+      // If the deleted account was selected, clear the selection
+      if (selectedAccount && selectedAccount.id === accountToDelete) {
+        setSelectedAccount(null);
+        setDetailsView(false);
+      }
+
+      setNotification({
+        open: true,
+        message: 'Account deleted successfully',
+        severity: 'success',
+        accountId: null
+      });
+    }
+
+    // Close dialog and reset state
+    setDeleteDialogOpen(false);
+    setAccountToDelete(null);
+    setMultipleDeleteMode(false);
   };
 
   const handleBackToAccounts = () => {
@@ -1179,12 +1438,213 @@ const Accounts: React.FC = () => {
     setActiveTab(tab);
   };
 
+  // Function to generate AI description for an account
+  const generateAIDescription = (account: Account) => {
+    // Reset previous description and set loading state
+    setAiDescription({
+      summary: '',
+      strengths: [],
+      opportunities: [],
+      isLoading: true
+    });
+
+    // Simulate API call delay
+    setTimeout(() => {
+      // Generate description based on account data
+      const industry = account.organisationType;
+      const location = account.location;
+      const assets = account.assets.length;
+
+      // Generate a summary based on account details
+      const summary = `${account.accountName} is a ${industry} company based in ${location} with ${assets} active assets. They are currently using our ${account.productFamily} solutions to optimize their operations.`;
+
+      // Generate strengths based on account type
+      const strengths = [
+        `Strong presence in the ${industry} sector`,
+        `Established operations in ${location}`,
+        `Effective utilization of ${account.productFamily}`,
+        `Consistent growth in asset utilization`
+      ];
+
+      // Generate opportunities based on account type
+      const opportunities = [
+        `Expand adoption of additional ${account.productFamily} features`,
+        `Implement advanced analytics for better insights`,
+        `Integrate with other business systems for improved workflow`,
+        `Explore new market opportunities in related sectors`
+      ];
+
+      // Update state with generated description
+      setAiDescription({
+        summary,
+        strengths,
+        opportunities,
+        isLoading: false
+      });
+    }, 1500); // Simulate 1.5 second delay for API call
+  };
+
+  // Function to generate AI template for email, call, or meeting
+  const generateAITemplate = (type: 'email' | 'call' | 'meeting') => {
+    if (!selectedAccount) return;
+
+    // Open dialog and set loading state
+    setTemplateDialog({
+      open: true,
+      type,
+      content: '',
+      isLoading: true
+    });
+
+    // Simulate API call delay
+    setTimeout(() => {
+      // Generate template based on account data and template type
+      const accountName = selectedAccount.accountName;
+      const industry = selectedAccount.organisationType;
+      const productFamily = selectedAccount.productFamily;
+
+      let content = '';
+
+      if (type === 'email') {
+        content = `Subject: ${productFamily} Solutions for ${accountName}\n\nDear [Contact Name],\n\nI hope this email finds you well. I wanted to reach out regarding how our ${productFamily} solutions can address the specific challenges that ${accountName} is facing in the ${industry} sector.\n\nBased on our analysis, we've identified several opportunities where our solutions could provide significant value:\n\n1. [Specific solution tailored to their industry needs]\n2. [ROI or efficiency improvement they could achieve]\n3. [Competitive advantage our solution provides]\n\nI'd be happy to schedule a brief call to discuss how these solutions align with your strategic objectives for the coming quarter.\n\nBest regards,\n[Your Name]\n[Your Position]\nLSEG`;
+      } else if (type === 'call') {
+        content = `# Cold Call Script for ${accountName}\n\nIntroduction:\n- Introduce yourself and LSEG\n- Mention any mutual connections or previous interactions\n\nValue Proposition:\n- "I'm reaching out because we've helped several ${industry} companies like yours improve their [specific metric] by implementing our ${productFamily} solutions."\n\nKey Talking Points:\n1. Address specific pain points in the ${industry} sector\n2. Highlight how our ${productFamily} solutions have helped similar companies\n3. Mention specific ROI metrics from case studies\n\nCall to Action:\n- Suggest a follow-up meeting with relevant stakeholders\n- Offer to send additional information on [specific solution]\n\nHandling Objections:\n- "Not interested": Acknowledge and ask about their current solutions for [specific challenge]\n- "No budget": Discuss ROI timeline and implementation options\n- "Bad timing": Suggest a specific future date to reconnect`;
+      } else if (type === 'meeting') {
+        content = `# Meeting Talking Points for ${accountName}\n\nMeeting Objective:\nDiscuss how LSEG's ${productFamily} solutions can address ${accountName}'s specific challenges in the ${industry} sector.\n\nAttendees:\n- [Key stakeholders from client side]\n- [Your team members with relevant expertise]\n\nAgenda:\n1. Introduction and relationship building (5 min)\n2. Understanding current challenges and goals (10 min)\n3. Presentation of relevant solutions (15 min)\n4. Discussion of implementation and timeline (10 min)\n5. Next steps and action items (5 min)\n\nKey Points to Emphasize:\n- Our experience with similar ${industry} companies\n- Specific features of our ${productFamily} that address their needs\n- Implementation timeline and resource requirements\n- Expected ROI and success metrics\n\nSupporting Materials:\n- Case study of similar ${industry} client\n- Product demo focusing on [specific feature]\n- Implementation roadmap\n- Pricing and ROI calculator`;
+      }
+
+      // Update state with generated template
+      setTemplateDialog({
+        open: true,
+        type,
+        content,
+        isLoading: false
+      });
+    }, 2000); // Simulate 2 second delay for API call
+  };
+
+  // Function to handle dialog close
+  const handleTemplateDialogClose = () => {
+    setTemplateDialog({
+      ...templateDialog,
+      open: false
+    });
+  };
+
+  // Function to save the generated template
+  const handleSaveTemplate = () => {
+    if (!selectedAccount || !templateDialog.type || !templateDialog.content) return;
+
+    const templateType = templateDialog.type === 'email' ? 'Email' :
+                         templateDialog.type === 'call' ? 'Cold Call Script' :
+                         'Meeting Talking Points';
+
+    // Create a new campaign from the template
+    const newCampaign: Campaign = {
+      id: Date.now(), // Use timestamp as a unique ID
+      title: `${templateType} for ${selectedAccount.accountName}`,
+      description: `AI-generated ${templateDialog.type} template for ${selectedAccount.accountName}`,
+      accountName: selectedAccount.accountName,
+      accountId: selectedAccount.id,
+      type: templateDialog.type,
+      content: templateDialog.content,
+      createdAt: new Date().toISOString(),
+      isRead: false
+    };
+
+    // Add the new campaign to the campaigns list
+    setCampaigns(prevCampaigns => [newCampaign, ...prevCampaigns]);
+
+    // Set the notification flag for the campaign view
+    setCampaignView(prev => ({
+      ...prev,
+      hasNewNotification: true
+    }));
+
+    // Show notification
+    setNotification({
+      open: true,
+      message: `${templateType} template saved successfully for ${selectedAccount.accountName}`,
+      severity: 'success',
+      accountId: selectedAccount.id
+    });
+
+    handleTemplateDialogClose();
+  };
+
   const handleAccountMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAccountMenuAnchor(event.currentTarget);
   };
 
   const handleAccountMenuClose = () => {
     setAccountMenuAnchor(null);
+  };
+
+  // Function to open the campaign view
+  const handleOpenCampaignView = () => {
+    setCampaignView({
+      ...campaignView,
+      open: true,
+      hasNewNotification: false // Clear notification when opening
+    });
+  };
+
+  // Function to close the campaign view
+  const handleCloseCampaignView = () => {
+    setCampaignView({
+      ...campaignView,
+      open: false,
+      selectedCampaignId: null
+    });
+  };
+
+  // Function to change the campaign filter
+  const handleCampaignFilterChange = (filter: 'all' | 'unread' | 'read') => {
+    setCampaignView({
+      ...campaignView,
+      filter
+    });
+  };
+
+  // Function to select a campaign
+  const handleCampaignSelect = (campaignId: number) => {
+    // Mark the campaign as read
+    setCampaigns(prevCampaigns =>
+      prevCampaigns.map(campaign =>
+        campaign.id === campaignId
+          ? { ...campaign, isRead: true }
+          : campaign
+      )
+    );
+
+    // Set the selected campaign
+    setCampaignView({
+      ...campaignView,
+      selectedCampaignId: campaignId
+    });
+  };
+
+  // Function to delete a campaign
+  const handleDeleteCampaign = (campaignId: number) => {
+    setCampaigns(prevCampaigns =>
+      prevCampaigns.filter(campaign => campaign.id !== campaignId)
+    );
+
+    // If the deleted campaign was selected, clear the selection
+    if (campaignView.selectedCampaignId === campaignId) {
+      setCampaignView({
+        ...campaignView,
+        selectedCampaignId: null
+      });
+    }
+
+    // Show notification
+    setNotification({
+      open: true,
+      message: 'Campaign deleted successfully',
+      severity: 'success',
+      accountId: null
+    });
   };
 
   const handleFilterMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -1318,7 +1778,10 @@ const Accounts: React.FC = () => {
     if (!validateAccountForm()) return;
 
     // Generate a new ID (would be handled by backend in real app)
-    const newId = Math.max(...mockAccounts.map(a => a.id)) + 1;
+    const newId = Math.max(...accounts.map(a => a.id)) + 1;
+
+    // Generate a vibrant color for the account
+    const accountColor = stringToColor(newAccount.accountName || '');
 
     // Create new account object
     const accountToAdd: Account = {
@@ -1332,11 +1795,11 @@ const Accounts: React.FC = () => {
       exitRate: '0.00',
       updates: 'pending',
       logoSrc: '/images/avatar.png',
-      color: stringToColor(newAccount.accountName || '')
+      color: accountColor
     };
 
-    // Add to mock accounts
-    mockAccounts.unshift(accountToAdd);
+    // Add to accounts state
+    setAccounts(prevAccounts => [accountToAdd, ...prevAccounts]);
 
     // Show success notification
     setNotification({
@@ -1487,7 +1950,7 @@ const Accounts: React.FC = () => {
             }
 
             // Generate ID and add other required fields
-            const newId = Math.max(...mockAccounts.map(a => a.id), ...newAccounts.map(a => a.id)) + 1;
+            const newId = Math.max(...accounts.map(a => a.id), ...newAccounts.map(a => a.id)) + 1;
             const newAccount: Account = {
               id: newId,
               accountName: accountData.accountName || '',
@@ -1513,8 +1976,8 @@ const Accounts: React.FC = () => {
             }
           }
 
-          // Add accounts to the mock data
-          mockAccounts.unshift(...newAccounts);
+          // Add accounts to the state
+          setAccounts(prevAccounts => [...newAccounts, ...prevAccounts]);
 
           // Show success notification
           setImportSuccess(`Successfully imported ${newAccounts.length} accounts`);
@@ -1633,7 +2096,7 @@ const Accounts: React.FC = () => {
             overflowY: 'auto'
           }}
         >
-          {mockAccounts.map((account, index) => (
+          {accounts.map((account, index) => (
             <React.Fragment key={account.id}>
               <AccountListItem
                 onClick={() => handleAccountSelect(account)}
@@ -1649,8 +2112,10 @@ const Accounts: React.FC = () => {
                       fontWeight: 600,
                       fontSize: '0.75rem',
                       backgroundColor: account.color || stringToColor(account.accountName),
-                      mr: 1
+                      mr: 1,
+                      border: account.logoSrc !== '/images/avatar.png' ? '1px solid rgba(0,0,0,0.1)' : 'none'
                     }}
+                    src={account.logoSrc !== '/images/avatar.png' ? account.logoSrc : undefined}
                   >
                     {getInitials(account.accountName)}
                   </Avatar>
@@ -1668,7 +2133,7 @@ const Accounts: React.FC = () => {
                   )}
                 </Box>
               </AccountListItem>
-              {index < mockAccounts.length - 1 && <Divider />}
+              {index < accounts.length - 1 && <Divider />}
             </React.Fragment>
           ))}
         </Paper>
@@ -1733,8 +2198,10 @@ const Accounts: React.FC = () => {
                 fontWeight: 700,
                 backgroundColor: accountColor,
                 mr: 3,
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                border: selectedAccount.logoSrc !== '/images/avatar.png' ? '2px solid rgba(255,255,255,0.2)' : 'none'
               }}
+              src={selectedAccount.logoSrc !== '/images/avatar.png' ? selectedAccount.logoSrc : undefined}
             >
               {accountInitials}
             </Avatar>
@@ -1868,7 +2335,12 @@ const Accounts: React.FC = () => {
                 {activeTab === 'tasks' && (
                   <>
                     <Collapse in={showTaskForm}>
-                      <Box sx={{ mb: 2, p: 2, bgcolor: '#f9f9f9', borderRadius: '3px' }}>
+                      <Box sx={{
+                        mb: 2,
+                        p: 2,
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f9f9f9',
+                        borderRadius: '3px'
+                      }}>
                         <Typography variant="subtitle2" fontWeight={500} sx={{ mb: 1 }}>
                           New Task
                         </Typography>
@@ -1890,15 +2362,18 @@ const Accounts: React.FC = () => {
                           >
                             Cancel
                           </Button>
-                          <Button 
-                            variant="contained" 
-                            size="small" 
+                          <Button
+                            variant="contained"
+                            size="small"
                             onClick={handleAddTask}
-                            sx={{ 
-                              borderRadius: '3px', 
-                              textTransform: 'none', 
-                              bgcolor: '#000',
-                              '&:hover': { bgcolor: '#333' }
+                            sx={{
+                              borderRadius: '3px',
+                              textTransform: 'none',
+                              bgcolor: (theme) => theme.palette.mode === 'dark' ? '#fff' : '#000',
+                              color: (theme) => theme.palette.mode === 'dark' ? '#000' : '#fff',
+                              '&:hover': {
+                                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : '#333'
+                              }
                             }}
                           >
                             Add Task
@@ -1907,7 +2382,10 @@ const Accounts: React.FC = () => {
                       </Box>
                     </Collapse>
                     
-                    <List sx={{ bgcolor: 'background.paper' }}>
+                    <List sx={{
+                      bgcolor: 'background.paper',
+                      color: (theme) => theme.palette.mode === 'dark' ? 'text.primary' : 'inherit'
+                    }}>
                       <ListItem alignItems="flex-start" sx={{ px: 2, py: 1.5, borderLeft: '3px solid #047857', mb: 1, borderRadius: '3px' }}>
                         <ListItemAvatar sx={{ minWidth: 30, mt: 0.5 }}>
                           <KeyboardArrowDownIcon fontSize="small" />
@@ -1919,15 +2397,15 @@ const Accounts: React.FC = () => {
                               <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
                                 Due: 12th Jan 2025
                               </Typography>
-                              <Chip 
-                                label="High Priority" 
-                                size="small" 
-                                sx={{ 
-                                  height: 20, 
+                              <Chip
+                                label="High Priority"
+                                size="small"
+                                sx={{
+                                  height: 20,
                                   fontSize: '0.625rem',
-                                  bgcolor: 'rgba(185, 28, 28, 0.1)',
-                                  color: '#B91C1C'
-                                }} 
+                                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(185, 28, 28, 0.3)' : 'rgba(185, 28, 28, 0.1)',
+                                  color: (theme) => theme.palette.mode === 'dark' ? '#ff6b6b' : '#B91C1C'
+                                }}
                               />
                             </Box>
                           }
@@ -1949,15 +2427,15 @@ const Accounts: React.FC = () => {
                               <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
                                 Due: 30th Nov 2023
                               </Typography>
-                              <Chip 
-                                label="Medium Priority" 
-                                size="small" 
-                                sx={{ 
-                                  height: 20, 
+                              <Chip
+                                label="Medium Priority"
+                                size="small"
+                                sx={{
+                                  height: 20,
                                   fontSize: '0.625rem',
-                                  bgcolor: 'rgba(180, 83, 9, 0.1)',
-                                  color: '#B45309'
-                                }} 
+                                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(180, 83, 9, 0.3)' : 'rgba(180, 83, 9, 0.1)',
+                                  color: (theme) => theme.palette.mode === 'dark' ? '#ffa94d' : '#B45309'
+                                }}
                               />
                             </Box>
                           }
@@ -2022,31 +2500,34 @@ const Accounts: React.FC = () => {
               </Box>
 
               <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-                <Button 
-                  variant="contained" 
-                  sx={{ 
-                    borderRadius: '3px', 
-                    textTransform: 'none', 
-                    bgcolor: '#333', 
+                <Button
+                  variant="contained"
+                  sx={{
+                    borderRadius: '3px',
+                    textTransform: 'none',
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? '#555' : '#333',
                     color: '#fff',
                     fontWeight: 500,
-                    px: 2
+                    px: 2,
+                    '&:hover': {
+                      bgcolor: (theme) => theme.palette.mode === 'dark' ? '#666' : '#444',
+                    }
                   }}
                   startIcon={<StarIcon sx={{ fontSize: 16 }} />}
                 >
                   Risk
                 </Button>
-                <Button 
-                  variant="contained" 
-                  sx={{ 
-                    borderRadius: '3px', 
-                    textTransform: 'none', 
-                    bgcolor: '#f5f5f5', 
-                    color: '#000',
+                <Button
+                  variant="contained"
+                  sx={{
+                    borderRadius: '3px',
+                    textTransform: 'none',
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : '#f5f5f5',
+                    color: (theme) => theme.palette.mode === 'dark' ? '#fff' : '#000',
                     fontWeight: 500,
                     px: 2,
                     '&:hover': {
-                      bgcolor: '#e0e0e0'
+                      bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.25)' : '#e0e0e0'
                     }
                   }}
                 >
@@ -2122,6 +2603,91 @@ const Accounts: React.FC = () => {
           </Box>
 
           <Box sx={{ width: '40%' }}>
+            {/* AI-Generated Account Description Card */}
+            <Paper elevation={0} sx={{ borderRadius: (theme) => theme.shape.borderRadius, overflow: 'hidden', mb: 3 }}>
+              <Box sx={{ p: 2, bgcolor: '#0A2647', color: 'white' }}>
+                <SectionTitle sx={{ mb: 1 }}>
+                  <AssignmentIcon sx={{ color: 'white', mr: 1 }} />
+                  <Typography variant="h6" fontWeight={600} color="white">
+                    AI Account Analysis
+                  </Typography>
+                </SectionTitle>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" fontWeight={500} color="rgba(255,255,255,0.8)">
+                    Generated by AI
+                  </Typography>
+                  <Chip
+                    label="BETA"
+                    size="small"
+                    sx={{
+                      height: 20,
+                      fontSize: '0.625rem',
+                      bgcolor: 'rgba(255,255,255,0.15)',
+                      color: 'white'
+                    }}
+                  />
+                </Box>
+              </Box>
+
+              <Box sx={{ p: 3 }}>
+                {aiDescription.isLoading ? (
+                  <>
+                    <Skeleton variant="text" width="100%" height={24} sx={{ mb: 2 }} />
+                    <Skeleton variant="text" width="90%" height={24} sx={{ mb: 3 }} />
+
+                    <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                      Key Strengths
+                    </Typography>
+                    <Skeleton variant="text" width="100%" height={20} sx={{ mb: 1 }} />
+                    <Skeleton variant="text" width="95%" height={20} sx={{ mb: 1 }} />
+                    <Skeleton variant="text" width="90%" height={20} sx={{ mb: 1 }} />
+                    <Skeleton variant="text" width="85%" height={20} sx={{ mb: 3 }} />
+
+                    <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                      Opportunities
+                    </Typography>
+                    <Skeleton variant="text" width="100%" height={20} sx={{ mb: 1 }} />
+                    <Skeleton variant="text" width="95%" height={20} sx={{ mb: 1 }} />
+                    <Skeleton variant="text" width="90%" height={20} sx={{ mb: 1 }} />
+                    <Skeleton variant="text" width="85%" height={20} sx={{ mb: 1 }} />
+                  </>
+                ) : (
+                  <>
+                    <Typography variant="body1" sx={{ mb: 3 }}>
+                      {aiDescription.summary}
+                    </Typography>
+
+                    <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                      Key Strengths
+                    </Typography>
+                    <Box component="ul" sx={{ pl: 2, mb: 3 }}>
+                      {aiDescription.strengths.map((strength, index) => (
+                        <Box component="li" key={index} sx={{ mb: 0.5 }}>
+                          <Typography variant="body2">
+                            {strength}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+
+                    <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                      Opportunities
+                    </Typography>
+                    <Box component="ul" sx={{ pl: 2 }}>
+                      {aiDescription.opportunities.map((opportunity, index) => (
+                        <Box component="li" key={index} sx={{ mb: 0.5 }}>
+                          <Typography variant="body2">
+                            {opportunity}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  </>
+                )}
+              </Box>
+            </Paper>
+
+            {/* Insights Panel */}
             <Paper elevation={0} sx={{ borderRadius: (theme) => theme.shape.borderRadius, overflow: 'hidden', mb: 3 }}>
               <Box sx={{ p: 2, bgcolor: '#212121', color: 'white' }}>
                 <SectionTitle sx={{ mb: 1 }}>
@@ -2287,34 +2853,59 @@ const Accounts: React.FC = () => {
                 </Box>
 
                 <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                  <Button 
-                    variant="contained" 
-                    sx={{ 
-                      borderRadius: '3px', 
-                      textTransform: 'none', 
-                      bgcolor: '#f5f5f5', 
-                      color: '#000',
+                  <Button
+                    variant="contained"
+                    startIcon={<EmailIcon />}
+                    onClick={() => generateAITemplate('email')}
+                    sx={{
+                      borderRadius: '3px',
+                      textTransform: 'none',
+                      bgcolor: '#1565C0',
+                      color: '#fff',
                       fontWeight: 500,
                       px: 2,
                       '&:hover': {
-                        bgcolor: '#e0e0e0'
+                        bgcolor: '#0D47A1'
                       }
                     }}
                   >
-                    Recommended Campaigns
+                    Email
                   </Button>
-                  <Button 
-                    variant="contained" 
-                    sx={{ 
-                      borderRadius: '3px', 
-                      textTransform: 'none', 
-                      bgcolor: '#000', 
+                  <Button
+                    variant="contained"
+                    startIcon={<CallIcon />}
+                    onClick={() => generateAITemplate('call')}
+                    sx={{
+                      borderRadius: '3px',
+                      textTransform: 'none',
+                      bgcolor: '#2E7D32',
                       color: '#fff',
                       fontWeight: 500,
-                      px: 2
+                      px: 2,
+                      '&:hover': {
+                        bgcolor: '#1B5E20'
+                      }
                     }}
                   >
-                    Talking Points
+                    Cold Call
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<MeetingRoomIcon />}
+                    onClick={() => generateAITemplate('meeting')}
+                    sx={{
+                      borderRadius: '3px',
+                      textTransform: 'none',
+                      bgcolor: '#6A1B9A',
+                      color: '#fff',
+                      fontWeight: 500,
+                      px: 2,
+                      '&:hover': {
+                        bgcolor: '#4A148C'
+                      }
+                    }}
+                  >
+                    Meeting Points
                   </Button>
                 </Box>
               </Box>
@@ -2326,37 +2917,66 @@ const Accounts: React.FC = () => {
                 Quick Access
               </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                <Chip 
-                  label="Account History" 
-                  clickable 
-                  sx={{ 
+                <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                  {campaignView.hasNewNotification && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: -2,
+                        right: -2,
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        bgcolor: 'error.main',
+                        zIndex: 1,
+                        border: '1px solid white'
+                      }}
+                    />
+                  )}
+                  <Chip
+                    icon={<EmailIcon fontSize="small" />}
+                    label={`Campaigns ${campaigns.filter(c => !c.isRead).length > 0 ? `(${campaigns.filter(c => !c.isRead).length})` : ''}`}
+                    clickable
+                    onClick={handleOpenCampaignView}
+                    sx={{
+                      borderRadius: '3px',
+                      fontWeight: campaigns.filter(c => !c.isRead).length > 0 ? 'bold' : 'normal',
+                      bgcolor: campaigns.filter(c => !c.isRead).length > 0 ? 'rgba(25, 118, 210, 0.1)' : 'transparent',
+                      '&:hover': { bgcolor: 'rgba(25, 118, 210, 0.1)' }
+                    }}
+                  />
+                </Box>
+                <Chip
+                  label="Account History"
+                  clickable
+                  sx={{
                     borderRadius: '3px',
                     '&:hover': { bgcolor: '#f5f5f5' }
-                  }} 
+                  }}
                 />
-                <Chip 
-                  label="Meeting Notes" 
-                  clickable 
-                  sx={{ 
+                <Chip
+                  label="Meeting Notes"
+                  clickable
+                  sx={{
                     borderRadius: '3px',
                     '&:hover': { bgcolor: '#f5f5f5' }
-                  }} 
+                  }}
                 />
-                <Chip 
-                  label="Contact List" 
-                  clickable 
-                  sx={{ 
+                <Chip
+                  label="Contact List"
+                  clickable
+                  sx={{
                     borderRadius: '3px',
                     '&:hover': { bgcolor: '#f5f5f5' }
-                  }} 
+                  }}
                 />
-                <Chip 
-                  label="Recent Orders" 
-                  clickable 
-                  sx={{ 
+                <Chip
+                  label="Recent Orders"
+                  clickable
+                  sx={{
                     borderRadius: '3px',
                     '&:hover': { bgcolor: '#f5f5f5' }
-                  }} 
+                  }}
                 />
               </Box>
             </Paper>
@@ -2490,7 +3110,7 @@ const Accounts: React.FC = () => {
                     {/* Location Filter */}
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>Location</Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2, maxHeight: 100, overflow: 'auto' }}>
-                      {filterOptions.locations.slice(0, 15).map((location) => (
+                      {dynamicFilterOptions.locations.slice(0, 15).map((location) => (
                         <Chip
                           key={location}
                           label={location.split(',')[0]} // Show only city name to save space
@@ -2510,7 +3130,7 @@ const Accounts: React.FC = () => {
                     {/* Organization Type Filter */}
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>Organization Type</Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
-                      {filterOptions.organisationTypes.map((type) => (
+                      {dynamicFilterOptions.organisationTypes.map((type) => (
                         <Chip
                           key={type}
                           label={type}
@@ -2530,7 +3150,7 @@ const Accounts: React.FC = () => {
                     {/* Product Family Filter */}
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>Product Family</Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1, maxHeight: 100, overflow: 'auto' }}>
-                      {filterOptions.productFamilies.map((family) => (
+                      {dynamicFilterOptions.productFamilies.map((family) => (
                         <Chip
                           key={family}
                           label={family}
@@ -2561,17 +3181,46 @@ const Accounts: React.FC = () => {
                     </Button>
                   </Box>
                 </Menu>
-                <ActionButton variant="outlined" startIcon={<DownloadIcon />}>
-                  Export
-                </ActionButton>
-                <ActionButton
-                  variant="contained"
-                  color="primary"
-                  startIcon={<AddIcon />}
-                  onClick={handleOpenAddAccountDialog}
-                >
-                  Add Account
-                </ActionButton>
+                {multipleDeleteMode ? (
+                  <>
+                    <ActionButton
+                      variant="outlined"
+                      color="error"
+                      disabled={selectedAccounts.length === 0}
+                      onClick={handleDeleteMultipleAccounts}
+                      startIcon={<DeleteIcon />}
+                    >
+                      Delete ({selectedAccounts.length})
+                    </ActionButton>
+                    <ActionButton
+                      variant="outlined"
+                      onClick={toggleMultipleDeleteMode}
+                    >
+                      Cancel
+                    </ActionButton>
+                  </>
+                ) : (
+                  <>
+                    <ActionButton variant="outlined" startIcon={<DownloadIcon />}>
+                      Export
+                    </ActionButton>
+                    <ActionButton
+                      variant="outlined"
+                      startIcon={<DeleteIcon />}
+                      onClick={toggleMultipleDeleteMode}
+                    >
+                      Delete Accounts
+                    </ActionButton>
+                    <ActionButton
+                      variant="contained"
+                      color="primary"
+                      startIcon={<AddIcon />}
+                      onClick={handleOpenAddAccountDialog}
+                    >
+                      Add Account
+                    </ActionButton>
+                  </>
+                )}
               </Box>
             ) : (
               <IconButton 
@@ -2632,7 +3281,7 @@ const Accounts: React.FC = () => {
                       <StyledTab 
                         label={
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            All Accounts <TabCount>{mockAccounts.length}</TabCount>
+                            All Accounts <TabCount>{accounts.length}</TabCount>
                           </Box>
                         } 
                       />
@@ -2691,7 +3340,25 @@ const Accounts: React.FC = () => {
                       <Table size="small" stickyHeader>
                         <TableHead>
                           <TableRow>
-                            <TableHeader onClick={() => handleSort('accountName')} sx={{ cursor: 'pointer', pl: 3, py: 1.5 }}>
+                            {multipleDeleteMode && (
+                              <TableHeader sx={{ width: 50, py: 1.5 }}>
+                                <Checkbox
+                                  size="small"
+                                  indeterminate={selectedAccounts.length > 0 && selectedAccounts.length < sortedAccounts.length}
+                                  checked={selectedAccounts.length > 0 && selectedAccounts.length === sortedAccounts.length}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      // Select all accounts
+                                      setSelectedAccounts(sortedAccounts.map(account => account.id));
+                                    } else {
+                                      // Deselect all accounts
+                                      setSelectedAccounts([]);
+                                    }
+                                  }}
+                                />
+                              </TableHeader>
+                            )}
+                            <TableHeader onClick={() => handleSort('accountName')} sx={{ cursor: 'pointer', pl: multipleDeleteMode ? 1 : 3, py: 1.5 }}>
                               <Box display="flex" alignItems="center">
                                 Account Name {getSortIcon('accountName')}
                               </Box>
@@ -2748,19 +3415,36 @@ const Accounts: React.FC = () => {
                             ))
                           ) : (
                             sortedAccounts.slice(0, displayLimit).map((account) => (
-                              <TableRow 
-                                key={account.id} 
+                              <TableRow
+                                key={account.id}
                                 hover
                                 onClick={() => handleAccountSelect(account)}
-                                sx={{ 
+                                sx={{
                                   cursor: 'pointer',
                                   transition: (theme) => theme.transitions.create(['background-color'], {
                                     duration: theme.transitions.duration.shortest,
                                   }),
-                                  bgcolor: selectedAccount?.id === account.id ? (theme) => theme.palette.action.selected : 'transparent',
+                                  bgcolor: multipleDeleteMode && selectedAccounts.includes(account.id)
+                                    ? (theme) => theme.palette.action.selected
+                                    : selectedAccount?.id === account.id
+                                      ? (theme) => theme.palette.action.selected
+                                      : 'transparent',
                                 }}
                               >
-                                <TableContent sx={{ pl: 3, py: 1 }}>
+                                {multipleDeleteMode && (
+                                  <TableContent sx={{ width: 50, py: 1 }}>
+                                    <Checkbox
+                                      size="small"
+                                      checked={selectedAccounts.includes(account.id)}
+                                      onChange={(e) => {
+                                        e.stopPropagation();
+                                        handleToggleAccountSelection(account.id);
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                  </TableContent>
+                                )}
+                                <TableContent sx={{ pl: multipleDeleteMode ? 1 : 3, py: 1 }}>
                                   <Box display="flex" alignItems="center" sx={{ position: 'relative' }}>
                                     <Avatar
                                       sx={{
@@ -2769,8 +3453,10 @@ const Accounts: React.FC = () => {
                                         fontWeight: 600,
                                         fontSize: '0.75rem',
                                         backgroundColor: account.color || stringToColor(account.accountName),
-                                        mr: 1.5
+                                        mr: 1.5,
+                                        border: account.logoSrc !== '/images/avatar.png' ? '1px solid rgba(0,0,0,0.1)' : 'none'
                                       }}
+                                      src={account.logoSrc !== '/images/avatar.png' ? account.logoSrc : undefined}
                                     >
                                       {getInitials(account.accountName)}
                                     </Avatar>
@@ -2971,6 +3657,451 @@ const Accounts: React.FC = () => {
           </Box>
         </PageTransition>
 
+        {/* Campaign Inbox Dialog */}
+        <Dialog
+          open={campaignView.open}
+          onClose={handleCloseCampaignView}
+          maxWidth="lg"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: (theme) => theme.shape.borderRadius,
+              height: '80vh',
+              maxHeight: '80vh'
+            }
+          }}
+        >
+          <DialogTitle sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+            pb: 2
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <EmailIcon sx={{ mr: 1 }} />
+              <Typography variant="h6">
+                Campaign Inbox
+              </Typography>
+              {campaigns.filter(c => !c.isRead).length > 0 && (
+                <Chip
+                  label={campaigns.filter(c => !c.isRead).length}
+                  size="small"
+                  sx={{
+                    ml: 1,
+                    bgcolor: 'primary.main',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    height: 20,
+                    minWidth: 20
+                  }}
+                />
+              )}
+            </Box>
+            <Box>
+              <Button
+                variant={campaignView.filter === 'all' ? 'contained' : 'outlined'}
+                size="small"
+                onClick={() => handleCampaignFilterChange('all')}
+                sx={{ mr: 1, textTransform: 'none' }}
+              >
+                All
+              </Button>
+              <Button
+                variant={campaignView.filter === 'unread' ? 'contained' : 'outlined'}
+                size="small"
+                onClick={() => handleCampaignFilterChange('unread')}
+                sx={{ mr: 1, textTransform: 'none' }}
+              >
+                Unread
+              </Button>
+              <Button
+                variant={campaignView.filter === 'read' ? 'contained' : 'outlined'}
+                size="small"
+                onClick={() => handleCampaignFilterChange('read')}
+                sx={{ mr: 1, textTransform: 'none' }}
+              >
+                Read
+              </Button>
+              <IconButton edge="end" onClick={handleCloseCampaignView} aria-label="close">
+                <CloseIcon />
+              </IconButton>
+            </Box>
+          </DialogTitle>
+          <DialogContent dividers sx={{ p: 0, display: 'flex', height: '100%' }}>
+            <Box sx={{ width: '300px', borderRight: (theme) => `1px solid ${theme.palette.divider}`, height: '100%', overflow: 'auto' }}>
+              {/* Campaign List */}
+              <List disablePadding>
+                {campaigns.length === 0 ? (
+                  <Box sx={{ p: 3, textAlign: 'center' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      No campaigns yet. Generate templates to see them here.
+                    </Typography>
+                  </Box>
+                ) : (
+                  <>
+                    {/* Unread Campaigns Section */}
+                    {campaigns.filter(c => !c.isRead).length > 0 &&
+                     (campaignView.filter === 'all' || campaignView.filter === 'unread') && (
+                      <>
+                        <Box sx={{
+                          p: 1.5,
+                          bgcolor: 'rgba(25, 118, 210, 0.05)',
+                          borderBottom: (theme) => `1px solid ${theme.palette.divider}`
+                        }}>
+                          <Typography variant="caption" fontWeight="bold" color="primary">
+                            NEW ({campaigns.filter(c => !c.isRead).length})
+                          </Typography>
+                        </Box>
+                        {campaigns
+                          .filter(campaign => !campaign.isRead)
+                          .map(campaign => (
+                            <ListItem
+                              key={campaign.id}
+                              button
+                              selected={campaignView.selectedCampaignId === campaign.id}
+                              onClick={() => handleCampaignSelect(campaign.id)}
+                              sx={{
+                                borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                                bgcolor: 'rgba(25, 118, 210, 0.05)',
+                                py: 1.5
+                              }}
+                            >
+                              <ListItemAvatar sx={{ minWidth: 40 }}>
+                                {campaign.type === 'email' && <EmailIcon color="primary" />}
+                                {campaign.type === 'call' && <CallIcon color="success" />}
+                                {campaign.type === 'meeting' && <MeetingRoomIcon color="warning" />}
+                              </ListItemAvatar>
+                              <ListItemText
+                                primary={
+                                  <Typography
+                                    variant="body2"
+                                    fontWeight="bold"
+                                    sx={{
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                  >
+                                    {campaign.title}
+                                  </Typography>
+                                }
+                                secondary={
+                                  <Box>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      sx={{
+                                        display: 'block',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                      }}
+                                    >
+                                      {campaign.description}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {new Date(campaign.createdAt).toLocaleDateString()}
+                                    </Typography>
+                                  </Box>
+                                }
+                              />
+                              <Box
+                                sx={{
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: '50%',
+                                  bgcolor: 'error.main',
+                                  ml: 1
+                                }}
+                              />
+                            </ListItem>
+                          ))
+                        }
+                      </>
+                    )}
+
+                    {/* Read Campaigns Section */}
+                    {campaigns.filter(c => c.isRead).length > 0 &&
+                     (campaignView.filter === 'all' || campaignView.filter === 'read') && (
+                      <>
+                        <Box sx={{
+                          p: 1.5,
+                          bgcolor: 'rgba(0, 0, 0, 0.02)',
+                          borderBottom: (theme) => `1px solid ${theme.palette.divider}`
+                        }}>
+                          <Typography variant="caption" fontWeight="bold" color="text.secondary">
+                            EARLIER ({campaigns.filter(c => c.isRead).length})
+                          </Typography>
+                        </Box>
+                        {campaigns
+                          .filter(campaign => campaign.isRead)
+                          .map(campaign => (
+                            <ListItem
+                              key={campaign.id}
+                              button
+                              selected={campaignView.selectedCampaignId === campaign.id}
+                              onClick={() => handleCampaignSelect(campaign.id)}
+                              sx={{
+                                borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                                py: 1.5
+                              }}
+                            >
+                              <ListItemAvatar sx={{ minWidth: 40 }}>
+                                {campaign.type === 'email' && <EmailIcon color="primary" />}
+                                {campaign.type === 'call' && <CallIcon color="success" />}
+                                {campaign.type === 'meeting' && <MeetingRoomIcon color="warning" />}
+                              </ListItemAvatar>
+                              <ListItemText
+                                primary={
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                  >
+                                    {campaign.title}
+                                  </Typography>
+                                }
+                                secondary={
+                                  <Box>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      sx={{
+                                        display: 'block',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                      }}
+                                    >
+                                      {campaign.description}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {new Date(campaign.createdAt).toLocaleDateString()}
+                                    </Typography>
+                                  </Box>
+                                }
+                              />
+                            </ListItem>
+                          ))
+                        }
+                      </>
+                    )}
+
+                    {/* No Results Message */}
+                    {((campaignView.filter === 'unread' && campaigns.filter(c => !c.isRead).length === 0) ||
+                      (campaignView.filter === 'read' && campaigns.filter(c => c.isRead).length === 0)) && (
+                      <Box sx={{ p: 3, textAlign: 'center' }}>
+                        <Typography variant="body2" color="text.secondary">
+                          No {campaignView.filter} campaigns found.
+                        </Typography>
+                      </Box>
+                    )}
+                  </>
+                )}
+              </List>
+            </Box>
+            <Box sx={{ flexGrow: 1, height: '100%', overflow: 'auto', p: 0 }}>
+              {/* Campaign Detail */}
+              {campaignView.selectedCampaignId ? (
+                (() => {
+                  const selectedCampaign = campaigns.find(c => c.id === campaignView.selectedCampaignId);
+                  if (!selectedCampaign) return null;
+
+                  return (
+                    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                      <Box sx={{ p: 3, borderBottom: (theme) => `1px solid ${theme.palette.divider}` }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <Box>
+                            <Typography variant="h6" fontWeight="bold">
+                              {selectedCampaign.title}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {selectedCampaign.description}
+                            </Typography>
+                            <Box sx={{ mt: 1 }}>
+                              <Chip
+                                label={selectedCampaign.type === 'email' ? 'Email Template' :
+                                       selectedCampaign.type === 'call' ? 'Call Script' :
+                                       'Meeting Points'}
+                                size="small"
+                                sx={{
+                                  mr: 1,
+                                  bgcolor: selectedCampaign.type === 'email' ? 'rgba(25, 118, 210, 0.1)' :
+                                          selectedCampaign.type === 'call' ? 'rgba(46, 125, 50, 0.1)' :
+                                          'rgba(106, 27, 154, 0.1)',
+                                  color: selectedCampaign.type === 'email' ? 'primary.main' :
+                                         selectedCampaign.type === 'call' ? 'success.main' :
+                                         'secondary.main'
+                                }}
+                              />
+                              <Chip
+                                label={selectedCampaign.accountName}
+                                size="small"
+                                sx={{ mr: 1 }}
+                              />
+                              <Typography variant="caption" color="text.secondary">
+                                Created on {new Date(selectedCampaign.createdAt).toLocaleDateString()}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          <IconButton onClick={() => handleDeleteCampaign(selectedCampaign.id)}>
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                      <Box sx={{ p: 3, flexGrow: 1, overflow: 'auto' }}>
+                        <Paper
+                          variant="outlined"
+                          sx={{
+                            p: 3,
+                            whiteSpace: 'pre-wrap',
+                            fontFamily: 'monospace',
+                            fontSize: '0.875rem',
+                            lineHeight: 1.6
+                          }}
+                        >
+                          {selectedCampaign.content}
+                        </Paper>
+                      </Box>
+                      <Box sx={{ p: 2, borderTop: (theme) => `1px solid ${theme.palette.divider}`, display: 'flex', justifyContent: 'flex-end' }}>
+                        <Button
+                          variant="outlined"
+                          startIcon={<CloudUploadIcon />}
+                          sx={{ mr: 1 }}
+                        >
+                          Use Template
+                        </Button>
+                        <Button
+                          variant="contained"
+                          startIcon={<EmailIcon />}
+                        >
+                          Send Email
+                        </Button>
+                      </Box>
+                    </Box>
+                  );
+                })()
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                  <Box sx={{ textAlign: 'center', p: 3 }}>
+                    <EmailIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2, opacity: 0.3 }} />
+                    <Typography variant="h6" color="text.secondary">
+                      Select a campaign to view
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Your AI-generated templates will appear here
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          </DialogContent>
+        </Dialog>
+
+        {/* Template Generation Dialog */}
+        <Dialog
+          open={templateDialog.open}
+          onClose={handleTemplateDialogClose}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: (theme) => theme.shape.borderRadius,
+              maxHeight: '80vh'
+            }
+          }}
+        >
+          <DialogTitle sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+            pb: 2
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              {templateDialog.type === 'email' && <EmailIcon sx={{ mr: 1 }} />}
+              {templateDialog.type === 'call' && <CallIcon sx={{ mr: 1 }} />}
+              {templateDialog.type === 'meeting' && <MeetingRoomIcon sx={{ mr: 1 }} />}
+              <Typography variant="h6">
+                {templateDialog.type === 'email' ? 'Email Template' :
+                 templateDialog.type === 'call' ? 'Cold Call Script' :
+                 'Meeting Talking Points'}
+              </Typography>
+            </Box>
+            <IconButton edge="end" onClick={handleTemplateDialogClose} aria-label="close">
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent dividers>
+            {templateDialog.isLoading ? (
+              <Box sx={{ p: 3 }}>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  Generating AI template for {selectedAccount?.accountName}...
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', my: 4 }}>
+                  <CircularProgress size={40} />
+                </Box>
+                <Skeleton variant="text" width="100%" height={24} sx={{ mb: 1 }} />
+                <Skeleton variant="text" width="95%" height={24} sx={{ mb: 1 }} />
+                <Skeleton variant="text" width="90%" height={24} sx={{ mb: 1 }} />
+                <Skeleton variant="text" width="100%" height={24} sx={{ mb: 1 }} />
+                <Skeleton variant="text" width="85%" height={24} sx={{ mb: 1 }} />
+                <Skeleton variant="text" width="95%" height={24} sx={{ mb: 1 }} />
+              </Box>
+            ) : (
+              <TextField
+                multiline
+                fullWidth
+                minRows={12}
+                maxRows={20}
+                value={templateDialog.content}
+                onChange={(e) => setTemplateDialog({
+                  ...templateDialog,
+                  content: e.target.value
+                })}
+                variant="outlined"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontFamily: 'monospace',
+                    fontSize: '0.875rem',
+                    lineHeight: 1.6
+                  }
+                }}
+              />
+            )}
+          </DialogContent>
+          <DialogActions sx={{ px: 3, py: 2, justifyContent: 'space-between' }}>
+            <Button
+              onClick={handleTemplateDialogClose}
+              variant="outlined"
+              sx={{ borderRadius: '3px', textTransform: 'none' }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveTemplate}
+              variant="contained"
+              disabled={templateDialog.isLoading}
+              startIcon={<CloudUploadIcon />}
+              sx={{
+                borderRadius: '3px',
+                textTransform: 'none',
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? '#fff' : '#000',
+                color: (theme) => theme.palette.mode === 'dark' ? '#000' : '#fff',
+                '&:hover': {
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : '#333'
+                }
+              }}
+            >
+              Save Template
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         {/* Notification for AI processing completion */}
         <Snackbar
           open={notification.open}
@@ -3008,14 +4139,18 @@ const Accounts: React.FC = () => {
                     fontWeight: 600,
                     fontSize: '0.875rem',
                     backgroundColor: (theme) => {
-                      const account = mockAccounts.find(a => a.id === notification.accountId);
+                      const account = accounts.find(a => a.id === notification.accountId);
                       return account?.color || stringToColor(account?.accountName || '');
                     },
                     mr: 1.5,
-                    mt: 0.5
+                    mt: 0.5,
+                    border: '1px solid rgba(255,255,255,0.2)'
                   }}
+                  src={accounts.find(a => a.id === notification.accountId)?.logoSrc !== '/images/avatar.png'
+                    ? accounts.find(a => a.id === notification.accountId)?.logoSrc
+                    : undefined}
                 >
-                  {getInitials(mockAccounts.find(a => a.id === notification.accountId)?.accountName || '')}
+                  {getInitials(accounts.find(a => a.id === notification.accountId)?.accountName || '')}
                 </Avatar>
               )}
               <Box sx={{ flex: 1 }}>
@@ -3028,7 +4163,7 @@ const Accounts: React.FC = () => {
                       size="small"
                       variant="text"
                       onClick={() => {
-                        const account = mockAccounts.find(a => a.id === notification.accountId);
+                        const account = accounts.find(a => a.id === notification.accountId);
                         if (account) {
                           handleAccountSelect(account);
                           handleCloseNotification();
@@ -3247,7 +4382,7 @@ const Accounts: React.FC = () => {
                         onChange={handleAccountTypeChange}
                         label="Organization Type"
                       >
-                        {filterOptions.organisationTypes.map((type) => (
+                        {dynamicFilterOptions.organisationTypes.map((type) => (
                           <MenuItem key={type} value={type}>
                             {type}
                           </MenuItem>
@@ -3268,7 +4403,7 @@ const Accounts: React.FC = () => {
                         onChange={handleAccountTypeChange}
                         label="Product Family"
                       >
-                        {filterOptions.productFamilies.map((family) => (
+                        {dynamicFilterOptions.productFamilies.map((family) => (
                           <MenuItem key={family} value={family}>
                             {family}
                           </MenuItem>
@@ -3402,7 +4537,8 @@ const Accounts: React.FC = () => {
                           fontWeight: 600,
                           fontSize: '1rem',
                           backgroundColor: stringToColor(newAccount.accountName || ''),
-                          mr: 2
+                          mr: 2,
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                         }}
                       >
                         {getInitials(newAccount.accountName || '')}

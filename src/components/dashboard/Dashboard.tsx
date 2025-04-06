@@ -82,7 +82,10 @@ const SearchBar = styled(Box)(({ theme }) => ({
   },
 }));
 
-const FilterButton = styled(Button)<{ active: boolean }>(({ theme, active }) => ({
+// Create a styled button that doesn't pass the 'active' prop to the DOM
+const FilterButton = styled(Button, {
+  shouldForwardProp: (prop) => prop !== 'active',
+})<{ active: boolean }>(({ theme, active }) => ({
   backgroundColor: active ? theme.palette.secondary.main : 'transparent',
   color: active ? theme.palette.secondary.contrastText : theme.palette.text.primary,
   borderRadius: '3px',
