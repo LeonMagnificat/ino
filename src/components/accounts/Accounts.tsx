@@ -1090,8 +1090,8 @@ const Accounts: React.FC = () => {
           // Map API response to accounts with UI state properties
           const mappedAccounts = result.data.map((account: Account) => ({
             ...account,
-            // Map status number to a UI status
-            updates: account.status === 0 ? 'completed' : 'pending',
+            // Map status number to a UI status - status 0 is pending, status 1 is completed
+            updates: account.status === 1 ? 'completed' : 'pending',
             // Generate a color based on account name
             color: stringToColor(account.account_name)
           }));
