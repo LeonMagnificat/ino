@@ -86,6 +86,7 @@ import BusinessIcon from '@mui/icons-material/Business';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import FilePresentIcon from '@mui/icons-material/FilePresent';
 import InfoIcon from '@mui/icons-material/Info';
+import StatusIndicator from './StatusIndicator';
 
 // Use the global theme from ThemeContext
 
@@ -313,10 +314,11 @@ interface Account {
     }>;
     // Fields for the 5 insight questions
     latest_updates?: string[];
-    challenges_priorities?: string[];
-    key_decision_makers?: string[];
-    position_market_trends?: string[];
-    upcoming_initiatives?: string[];
+    challenges?: string[];
+    decision_makers?: string[];
+    market_position?: string[];
+    future_plans?: string[];
+    status?: number;
   };
 }
 
@@ -706,13 +708,31 @@ const fetchUserProfile = async (): Promise<string> => {
       }
     });
     
+    console.log('Profile response:', response.data);
+    
+    // The API returns user ID in the response
     if (response.data && response.data.id) {
       return response.data.id;
     }
-    throw new Error('User ID not found in profile response');
+    
+    // If we have a user in localStorage, try to get the ID from there as fallback
+    const userJson = localStorage.getItem('user');
+    if (userJson) {
+      try {
+        const user = JSON.parse(userJson);
+        if (user && user.id) {
+          return user.id;
+        }
+      } catch (e) {
+        console.error('Error parsing user from localStorage:', e);
+      }
+    }
+    
+    // Fallback to a default user ID for development
+    return 'user12345';
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    return ''; // Fallback user ID
+    return 'user12345'; // Fallback user ID for development
   }
 };
 
@@ -721,6 +741,7 @@ const parseAndSendAccountsCSV = async (csvContent: string) => {
   try {
     // Get user ID from profile
     const userId = await fetchUserProfile();
+    console.log('Using user ID for import:', userId);
     
     // Split the CSV content into lines
     const lines = csvContent.replace(/^\ufeff/, '').split(/\r?\n/).filter(line => line.trim());
@@ -732,148 +753,110 @@ const parseAndSendAccountsCSV = async (csvContent: string) => {
     // Extract headers (first row)
     const headers = lines[0].split(';').map(header => header.trim());
     
-    // Map CSV column headers to backend field names
-    const fieldMapping: Record<string, string> = {
-      'Account Number': 'account_number',
-      'Account Name': 'account_name',
-      'Account Owner': 'account_owner',
-      'Organisation Type': 'organisation_type',
-      'Billing Country': 'billing_country',
-      'Shipping City': 'location',
-      'Quantity': 'quantity',
-      'Product Name': 'product_name',
-      'Last Billed Price (Total)': 'last_billed_price_total',
-      'SBU & Sub SBU': 'sbu_and_sub_sbu',
-      'Risk Assets': 'risk_assets',
-      'Risk Product Category': 'risk_product_category',
-      'Exit Rate USD': 'exit_rate_usd'
-    };
-    
-    // Parse data rows
-    const accounts = [];
-    for (let i = 1; i < lines.length; i++) {
-      if (!lines[i].trim()) continue; // Skip empty lines
-      
-      const values = parseCSVLine(lines[i], ';');
-      
+    // Parse data rows keeping the original column names
+    const dataRows = lines.slice(1).map(line => {
+      const values = line.split(';').map(value => value.trim());
       if (values.length !== headers.length) {
-        console.warn(`Row ${i + 1}: Column count mismatch (expected ${headers.length}, got ${values.length})`);
-        continue;
+        console.warn(`Row has ${values.length} columns, expected ${headers.length}`);
       }
       
-      // Create account object with header keys and row values
-      const account: Record<string, any> = {};
+      // Create an object for each row with original header names
+      const rowData: Record<string, any> = {};
       headers.forEach((header, index) => {
-        // Use mapped field name if available, otherwise use original header
-        const fieldName = fieldMapping[header] || header;
-        
-        // Format numeric values
-        if (header === 'Quantity') {
-          account[fieldName] = parseInt(values[index]) || 0;
-        } else if (header === 'Exit Rate USD') {
-          // Replace comma with dot for decimal numbers and convert to string
-          account[fieldName] = values[index].replace(',', '.');
-        } else {
-          account[fieldName] = values[index];
+        if (index < values.length) {
+          // Preserve original header name and value
+          rowData[header] = values[index];
+          
+          // Convert numeric values for Quantity
+          if (header === 'Quantity') {
+            const num = parseInt(values[index]);
+            if (!isNaN(num)) {
+              rowData[header] = num;
+            }
+          }
         }
       });
       
-      // Add additional fields required by the API
-      account.id = `acc_${Date.now()}_${i}`; // Generate a unique ID
-      account.createdAt = new Date().toISOString();
-      account.updatedAt = new Date().toISOString();
-      
-      accounts.push(account);
-    }
+      return rowData;
+    });
     
-    console.log('Parsed accounts sample:', accounts[0]); // Log the first account for debugging
+    // Group rows by account name (all rows for the same account should be processed together)
+    const accountsMap = new Map<string, any[]>();
     
-    // Check if we're in development/test mode or if we have authorization issues
-    const isDevMode = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost';
-    let useMockData = isDevMode;
-    
-    if (!useMockData) {
-      try {
-        // Test the API with a small request
-        await axios.get('https://ino-by-sam-be-production.up.railway.app/auth/profile', {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': getAuthToken()
-          },
-          timeout: 5000 // 5 second timeout for quick check
-        });
-      } catch (error) {
-        console.warn('API authorization check failed, falling back to mock data', error);
-        useMockData = true;
+    dataRows.forEach(row => {
+      if (!row['Account Name']) {
+        console.warn('Row missing Account Name, skipping', row);
+        return;
       }
-    }
-    
-    // If using mock data, return success without making API calls
-    if (useMockData) {
-      console.log('Using mock data instead of API calls for', accounts.length, 'accounts');
       
-      // These accounts will be processed by the component 
-      return {
-        success: true,
-        data: { 
-          mockData: true,
-          parsedAccounts: accounts,
-          totalAccounts: accounts.length
-        },
-        message: `Imported ${accounts.length} accounts successfully (using mock data - no backend connection)`
-      };
+      const accountName = row['Account Name'];
+      if (!accountsMap.has(accountName)) {
+        accountsMap.set(accountName, []);
+      }
+      
+      accountsMap.get(accountName)!.push(row);
+    });
+    
+    // Convert the map to array of accounts with all their rows
+    const accountsWithRows = Array.from(accountsMap.values());
+    console.log(`Grouped ${dataRows.length} rows into ${accountsWithRows.length} unique accounts`);
+    
+    // Process accounts in batches of 10
+    const batchSize = 10;
+    const batches = [];
+    
+    for (let i = 0; i < accountsWithRows.length; i += batchSize) {
+      batches.push(accountsWithRows.slice(i, i + batchSize));
     }
     
-    // Process in batches of 50 accounts for server API
-    const BATCH_SIZE = 50;
+    console.log(`Split accounts into ${batches.length} batches of up to ${batchSize} accounts each`);
+    
+    // Track successful and failed requests
     let successCount = 0;
     let failedCount = 0;
     
-    for (let i = 0; i < accounts.length; i += BATCH_SIZE) {
-      const batchAccounts = accounts.slice(i, i + BATCH_SIZE);
-      
-      // Create payload for this batch
-      const payload = {
-        user_id: userId,
-        accounts: batchAccounts
-      };
-      
-      console.log(`Sending batch ${i / BATCH_SIZE + 1}/${Math.ceil(accounts.length / BATCH_SIZE)} (${batchAccounts.length} accounts)`);
+    // Send each batch to the backend
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
       
       try {
-        // Send data to backend API
-        const response = await axios.post('https://ino-by-sam-be-production.up.railway.app/accounts', payload, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': getAuthToken()
-          },
-          timeout: 30000 // 30 seconds timeout for each batch
+        console.log(`Sending batch ${i + 1}/${batches.length} (${batch.length} accounts)`);
+        
+        // Format the batch as expected by the backend
+        const batchPayload = {
+          user_id: userId,
+          accounts: batch.flat() // All rows for each account in this batch, with original column names
+        };
+        
+        console.log('Payload structure:', {
+          user_id: userId,
+          accountsCount: batchPayload.accounts.length,
+          sample: batchPayload.accounts.slice(0, 1)
         });
         
-        successCount += batchAccounts.length;
-      } catch (error) {
-        console.error(`Error sending batch ${i / BATCH_SIZE + 1}:`, error);
+        // Send the batch to the backend
+        const response = await axios.post(
+          'https://ino-by-sam-be-production.up.railway.app/accounts',
+          batchPayload,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': getAuthToken()
+            }
+          }
+        );
         
-        // If we get a 401 or CORS error, we should stop processing batches and fall back to mock data
-        const axiosError = error as any;
-        if (
-          (axiosError.response && axiosError.response.status === 401) ||
-          (axiosError.message && axiosError.message.includes('Network Error'))
-        ) {
-          console.error('Authentication or network error. Stopping batch processing and using mock data.');
-          
-          return {
-            success: true,
-            data: { 
-              mockData: true,
-              parsedAccounts: accounts,
-              totalAccounts: accounts.length
-            },
-            message: `Imported ${accounts.length} accounts successfully (using mock data - authentication failed)`
-          };
+        console.log(`Batch ${i + 1} response:`, response.data);
+        
+        if (response.data.success) {
+          successCount += batch.length;
+        } else {
+          failedCount += batch.length;
+          console.error(`Failed to import batch ${i + 1}:`, response.data.message);
         }
-        
-        failedCount += batchAccounts.length;
+      } catch (error) {
+        failedCount += batch.length;
+        console.error(`Error sending batch ${i + 1}:`, error);
       }
     }
     
@@ -883,10 +866,10 @@ const parseAndSendAccountsCSV = async (csvContent: string) => {
         success: true,
         data: { 
           mockData: true,
-          parsedAccounts: accounts,
-          totalAccounts: accounts.length
+          parsedAccounts: accountsWithRows.flat(),
+          totalAccounts: accountsWithRows.length
         },
-        message: `Imported ${accounts.length} accounts successfully (using mock data - API upload failed)`
+        message: `Imported ${accountsWithRows.length} accounts successfully (using mock data - API upload failed)`
       };
     }
     
@@ -1105,38 +1088,6 @@ const Accounts: React.FC = () => {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // State variables
-  const [templateType, setTemplateType] = useState<string | null>(null);
-  const [generatingTemplate, setGeneratingTemplate] = useState<boolean>(false);
-  const [templateSaved, setTemplateSaved] = useState<boolean>(false);
-
-  // Template generation function
-  const handleGenerateTemplate = (type: string) => {
-    setTemplateType(type);
-    setGeneratingTemplate(true);
-    setTemplateSaved(false);
-    
-    // Simulate template generation with AI
-    setTimeout(() => {
-      setGeneratingTemplate(false);
-      setTemplateSaved(true);
-      
-      // Show notification that template was saved
-      setNotification({
-        open: true,
-        severity: 'success',
-        message: `${type} template for ${selectedAccount?.account_name} has been saved to templates`,
-        accountId: selectedAccount?.id as unknown as number
-      });
-      
-      // Reset template states after a delay
-      setTimeout(() => {
-        setTemplateType(null);
-        setTemplateSaved(false);
-      }, 3000);
-    }, 2000);
-  };
-
   // Fetch accounts on component mount
   useEffect(() => {
     const loadAccounts = async () => {
@@ -1165,6 +1116,7 @@ const Accounts: React.FC = () => {
             // Start polling for insights
             const poller = pollCompanyInsights(
               pendingAccounts,
+              // Handle successful insights
               (accountId: string) => {
                 // Update the account with completed status when insight is ready
                 setAccounts(currentAccounts => 
@@ -1177,9 +1129,21 @@ const Accounts: React.FC = () => {
                 
                 // Show notification for newly available insight
                 const accountName = mappedAccounts.find((a: Account) => a.id === accountId)?.account_name || 'Account';
+                
+                // Show snackbar notification (keep the existing code)
                 setNotification({
                   open: true,
                   message: `${accountName}'s insight analysis has completed`,
+                  severity: 'success',
+                  accountId: accountId
+                });
+                
+                // Also add to notification panel
+                addNotification({
+                  title: accountName,
+                  content: `Insight analysis has completed for ${accountName}`,
+                  logoSrc: '/logo192.png',
+                  type: 'account',
                   severity: 'success',
                   accountId: accountId
                 });
@@ -1188,6 +1152,46 @@ const Accounts: React.FC = () => {
                 setSelectedAccount(current => {
                   if (current && current.id === accountId) {
                     return { ...current, updates: 'completed' as const };
+                  }
+                  return current;
+                });
+              },
+              // Handle failed insights
+              (accountId: string) => {
+                // Update the account with failed status
+                setAccounts(currentAccounts => 
+                  currentAccounts.map(account => 
+                    account.id === accountId 
+                      ? { ...account, updates: 'failed' as const } 
+                      : account
+                  )
+                );
+                
+                // Show notification for failed insight
+                const accountName = mappedAccounts.find((a: Account) => a.id === accountId)?.account_name || 'Account';
+                
+                // Show snackbar notification (keep the existing code)
+                setNotification({
+                  open: true,
+                  message: `${accountName}'s insight analysis failed`,
+                  severity: 'error',
+                  accountId: accountId
+                });
+                
+                // Also add to notification panel
+                addNotification({
+                  title: accountName,
+                  content: `Insight analysis failed for ${accountName}`,
+                  logoSrc: '/logo192.png',
+                  type: 'alert',
+                  severity: 'error',
+                  accountId: accountId
+                });
+                
+                // Update selected account if it's the one that failed
+                setSelectedAccount(current => {
+                  if (current && current.id === accountId) {
+                    return { ...current, updates: 'failed' as const };
                   }
                   return current;
                 });
@@ -1265,7 +1269,7 @@ const Accounts: React.FC = () => {
       
       return () => clearTimeout(timer);
     }
-  }, [accounts, selectedAccount]);
+  }, [accounts, selectedAccount, addNotification]);
 
   // Handle click outside to close assets dropdown
   React.useEffect(() => {
@@ -1626,14 +1630,25 @@ const Accounts: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
+  // Update handleNextStep to validate CSV file in step 1 before proceeding
   const handleNextStep = () => {
     if (addAccountStep === 0) {
       // If on the first step (method selection), just go to next step
       setAddAccountStep(1);
     } else if (addAccountStep === 1) {
-      // If on the second step (account details form), validate before proceeding
-      if (validateAccountForm()) {
-        setAddAccountStep(2);
+      if (importMethod === 'single') {
+        // If on the second step (account details form), validate before proceeding
+        if (validateAccountForm()) {
+          setAddAccountStep(2);
+        }
+      } else if (importMethod === 'csv') {
+        // For CSV import, make sure a file is selected
+        if (csvFile) {
+          setAddAccountStep(2);
+          // We'll start the import process in step 3
+        } else {
+          setImportErrors(['Please select a CSV file first']);
+        }
       }
     }
   };
@@ -2257,11 +2272,10 @@ const Accounts: React.FC = () => {
                       </Typography>
                     </Box>
                     <StatusLabel status={account.updates}>
-                      <StatusIndicator status={account.updates} />
                       {account.updates === 'completed' ? 'Analysis Complete' :
-                       account.updates === 'failed' ? 'No Results Found' :
-                       account.updates === 'loading' ? 'Processing' : 
-                       account.updates ? account.updates.charAt(0).toUpperCase() + account.updates.slice(1) : 'Pending'}
+                       account.updates === 'failed' ? 'Analysis Failed' :
+                       account.updates === 'pending' ? 'Analysis in Progress' :
+                       account.updates === 'loading' ? 'Loading' : 'Unknown Status'}
                     </StatusLabel>
                     {bookmarked.includes(String(account.id)) && (
                       <BookmarkIcon sx={{ ml: 1, fontSize: 16, color: (theme) => theme.palette.warning.main }} />
@@ -2781,6 +2795,7 @@ const Accounts: React.FC = () => {
                   <Collapse in={expandedInsights.includes(0)}>
                     <Box sx={{ px: 2, pb: 2 }}>
                       <List dense sx={{ pl: 2, mt: 0 }}>
+                        {/* For the latest_updates section */}
                         {selectedAccount.companyInsight?.latest_updates ? (
                           Array.isArray(selectedAccount.companyInsight.latest_updates) ? 
                             selectedAccount.companyInsight.latest_updates.map((point, i) => (
@@ -2797,9 +2812,11 @@ const Accounts: React.FC = () => {
                         ) : (
                           <ListItem sx={{ pl: 0 }}>
                             <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                              {selectedAccount.updates === 'completed' 
-                                ? 'No information available' 
-                                : 'Analysis in progress...'}
+                              {selectedAccount.updates === 'pending' 
+                                ? 'Analysis in progress...' 
+                                : selectedAccount.updates === 'failed' 
+                                  ? 'Analysis failed. Please try again.' 
+                                  : 'No information available'}
                             </Typography>
                           </ListItem>
                         )}
@@ -2860,9 +2877,9 @@ const Accounts: React.FC = () => {
                   <Collapse in={expandedInsights.includes(1)}>
                     <Box sx={{ px: 2, pb: 2 }}>
                       <List dense sx={{ pl: 2, mt: 0 }}>
-                        {selectedAccount.companyInsight?.challenges_priorities ? (
-                          Array.isArray(selectedAccount.companyInsight.challenges_priorities) ? 
-                            selectedAccount.companyInsight.challenges_priorities.map((point, i) => (
+                        {selectedAccount.companyInsight?.challenges ? (
+                          Array.isArray(selectedAccount.companyInsight.challenges) ? 
+                            selectedAccount.companyInsight.challenges.map((point, i) => (
                               <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
                                 <Typography variant="body2">{point}</Typography>
                               </ListItem>
@@ -2870,7 +2887,7 @@ const Accounts: React.FC = () => {
                             : 
                             <ListItem sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
                               <Typography variant="body2">
-                                {selectedAccount.companyInsight.challenges_priorities}
+                                {selectedAccount.companyInsight.challenges}
                               </Typography>
                             </ListItem>
                         ) : (
@@ -2922,9 +2939,9 @@ const Accounts: React.FC = () => {
                   <Collapse in={expandedInsights.includes(2)}>
                     <Box sx={{ px: 2, pb: 2 }}>
                       <List dense sx={{ pl: 2, mt: 0 }}>
-                        {selectedAccount.companyInsight?.key_decision_makers ? (
-                          Array.isArray(selectedAccount.companyInsight.key_decision_makers) ? 
-                            selectedAccount.companyInsight.key_decision_makers.map((point, i) => (
+                        {selectedAccount.companyInsight?.decision_makers ? (
+                          Array.isArray(selectedAccount.companyInsight.decision_makers) ? 
+                            selectedAccount.companyInsight.decision_makers.map((point, i) => (
                               <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
                                 <Typography variant="body2">{point}</Typography>
                               </ListItem>
@@ -2932,7 +2949,7 @@ const Accounts: React.FC = () => {
                             : 
                             <ListItem sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
                               <Typography variant="body2">
-                                {selectedAccount.companyInsight.key_decision_makers}
+                                {selectedAccount.companyInsight.decision_makers}
                               </Typography>
                             </ListItem>
                         ) : (
@@ -2961,204 +2978,164 @@ const Accounts: React.FC = () => {
                 >
                   <Box 
                     sx={{ 
-                      borderRadius: '3px', 
-                      textTransform: 'none', 
-                      bgcolor: '#f5f5f5', 
-                      color: '#000',
-                      fontWeight: 500,
-                      px: 2,
-                      '&:hover': {
-                        bgcolor: '#e0e0e0'
-                      }
+                      p: 2, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      bgcolor: expandedInsights.includes(3) ? '#f5f5f5' : 'transparent',
+                      '&:hover': { bgcolor: '#f5f5f5' }
                     }}
+                    onClick={() => toggleInsight(3)}
                   >
-                    Recommended Campaigns
-                  </Button>
-                  <Button 
-                    variant="contained" 
+                    <Typography variant="body2" fontWeight={600}>
+                      4. How does the company position itself against competitors, and what market trends are affecting them?
+                    </Typography>
+                    <ExpandMoreIcon 
+                      sx={{ 
+                        transform: expandedInsights.includes(3) ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.3s'
+                      }} 
+                    />
+                  </Box>
+                  <Collapse in={expandedInsights.includes(3)}>
+                    <Box sx={{ px: 2, pb: 2 }}>
+                      <List dense sx={{ pl: 2, mt: 0 }}>
+                        {selectedAccount.companyInsight?.position_market_trends ? (
+                          Array.isArray(selectedAccount.companyInsight.position_market_trends) ? 
+                            selectedAccount.companyInsight.position_market_trends.map((point, i) => (
+                              <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
+                                <Typography variant="body2">{point}</Typography>
+                              </ListItem>
+                            )) 
+                            : 
+                            <ListItem sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
+                              <Typography variant="body2">
+                                {selectedAccount.companyInsight.position_market_trends}
+                              </Typography>
+                            </ListItem>
+                        ) : (
+                          <ListItem sx={{ pl: 0 }}>
+                            <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                              {selectedAccount.updates === 'completed' 
+                                ? 'No information available' 
+                                : 'Analysis in progress...'}
+                            </Typography>
+                          </ListItem>
+                        )}
+                      </List>
+                    </Box>
+                  </Collapse>
+                </Paper>
+
+                {/* Fifth insight question */}
+                <Paper 
+                  elevation={0} 
+                  sx={{ 
+                    mb: 2, 
+                    overflow: 'hidden', 
+                    borderRadius: (theme) => theme.shape.borderRadius,
+                    border: '1px solid #eee'
+                  }}
+                >
+                  <Box 
                     sx={{ 
-                      borderRadius: '3px', 
-                      textTransform: 'none', 
-                      bgcolor: '#000', 
-                      color: '#fff',
-                      fontWeight: 500,
-                      px: 2
+                      p: 2, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      bgcolor: expandedInsights.includes(4) ? '#f5f5f5' : 'transparent',
+                      '&:hover': { bgcolor: '#f5f5f5' }
                     }}
+                    onClick={() => toggleInsight(4)}
                   >
-                    Talking Points
-                  </Button>
-                </Box>
+                    <Typography variant="body2" fontWeight={600}>
+                      5. What upcoming initiatives, partnerships, or expansions is the company planning?
+                    </Typography>
+                    <ExpandMoreIcon 
+                      sx={{ 
+                        transform: expandedInsights.includes(4) ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.3s'
+                      }} 
+                    />
+                  </Box>
+                  <Collapse in={expandedInsights.includes(4)}>
+                    <Box sx={{ px: 2, pb: 2 }}>
+                      <List dense sx={{ pl: 2, mt: 0 }}>
+                        {selectedAccount.companyInsight?.upcoming_initiatives ? (
+                          Array.isArray(selectedAccount.companyInsight.upcoming_initiatives) ? 
+                            selectedAccount.companyInsight.upcoming_initiatives.map((point, i) => (
+                              <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
+                                <Typography variant="body2">{point}</Typography>
+                              </ListItem>
+                            )) 
+                            : 
+                            <ListItem sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
+                              <Typography variant="body2">
+                                {selectedAccount.companyInsight.upcoming_initiatives}
+                              </Typography>
+                            </ListItem>
+                        ) : (
+                          <ListItem sx={{ pl: 0 }}>
+                            <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                              {selectedAccount.updates === 'completed' 
+                                ? 'No information available' 
+                                : 'Analysis in progress...'}
+                            </Typography>
+                          </ListItem>
+                        )}
+                      </List>
+                    </Box>
+                  </Collapse>
+                </Paper>
               </Box>
             </Paper>
-            
-            {/* Quick Access Tools */}
-            <Paper elevation={0} sx={{ borderRadius: (theme) => theme.shape.borderRadius, p: 2 }}>
-              <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                Quick Access
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                <Chip 
-                  label="Account History" 
-                  clickable 
-                  sx={{ 
-                    borderRadius: '3px',
-                    '&:hover': { bgcolor: '#f5f5f5' }
-                  }} 
-                />
-                <Chip 
-                  label="Meeting Notes" 
-                  clickable 
-                  sx={{ 
-                    borderRadius: '3px',
-                    '&:hover': { bgcolor: '#f5f5f5' }
-                  }} 
-                />
-                <Chip 
-                  label="Contact List" 
-                  clickable 
-                  sx={{ 
-                    borderRadius: '3px',
-                    '&:hover': { bgcolor: '#f5f5f5' }
-                  }} 
-                />
-                <Chip 
-                  label="Recent Orders" 
-                  clickable 
-                  sx={{ 
-                    borderRadius: '3px',
-                    '&:hover': { bgcolor: '#f5f5f5' }
-                  }} 
-                />
+
+            <Paper elevation={0} sx={{ borderRadius: (theme) => theme.shape.borderRadius, overflow: 'hidden', mb: 3 }}>
+              <Box sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                <SectionTitle sx={{ mb: 0 }}>
+                  <AssignmentIcon sx={{ color: '#666', mr: 1 }} />
+                  <Typography variant="h6" fontWeight={600}>
+                    Action Plan
+                  </Typography>
+                </SectionTitle>
+              </Box>
+              <Box sx={{ p: 3 }}>
+                {selectedAccount.companyInsight?.action_plan?.map((action, index) => (
+                  <Paper
+                    key={index}
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      mb: 2,
+                      borderRadius: (theme) => theme.shape.borderRadius,
+                      border: '1px solid #eee',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 1
+                    }}
+                  >
+                    <Typography variant="subtitle1" fontWeight={600} color="primary">
+                      {action.recommendation}
+                    </Typography>
+                    <Typography variant="body2">
+                      {action.description}
+                    </Typography>
+                  </Paper>
+                )) || (
+                  <Box sx={{ p: 2, textAlign: 'center' }}>
+                    <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                      {selectedAccount.updates === 'completed' 
+                        ? 'No action plan available' 
+                        : 'Generating action plan...'}
+                    </Typography>
+                  </Box>
+                )}
               </Box>
             </Paper>
           </Box>
         </Box>
-        
-        {/* Template Generation Buttons */}
-        <Paper 
-          elevation={0} 
-          sx={{ 
-            mt: 2, 
-            p: 3, 
-            borderRadius: (theme) => theme.shape.borderRadius,
-            border: '1px solid',
-            borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)'
-          }}
-        >
-          <Typography variant="h6" fontWeight={600} gutterBottom>
-            Generate AI Templates
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Create targeted templates based on AI analysis of this account's data and market insights.
-          </Typography>
-          
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <Button
-              variant="contained"
-              startIcon={<EmailIcon />}
-              disabled={generatingTemplate}
-              onClick={() => handleGenerateTemplate('Email Campaign')}
-              sx={{
-                bgcolor: (theme) => theme.palette.warning.main, // Yellow
-                color: (theme) => theme.palette.warning.contrastText,
-                fontWeight: 500,
-                px: 3,
-                py: 1.5,
-                borderRadius: '3px',
-                '&:hover': {
-                  bgcolor: (theme) => theme.palette.warning.dark,
-                },
-                '&.Mui-disabled': {
-                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
-                }
-              }}
-            >
-              {templateType === 'Email Campaign' && generatingTemplate ? (
-                <>
-                  <CircularProgress size={16} color="inherit" sx={{ mr: 1 }} />
-                  Generating...
-                </>
-              ) : templateType === 'Email Campaign' && templateSaved ? (
-                <>
-                  <CheckCircleIcon sx={{ mr: 1 }} />
-                  Template Saved
-                </>
-              ) : (
-                'Create Email Campaign'
-              )}
-            </Button>
-            
-            <Button
-              variant="contained"
-              startIcon={<PhoneIcon />}
-              disabled={generatingTemplate}
-              onClick={() => handleGenerateTemplate('Cold Call')}
-              sx={{
-                bgcolor: (theme) => theme.palette.primary.main, // Blue
-                color: '#fff',
-                fontWeight: 500,
-                px: 3,
-                py: 1.5,
-                borderRadius: '3px',
-                '&:hover': {
-                  bgcolor: (theme) => theme.palette.primary.dark,
-                },
-                '&.Mui-disabled': {
-                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
-                }
-              }}
-            >
-              {templateType === 'Cold Call' && generatingTemplate ? (
-                <>
-                  <CircularProgress size={16} color="inherit" sx={{ mr: 1 }} />
-                  Generating...
-                </>
-              ) : templateType === 'Cold Call' && templateSaved ? (
-                <>
-                  <CheckCircleIcon sx={{ mr: 1 }} />
-                  Template Saved
-                </>
-              ) : (
-                'Cold Call Talk Points'
-              )}
-            </Button>
-            
-            <Button
-              variant="contained"
-              startIcon={<VideocamIcon />}
-              disabled={generatingTemplate}
-              onClick={() => handleGenerateTemplate('Teams Meeting')}
-              sx={{
-                bgcolor: (theme) => theme.palette.success.main, // Green
-                color: '#fff',
-                fontWeight: 500,
-                px: 3,
-                py: 1.5,
-                borderRadius: '3px',
-                '&:hover': {
-                  bgcolor: (theme) => theme.palette.success.dark,
-                },
-                '&.Mui-disabled': {
-                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
-                }
-              }}
-            >
-              {templateType === 'Teams Meeting' && generatingTemplate ? (
-                <>
-                  <CircularProgress size={16} color="inherit" sx={{ mr: 1 }} />
-                  Generating...
-                </>
-              ) : templateType === 'Teams Meeting' && templateSaved ? (
-                <>
-                  <CheckCircleIcon sx={{ mr: 1 }} />
-                  Template Saved
-                </>
-              ) : (
-                'Teams Meeting Points'
-              )}
-            </Button>
-          </Box>
-        </Paper>
       </AnimatedContainer>
     );
   };
@@ -3170,10 +3147,14 @@ const Accounts: React.FC = () => {
   const pollCompanyInsights = (
     accountIds: string[],
     onInsightReady: (accountId: string) => void,
-    intervalMs: number = 5000
+    onInsightFailed: (accountId: string) => void,
+    intervalMs: number = 5000,
+    maxAttempts: number = 20 // Increase max attempts to give more time for analysis
   ) => {
-    // Keep track of which accounts already have insights
+    // Keep track of which accounts already have insights or failed
     const accountsWithInsights = new Set<string>();
+    const accountsWithFailedInsights = new Set<string>();
+    const accountAttempts = new Map<string, number>(); // Track attempts per account
     let timer: NodeJS.Timeout | null = null;
     
     // Function to check insights status
@@ -3182,19 +3163,48 @@ const Accounts: React.FC = () => {
         // Skip if no accounts to check
         if (accountIds.length === 0) return;
         
-        // Get accounts that don't already have insights
-        const accountsToCheck = accountIds.filter(id => !accountsWithInsights.has(id));
+        // Get accounts that don't already have insights (successful or failed)
+        const accountsToCheck = accountIds.filter(id => 
+          !accountsWithInsights.has(id) && !accountsWithFailedInsights.has(id)
+        );
         
-        // Skip if all accounts already have insights
+        // Skip if all accounts have been processed
         if (accountsToCheck.length === 0) {
           stopPolling();
+          return;
+        }
+        
+        console.log(`Polling for insights: ${accountsToCheck.join(', ')}`);
+        
+        // Update attempt count for each account
+        accountsToCheck.forEach(id => {
+          const currentAttempts = accountAttempts.get(id) || 0;
+          accountAttempts.set(id, currentAttempts + 1);
+          
+          // Check if any account has reached max attempts
+          if (currentAttempts + 1 >= maxAttempts) {
+            console.log(`Max attempts reached for account ${id}, marking as failed`);
+            accountsWithFailedInsights.add(id);
+            onInsightFailed(id);
+          }
+        });
+        
+        // Filter out accounts that just reached max attempts
+        const remainingAccounts = accountsToCheck.filter(id => 
+          !accountsWithFailedInsights.has(id)
+        );
+        
+        if (remainingAccounts.length === 0) {
+          if (accountsWithInsights.size + accountsWithFailedInsights.size === accountIds.length) {
+            stopPolling();
+          }
           return;
         }
         
         // Call API to check which accounts have insights ready
         const response = await axios.post(
           'https://ino-by-sam-be-production.up.railway.app/accounts/check-insights',
-          { account_ids: accountsToCheck },
+          { account_ids: remainingAccounts },
           {
             headers: {
               'Content-Type': 'application/json',
@@ -3204,25 +3214,48 @@ const Accounts: React.FC = () => {
         );
         
         // Process accounts with ready insights
-        if (response.data && response.data.ready_insights) {
-          response.data.ready_insights.forEach((accountId: string) => {
-            // Only process if not already processed
-            if (!accountsWithInsights.has(accountId)) {
-              // Mark as processed
-              accountsWithInsights.add(accountId);
-              
-              // Notify caller
-              onInsightReady(accountId);
-            }
-          });
+        if (response.data) {
+          // Handle successful insights
+          if (response.data.ready_insights && Array.isArray(response.data.ready_insights)) {
+            response.data.ready_insights.forEach((accountId: string) => {
+              // Only process if not already processed
+              if (!accountsWithInsights.has(accountId)) {
+                console.log(`Insight ready for account ${accountId}`);
+                // Mark as processed
+                accountsWithInsights.add(accountId);
+                
+                // Notify caller
+                onInsightReady(accountId);
+              }
+            });
+          }
           
-          // If all accounts have insights, stop polling
-          if (accountsWithInsights.size === accountIds.length) {
+          // Handle failed insights
+          if (response.data.failed_insights && Array.isArray(response.data.failed_insights)) {
+            response.data.failed_insights.forEach((accountId: string) => {
+              // Only process if not already processed
+              if (!accountsWithFailedInsights.has(accountId)) {
+                console.log(`Insight failed for account ${accountId}`);
+                // Mark as processed
+                accountsWithFailedInsights.add(accountId);
+                
+                // Notify caller
+                onInsightFailed(accountId);
+              }
+            });
+          }
+          
+          // If all accounts have been processed, stop polling
+          if (accountsWithInsights.size + accountsWithFailedInsights.size === accountIds.length) {
+            console.log("All accounts processed, stopping polling");
             stopPolling();
           }
         }
       } catch (error) {
         console.error('Error polling for company insights:', error);
+        
+        // Don't mark as failed immediately on network errors, 
+        // only if max attempts are reached per account
       }
     };
     
@@ -3248,9 +3281,23 @@ const Accounts: React.FC = () => {
     
     // Return control object
     return {
-      stop: stopPolling
+      stop: stopPolling,
+      // Add a method to check status of specific account
+      isProcessed: (accountId: string) => {
+        return accountsWithInsights.has(accountId) || accountsWithFailedInsights.has(accountId);
+      },
+      isSuccessful: (accountId: string) => {
+        return accountsWithInsights.has(accountId);
+      }
     };
   };
+
+  // Add useEffect to automatically start the import when reaching step 3 for CSV
+  React.useEffect(() => {
+    if (addAccountStep === 2 && importMethod === 'csv' && csvFile && !isApiUploading && !apiUploadStatus) {
+      handleAPIUploadClick();
+    }
+  }, [addAccountStep, importMethod, csvFile, isApiUploading, apiUploadStatus]);
 
   return (
     <AccountsContainer>
@@ -4457,20 +4504,73 @@ const Accounts: React.FC = () => {
               </Box>
             )}
 
-            {/* Step 3B: CSV Mapping & Import */}
-            {addAccountStep === 2 && importMethod === 'csv' && csvFile && (
+            {/* Step 3B: CSV Import Progress */}
+            {addAccountStep === 2 && importMethod === 'csv' && (
               <Box>
                 <Typography variant="subtitle1" fontWeight="600" gutterBottom>
-                  CSV Import Configuration
+                  Importing Accounts
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Map the columns from your CSV file to account fields.
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  Your accounts are being processed and imported. This may take a few moments.
                 </Typography>
 
+                {/* Import progress */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  p: 4,
+                  mb: 3,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: (appTheme || muiTheme).shape.borderRadius,
+                  backgroundColor: 'background.paper'
+                }}>
+                  {!isApiUploading && !apiUploadStatus ? (
+                    // Initial state - trigger import
+                    <React.Fragment>
+                      <CircularProgress size={60} sx={{ mb: 2 }} />
+                      <Typography variant="body1" fontWeight="medium" textAlign="center">
+                        Preparing to import...
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mt: 1 }}>
+                        File: {csvFile?.name}
+                      </Typography>
+                    </React.Fragment>
+                  ) : isApiUploading ? (
+                    // During import
+                    <React.Fragment>
+                      <CircularProgress size={60} sx={{ mb: 2 }} />
+                      <Typography variant="body1" fontWeight="medium" textAlign="center">
+                        Uploading accounts...
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mt: 1 }}>
+                        This may take a few moments depending on the file size
+                      </Typography>
+                    </React.Fragment>
+                  ) : apiUploadStatus ? (
+                    // Import complete
+                    <React.Fragment>
+                      {apiUploadStatus.success ? (
+                        <CheckCircleIcon sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
+                      ) : (
+                        <ErrorIcon sx={{ fontSize: 60, color: 'error.main', mb: 2 }} />
+                      )}
+                      <Typography variant="body1" fontWeight="medium" textAlign="center">
+                        {apiUploadStatus.success ? 'Import Complete' : 'Import Failed'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mt: 1 }}>
+                        {apiUploadStatus.message}
+                      </Typography>
+                    </React.Fragment>
+                  ) : null}
+                </Box>
+
                 {importErrors.length > 0 && (
-                  <Alert severity="error" sx={{ mb: 2 }}>
+                  <Alert severity="error" sx={{ mb: 3 }}>
                     <Typography variant="body2" fontWeight="medium">
-                      There were errors with your CSV file:
+                      There were errors with your import:
                     </Typography>
                     <Box component="ul" sx={{ pl: 2, mt: 1, mb: 0 }}>
                       {importErrors.map((error, index) => (
@@ -4478,69 +4578,6 @@ const Accounts: React.FC = () => {
                       ))}
                     </Box>
                   </Alert>
-                )}
-
-                {csvPreview.length > 0 && (
-                  <>
-                    <Typography variant="subtitle2" fontWeight="600" sx={{ mt: 3, mb: 1 }}>
-                      File Preview
-                    </Typography>
-
-                    <CSVPreviewTable>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            {csvPreview[0].map((header, index) => (
-                              <TableCell key={index}>
-                                <Box>
-                                  <Typography variant="caption" fontWeight="bold">
-                                    {header}
-                                  </Typography>
-                                  <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-                                    <InputLabel>Map to</InputLabel>
-                                    <Select
-                                      value={csvMapping[header] || ''}
-                                      onChange={(e) => handleMappingChange(header, e.target.value)}
-                                      label="Map to"
-                                      size="small"
-                                    >
-                                      <MenuItem value="">
-                                        <em>Skip</em>
-                                      </MenuItem>
-                                      <MenuItem value="accountName">Account Name</MenuItem>
-                                      <MenuItem value="location">Location</MenuItem>
-                                      <MenuItem value="organisationType">Organization Type</MenuItem>
-                                      <MenuItem value="productFamily">Product Family</MenuItem>
-                                    </Select>
-                                  </FormControl>
-                                </Box>
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {csvPreview.slice(1).map((row, rowIndex) => (
-                            <TableRow key={rowIndex}>
-                              {row.map((cell, cellIndex) => (
-                                <TableCell key={cellIndex}>{cell}</TableCell>
-                              ))}
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </CSVPreviewTable>
-
-                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-                      <Button
-                        variant="outlined"
-                        startIcon={<UploadFileIcon />}
-                        onClick={() => fileInputRef.current?.click()}
-                        sx={{ mr: 2 }}
-                      >
-                        Change File
-                      </Button>
-                    </Box>
-                  </>
                 )}
               </Box>
             )}
@@ -4597,11 +4634,10 @@ const Accounts: React.FC = () => {
             {addAccountStep === 2 && importMethod === 'csv' && (
               <Button
                 variant="contained"
-                onClick={handleImportAccounts}
-                startIcon={importInProgress ? <CircularProgress size={16} color="inherit" /> : <FileUploadIcon />}
-                disabled={importInProgress || csvPreview.length === 0 || Object.keys(csvMapping).length === 0}
+                onClick={handleCloseAddAccountDialog}
+                disabled={isApiUploading && !apiUploadStatus}
               >
-                Import Accounts
+                {apiUploadStatus ? 'Close' : 'Cancel'}
               </Button>
             )}
           </DialogActions>

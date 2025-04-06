@@ -17,6 +17,7 @@ import SignupPage from './components/auth/SignupPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 
 function App() {
   const [showNotifications, setShowNotifications] = React.useState(false);
@@ -28,92 +29,94 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <CssBaseline />
-        <Router>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/logout" element={<LogoutRedirect />} />
+        <NotificationProvider>
+          <CssBaseline />
+          <Router>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignupPage />} />
+              <Route path="/logout" element={<LogoutRedirect />} />
 
-            {/* Protected routes */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
-                  <Dashboard />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            {/* Advanced Analytics route removed - charts moved to main dashboard */}
-            <Route path="/accounts" element={
-              <ProtectedRoute>
-                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
-                  <Accounts />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/accounts/new" element={
-              <ProtectedRoute>
-                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
-                  <AccountsNew />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/campaigns" element={
-              <ProtectedRoute>
-                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
-                  <Campaigns />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/settings" element={
-              <ProtectedRoute>
-                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
-                  <Settings />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
+              {/* Protected routes */}
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                    <Dashboard />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              {/* Advanced Analytics route removed - charts moved to main dashboard */}
+              <Route path="/accounts" element={
+                <ProtectedRoute>
+                  <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                    <Accounts />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/accounts/new" element={
+                <ProtectedRoute>
+                  <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                    <AccountsNew />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/campaigns" element={
+                <ProtectedRoute>
+                  <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                    <Campaigns />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                    <Settings />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
 
-            <Route path="/settings/profile" element={
-              <ProtectedRoute>
-                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
-                  <ProfileSettings />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
+              <Route path="/settings/profile" element={
+                <ProtectedRoute>
+                  <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                    <ProfileSettings />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
 
-            <Route path="/settings/notifications" element={
-              <ProtectedRoute>
-                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
-                  <ProfileSettings />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
+              <Route path="/settings/notifications" element={
+                <ProtectedRoute>
+                  <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                    <ProfileSettings />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
 
-            <Route path="/settings/security" element={
-              <ProtectedRoute>
-                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
-                  <ProfileSettings />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
+              <Route path="/settings/security" element={
+                <ProtectedRoute>
+                  <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                    <ProfileSettings />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
 
-            <Route path="/help" element={
-              <ProtectedRoute>
-                <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
-                  <Box sx={{ p: 4 }}>
-                    <h1>Help & Support</h1>
-                    <p>This page is under construction.</p>
-                  </Box>
-                </AppLayout>
-              </ProtectedRoute>
-            } />
+              <Route path="/help" element={
+                <ProtectedRoute>
+                  <AppLayout toggleNotifications={toggleNotifications} showNotifications={showNotifications}>
+                    <Box sx={{ p: 4 }}>
+                      <h1>Help & Support</h1>
+                      <p>This page is under construction.</p>
+                    </Box>
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
 
-            {/* Fallback route */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Router>
+              {/* Fallback route */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Router>
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );
@@ -149,9 +152,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, toggleNotifications, sh
       >
         {children}
       </Box>
-      <div className={showNotifications ? 'open' : ''}>
-        <Notifications className={showNotifications ? 'open' : ''} />
-      </div>
+      <Notifications className={showNotifications ? 'open' : ''} />
     </Box>
   );
 };

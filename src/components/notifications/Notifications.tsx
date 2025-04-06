@@ -31,6 +31,7 @@ import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import SettingsIcon from '@mui/icons-material/Settings';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useTheme } from '../../context/ThemeContext';
+import { useNotification } from '../../context/NotificationContext';
 import { BORDER_RADIUS } from '../ui/common/constants';
 
 const NotificationsContainer = styled(Box)(({ theme }) => ({
@@ -194,103 +195,20 @@ interface NotificationsProps {
 const Notifications: React.FC<NotificationsProps> = ({ className = '' }) => {
   const { mode } = useTheme();
   const [tabValue, setTabValue] = useState(0);
-  const [notifications, setNotifications] = useState<NotificationItemData[]>([
-    {
-      id: 1,
-      title: 'Master Card',
-      content: 'New account activity detected. A payment of $2,500 was processed for the quarterly subscription renewal.',
-      timeAgo: '10 mins ago',
-      logoSrc: '/images/mastercard.png',
-      expanded: false,
-      isNew: true,
-      type: 'account',
-    },
-    {
-      id: 2,
-      title: 'Twitter',
-      content: 'Your campaign "Summer Promotion" has reached 10,000 impressions. Check the analytics dashboard for more details.',
-      timeAgo: '2 hours ago',
-      logoSrc: '/images/twitter.png',
-      expanded: false,
-      type: 'account',
-    },
-    {
-      id: 3,
-      title: 'System Update',
-      content: 'A new version of the platform is available. Please refresh your browser to access the latest features and improvements.',
-      timeAgo: '1 day ago',
-      logoSrc: '/logo192.png',
-      expanded: false,
-      isNew: true,
-      type: 'system',
-    },
-    {
-      id: 4,
-      title: 'Star Bucks',
-      content: 'Meeting reminder: Quarterly review with the Star Bucks team scheduled for tomorrow at 2:00 PM.',
-      timeAgo: '1 day ago',
-      logoSrc: '/images/starbucks.png',
-      expanded: false,
-      type: 'account',
-    },
-    {
-      id: 5,
-      title: 'Security Alert',
-      content: 'Multiple login attempts detected from an unrecognized device. Please verify your account security settings.',
-      timeAgo: '2 days ago',
-      logoSrc: '/logo192.png',
-      expanded: false,
-      type: 'alert',
-    },
-    {
-      id: 6,
-      title: 'Apple',
-      content: 'Contract renewal: The service agreement with Apple Inc. is due for renewal in 15 days. Please review the terms.',
-      timeAgo: '3 days ago',
-      logoSrc: '/images/apple.png',
-      expanded: false,
-      type: 'account',
-    },
-    {
-      id: 7,
-      title: 'Data Backup',
-      content: 'Automatic data backup completed successfully. All your account information is safely stored.',
-      timeAgo: '5 days ago',
-      logoSrc: '/logo192.png',
-      expanded: false,
-      type: 'system',
-    },
-  ]);
-
+  const { 
+    notifications, 
+    toggleExpand, 
+    dismissNotification, 
+    markAllAsRead, 
+    clearAllNotifications 
+  } = useNotification();
+  
   // Menu state
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const isMenuOpen = Boolean(menuAnchorEl);
 
   // Real-time notifications toggle
   const [realTimeNotifications, setRealTimeNotifications] = useState(true);
-
-  const toggleExpand = (id: number) => {
-    setNotifications(
-      notifications.map((notification) =>
-        notification.id === id
-          ? { ...notification, expanded: !notification.expanded, isNew: false }
-          : notification
-      )
-    );
-  };
-
-  const dismissNotification = (id: number, event: React.MouseEvent) => {
-    event.stopPropagation();
-    setNotifications(notifications.map(notification =>
-      notification.id === id
-        ? { ...notification, isExiting: true }
-        : notification
-    ));
-
-    setTimeout(() => {
-      setNotifications(notifications.filter((notification) => notification.id !== id));
-    }, 300);
-  };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -302,21 +220,6 @@ const Notifications: React.FC<NotificationsProps> = ({ className = '' }) => {
 
   const handleMenuClose = () => {
     setMenuAnchorEl(null);
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(
-      notifications.map((notification) => ({
-        ...notification,
-        isNew: false,
-      }))
-    );
-    handleMenuClose();
-  };
-
-  const clearAllNotifications = () => {
-    setNotifications([]);
-    handleMenuClose();
   };
 
   const handleRealTimeToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -382,13 +285,13 @@ const Notifications: React.FC<NotificationsProps> = ({ className = '' }) => {
             }
           }}
         >
-          <MenuItem onClick={markAllAsRead}>
+          <MenuItem onClick={() => { markAllAsRead(); handleMenuClose(); }}>
             <ListItemIcon>
               <DoneAllIcon fontSize="small" />
             </ListItemIcon>
             Mark all as read
           </MenuItem>
-          <MenuItem onClick={clearAllNotifications}>
+          <MenuItem onClick={() => { clearAllNotifications(); handleMenuClose(); }}>
             <ListItemIcon>
               <DeleteSweepIcon fontSize="small" />
             </ListItemIcon>
@@ -451,7 +354,7 @@ const Notifications: React.FC<NotificationsProps> = ({ className = '' }) => {
               You're all caught up! Check back later for updates.
             </Typography>
           </Box>
-        ) : (
+        ) :
           filteredNotifications.map((notification) => (
             <React.Fragment key={notification.id}>
               <NotificationItem
@@ -477,7 +380,10 @@ const Notifications: React.FC<NotificationsProps> = ({ className = '' }) => {
                       <Typography variant="caption" color="text.secondary" sx={{ mr: 1, fontWeight: 500 }}>
                         {notification.timeAgo}
                       </Typography>
-                      <DismissButton size="small" onClick={(e) => dismissNotification(notification.id, e)}>
+                      <DismissButton size="small" onClick={(e) => {
+                        e.stopPropagation();
+                        dismissNotification(notification.id);
+                      }}>
                         <CloseIcon fontSize="small" />
                       </DismissButton>
                     </Box>
@@ -526,7 +432,7 @@ const Notifications: React.FC<NotificationsProps> = ({ className = '' }) => {
               </NotificationItem>
             </React.Fragment>
           ))
-        )}
+        }
       </List>
 
       {/* Footer with actions */}
