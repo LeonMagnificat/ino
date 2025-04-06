@@ -86,10 +86,6 @@ import BusinessIcon from '@mui/icons-material/Business';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import FilePresentIcon from '@mui/icons-material/FilePresent';
 import InfoIcon from '@mui/icons-material/Info';
-import AnalyticsIcon from '@mui/icons-material/Analytics';
-import EmailIcon from '@mui/icons-material/Email';
-import PhoneIcon from '@mui/icons-material/Phone';
-import VideocamIcon from '@mui/icons-material/Videocam';
 
 // Use the global theme from ThemeContext
 
@@ -214,12 +210,11 @@ const TableContent = styled(TableCell)(({ theme }) => ({
 
 interface StatusChipProps {
   status: 'completed' | 'pending' | 'failed' | 'loading' | undefined;
+  children?: React.ReactNode;
 }
 
 // Status indicator component
-const StatusIndicator = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'status',
-})<{ status: 'completed' | 'pending' | 'failed' | 'loading' }>(({ theme, status }) => ({
+const StatusChip = styled(Box)<{ status: 'completed' | 'pending' | 'failed' | 'loading' }>(({ theme, status }) => ({
   width: 10,
   height: 10,
   borderRadius: '2px',
@@ -234,61 +229,46 @@ const StatusIndicator = styled(Box, {
 }));
 
 // Define and update StatusLabel component to handle undefined status
-const StatusLabel: React.FC<StatusChipProps> = ({ status }) => {
-  // Default to 'pending' if status is undefined
-  const actualStatus = status || 'pending';
+const StatusLabel: React.FC<StatusChipProps> = ({ status, children }) => {
+  // Determine color based on status
+  let color = '';
+  let bgColor = '';
   
-  let color: string;
-  let text: string;
-
-  switch (actualStatus) {
+  switch (status) {
     case 'completed':
-      color = '#4caf50';
-      text = 'Completed';
-      break;
-    case 'pending':
-      color = '#ff9800';
-      text = 'Pending';
+      color = '#2ecc71';
+      bgColor = 'rgba(46, 204, 113, 0.1)';
       break;
     case 'failed':
-      color = '#f44336';
-      text = 'Failed';
+      color = '#e74c3c';
+      bgColor = 'rgba(231, 76, 60, 0.1)';
       break;
     case 'loading':
-      color = '#2196f3';
-      text = 'Processing';
+      color = '#3498db';
+      bgColor = 'rgba(52, 152, 219, 0.1)';
       break;
-    default:
-      color = '#757575';
-      text = 'Unknown';
+    default: // pending or undefined
+      color = '#f1c40f';
+      bgColor = 'rgba(241, 196, 15, 0.1)';
   }
-
+  
   return (
-    <Box 
-      component="span"
+    <Chip
+      label={children}
       sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        borderRadius: '12px',
-        color: color,
+        borderRadius: '16px',
+        color,
+        backgroundColor: bgColor,
+        fontWeight: 600,
         fontSize: '0.75rem',
-        fontWeight: 'bold',
-        px: 1,
-        height: 22,
-        backgroundColor: `${color}15`
+        height: 24,
+        '& .MuiChip-label': {
+          padding: '0 8px',
+          display: 'flex',
+          alignItems: 'center',
+        }
       }}
-    >
-      <Box
-        sx={{
-          width: 8,
-          height: 8,
-          borderRadius: '50%',
-          backgroundColor: color,
-          mr: 0.75
-        }}
-      />
-      {text}
-    </Box>
+    />
   );
 };
 
@@ -325,6 +305,19 @@ interface Account {
   updates?: 'completed' | 'pending' | 'failed' | 'loading';
   color?: string;
   logoSrc?: string;
+  // Add companyInsight property
+  companyInsight?: {
+    action_plan?: Array<{
+      recommendation: string;
+      description: string;
+    }>;
+    // Fields for the 5 insight questions
+    latest_updates?: string[];
+    challenges_priorities?: string[];
+    key_decision_makers?: string[];
+    position_market_trends?: string[];
+    upcoming_initiatives?: string[];
+  };
 }
 
 interface CompanyInsight {
@@ -941,10 +934,37 @@ const fetchAccounts = async () => {
         'Authorization': getAuthToken()
       }
     });
+
+    // Parse the response data to include companyInsight
+    const accountData = response.data;
+    const enhancedAccounts = await Promise.all(accountData.map(async (account: Account) => {
+      // For accounts with status=1 (completed), fetch company insights
+      if (account.status === 1) {
+        try {
+          const insightResponse = await axios.get(`https://ino-by-sam-be-production.up.railway.app/accounts/insight/${account.id}`, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': getAuthToken()
+            }
+          });
+          
+          if (insightResponse.data && insightResponse.data.isReady) {
+            return {
+              ...account,
+              companyInsight: insightResponse.data.insight
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching insight for account ${account.id}:`, error);
+        }
+      }
+      return account;
+    }));
+    
     return {
       success: true,
-      data: response.data,
-      message: `Retrieved ${response.data.length} accounts`
+      data: enhancedAccounts,
+      message: `Retrieved ${enhancedAccounts.length} accounts`
     };
   } catch (error) {
     console.error('Error fetching accounts:', error);
@@ -1125,16 +1145,60 @@ const Accounts: React.FC = () => {
         const result = await fetchAccounts();
         if (result.success && result.data) {
           // Map API response to accounts with UI state properties
-          const mappedAccounts = result.data.map((account: Account) => ({
+          const mappedAccounts = result.data.map((account: any) => ({
             ...account,
             // Map status number to a UI status - status 0 is pending, status 1 is completed
-            updates: account.status === 1 ? 'completed' : 'pending',
+            updates: account.status === 1 ? 'completed' as const : 'pending' as const,
             // Generate a color based on account name
             color: stringToColor(account.account_name)
           }));
           
           setAccounts(mappedAccounts);
           console.log('Accounts loaded:', mappedAccounts);
+          
+          // Start polling for accounts with pending insights
+          const pendingAccounts = mappedAccounts
+            .filter((account: Account) => account.updates === 'pending')
+            .map((account: Account) => account.id);
+            
+          if (pendingAccounts.length > 0) {
+            // Start polling for insights
+            const poller = pollCompanyInsights(
+              pendingAccounts,
+              (accountId: string) => {
+                // Update the account with completed status when insight is ready
+                setAccounts(currentAccounts => 
+                  currentAccounts.map(account => 
+                    account.id === accountId 
+                      ? { ...account, updates: 'completed' as const } 
+                      : account
+                  )
+                );
+                
+                // Show notification for newly available insight
+                const accountName = mappedAccounts.find((a: Account) => a.id === accountId)?.account_name || 'Account';
+                setNotification({
+                  open: true,
+                  message: `${accountName}'s insight analysis has completed`,
+                  severity: 'success',
+                  accountId: accountId
+                });
+                
+                // Update selected account if it's the one that just completed
+                setSelectedAccount(current => {
+                  if (current && current.id === accountId) {
+                    return { ...current, updates: 'completed' as const };
+                  }
+                  return current;
+                });
+              }
+            );
+            
+            // Clean up the poller when component unmounts
+            return () => {
+              poller.stop();
+            };
+          }
         } else {
           console.error('Failed to fetch accounts:', result.message);
           // If we fail to fetch accounts from the API, use mockAccounts
@@ -1460,9 +1524,14 @@ const Accounts: React.FC = () => {
   // Toggle bookmarking an account
   const toggleBookmark = (id: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    setBookmarked(prev => 
-      prev.includes(id) ? prev.filter(bookmarkId => bookmarkId !== id) : [...prev, id]
-    );
+    setBookmarked(prev => {
+      const index = prev.indexOf(id);
+      if (index > -1) {
+        return prev.filter(bid => bid !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
   };
 
   const toggleInsight = (index: number) => {
@@ -2187,8 +2256,14 @@ const Accounts: React.FC = () => {
                         {account.organisation_type}
                       </Typography>
                     </Box>
-                    <StatusLabel status={account.updates} />
-                    {bookmarked.includes(account.id) && (
+                    <StatusLabel status={account.updates}>
+                      <StatusIndicator status={account.updates} />
+                      {account.updates === 'completed' ? 'Analysis Complete' :
+                       account.updates === 'failed' ? 'No Results Found' :
+                       account.updates === 'loading' ? 'Processing' : 
+                       account.updates ? account.updates.charAt(0).toUpperCase() + account.updates.slice(1) : 'Pending'}
+                    </StatusLabel>
+                    {bookmarked.includes(String(account.id)) && (
                       <BookmarkIcon sx={{ ml: 1, fontSize: 16, color: (theme) => theme.palette.warning.main }} />
                     )}
                   </Box>
@@ -2244,10 +2319,10 @@ const Accounts: React.FC = () => {
         >
           <BookmarkButton 
             size="small" 
-            onClick={(e) => toggleBookmark(selectedAccount.id as unknown as number, e)}
-            aria-label={bookmarked.includes(selectedAccount.id as unknown as number) ? "Remove bookmark" : "Add bookmark"}
+            onClick={(e) => toggleBookmark(selectedAccount.id, e)}
+            aria-label={bookmarked.includes(selectedAccount.id) ? "Remove bookmark" : "Add bookmark"}
           >
-            {bookmarked.includes(selectedAccount.id as unknown as number) ? <BookmarkIcon /> : <BookmarkBorderIcon />}
+            {bookmarked.includes(selectedAccount.id) ? <BookmarkIcon /> : <BookmarkBorderIcon />}
           </BookmarkButton>
 
           <Box sx={{ display: 'flex', width: '100%' }}>
@@ -2317,29 +2392,6 @@ const Accounts: React.FC = () => {
               </Box>
               
               <Box sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
-                {selectedAccount.updates === 'loading' ? (
-                  <StatusLabel status={selectedAccount.updates}>
-                    <CircularProgress size={14} thickness={4} sx={{ mr: 0.75 }} />
-                    Processing
-                  </StatusLabel>
-                ) : (
-                  <StatusLabel status={selectedAccount.updates}>
-                    {selectedAccount.updates === 'completed' ? 'Analysis Complete' :
-                     selectedAccount.updates === 'failed' ? 'No Results Found' :
-                     selectedAccount.updates.charAt(0).toUpperCase() + selectedAccount.updates.slice(1)}
-                  </StatusLabel>
-                )}
-                <Divider orientation="vertical" flexItem sx={{ mx: 2, height: '20px' }} />
-                <Typography variant="body2" fontWeight={600}>
-                  {selectedAccount.organisation_type}
-                </Typography>
-                <Divider orientation="vertical" flexItem sx={{ mx: 2, height: '20px' }} />
-                <Typography variant="body2" fontWeight={600}>
-                  {selectedAccount.product_family}
-                </Typography>
-              </Box>
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
                 <AccountBadge>
                   {selectedAccount.quantity} Assets
                 </AccountBadge>
@@ -2681,12 +2733,12 @@ const Accounts: React.FC = () => {
                     {selectedAccount.location}
                   </Typography>
                   <Chip 
-                    label="LIVE DATA" 
+                    label={selectedAccount.updates === 'completed' ? "INSIGHTS READY" : "PROCESSING"}
                     size="small"
                     sx={{ 
                       height: 20,
                       fontSize: '0.625rem',
-                      bgcolor: 'rgba(255,255,255,0.15)',
+                      bgcolor: selectedAccount.updates === 'completed' ? 'rgba(46, 204, 113, 0.3)' : 'rgba(255,255,255,0.15)',
                       color: 'white'
                     }}
                   />
@@ -2694,63 +2746,72 @@ const Accounts: React.FC = () => {
               </Box>
               
               <Box sx={{ p: 3 }}>
-                {mockInsights.map((insight, index) => (
-                  <Paper 
-                    key={index} 
-                    elevation={0} 
+                {/* First insight question */}
+                <Paper 
+                  elevation={0} 
+                  sx={{ 
+                    mb: 2, 
+                    overflow: 'hidden', 
+                    borderRadius: (theme) => theme.shape.borderRadius,
+                    border: '1px solid #eee'
+                  }}
+                >
+                  <Box 
                     sx={{ 
-                      mb: 2, 
-                      overflow: 'hidden', 
-                      borderRadius: (theme) => theme.shape.borderRadius,
-                      border: '1px solid #eee'
+                      p: 2, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      bgcolor: expandedInsights.includes(0) ? '#f5f5f5' : 'transparent',
+                      '&:hover': { bgcolor: '#f5f5f5' }
                     }}
+                    onClick={() => toggleInsight(0)}
                   >
-                    <Box 
+                    <Typography variant="body2" fontWeight={600}>
+                      1. What are the latest company updates, including leadership changes, financial health, and strategic moves?
+                    </Typography>
+                    <ExpandMoreIcon 
                       sx={{ 
-                        p: 2, 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'space-between',
-                        cursor: 'pointer',
-                        bgcolor: expandedInsights.includes(index) ? '#f5f5f5' : 'transparent',
-                        '&:hover': { bgcolor: '#f5f5f5' }
-                      }}
-                      onClick={() => toggleInsight(index)}
-                    >
-                      <Typography variant="body2" fontWeight={600}>
-                        {index + 1}. {insight.question.length > 60 
-                          ? `${insight.question.substring(0, 60)}...` 
-                          : insight.question}
-                      </Typography>
-                      <ExpandMoreIcon 
-                        sx={{ 
-                          transform: expandedInsights.includes(index) ? 'rotate(180deg)' : 'rotate(0deg)',
-                          transition: 'transform 0.3s'
-                        }} 
-                      />
-                    </Box>
-                    <Collapse in={expandedInsights.includes(index)}>
-                      <Box sx={{ px: 2, pb: 2 }}>
-                        <List dense sx={{ pl: 2, mt: 0 }}>
-                          {insight.points.map((point, i) => (
-                            <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
+                        transform: expandedInsights.includes(0) ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.3s'
+                      }} 
+                    />
+                  </Box>
+                  <Collapse in={expandedInsights.includes(0)}>
+                    <Box sx={{ px: 2, pb: 2 }}>
+                      <List dense sx={{ pl: 2, mt: 0 }}>
+                        {selectedAccount.companyInsight?.latest_updates ? (
+                          Array.isArray(selectedAccount.companyInsight.latest_updates) ? 
+                            selectedAccount.companyInsight.latest_updates.map((point, i) => (
+                              <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
+                                <Typography variant="body2">{point}</Typography>
+                              </ListItem>
+                            )) 
+                            : 
+                            <ListItem sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
                               <Typography variant="body2">
-                                {point}
+                                {selectedAccount.companyInsight.latest_updates}
                               </Typography>
                             </ListItem>
-                          ))}
-                        </List>
-                      </Box>
-                    </Collapse>
-                  </Paper>
-                ))}
-              </Box>
-            </Paper>
+                        ) : (
+                          <ListItem sx={{ pl: 0 }}>
+                            <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                              {selectedAccount.updates === 'completed' 
+                                ? 'No information available' 
+                                : 'Analysis in progress...'}
+                            </Typography>
+                          </ListItem>
+                        )}
+                      </List>
+                    </Box>
+                  </Collapse>
+                </Paper>
 
             <Paper elevation={0} sx={{ borderRadius: (theme) => theme.shape.borderRadius, overflow: 'hidden', mb: 3 }}>
-              <Box sx={{ p: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5' }}>
+              <Box sx={{ p: 2, bgcolor: '#f5f5f5' }}>
                 <SectionTitle sx={{ mb: 0 }}>
-                  <AssignmentIcon sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#aaa' : '#666', mr: 1 }} />
+                  <AssignmentIcon sx={{ color: '#666', mr: 1 }} />
                   <Typography variant="h6" fontWeight={600}>
                     Action Plan
                   </Typography>
@@ -2784,66 +2845,130 @@ const Accounts: React.FC = () => {
                         boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                       }
                     }}
+                    onClick={() => toggleInsight(1)}
                   >
-                    <Typography variant="body2" sx={{ fontStyle: 'italic', mb: 1, fontWeight: 500 }}>
-                      "We see that integrating your new customer data platform has been a challenge. LSEG has a proven AI-based solution that can accelerate the process by 30%."
+                    <Typography variant="body2" fontWeight={600}>
+                      2. What are the company's biggest challenges, priorities, or inefficiencies right now?
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'right' }}>
-                      Based on recent technology adoption
-                    </Typography>
-                  </Paper>
-                  
-                  <Paper 
-                    elevation={0} 
-                    sx={{ 
-                      mb: 2, 
-                      p: 3, 
-                      bgcolor: '#fff', 
-                      borderRadius: (theme) => theme.shape.borderRadius, 
-                      borderLeft: '3px solid #1a73e8',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ fontStyle: 'italic', mb: 1, fontWeight: 500 }}>
-                      "Given the rising regulatory compliance risks, LSEG's compliance monitoring tools could help you stay ahead of upcoming changes."
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'right' }}>
-                      Addressing regulatory pressure
-                    </Typography>
-                  </Paper>
-                  
-                  <Paper 
-                    elevation={0} 
-                    sx={{ 
-                      mb: 2, 
-                      p: 3, 
-                      bgcolor: '#fff', 
-                      borderRadius: (theme) => theme.shape.borderRadius, 
-                      borderLeft: '3px solid #1a73e8',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ fontStyle: 'italic', mb: 1, fontWeight: 500 }}>
-                      "We noticed your upcoming expansion into Latin America—LSEG provides tailored financial data solutions for emerging markets that can enhance your market entry strategy."
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'right' }}>
-                      Strategic market expansion
-                    </Typography>
-                  </Paper>
-                </Box>
+                    <ExpandMoreIcon 
+                      sx={{ 
+                        transform: expandedInsights.includes(1) ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.3s'
+                      }} 
+                    />
+                  </Box>
+                  <Collapse in={expandedInsights.includes(1)}>
+                    <Box sx={{ px: 2, pb: 2 }}>
+                      <List dense sx={{ pl: 2, mt: 0 }}>
+                        {selectedAccount.companyInsight?.challenges_priorities ? (
+                          Array.isArray(selectedAccount.companyInsight.challenges_priorities) ? 
+                            selectedAccount.companyInsight.challenges_priorities.map((point, i) => (
+                              <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
+                                <Typography variant="body2">{point}</Typography>
+                              </ListItem>
+                            )) 
+                            : 
+                            <ListItem sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
+                              <Typography variant="body2">
+                                {selectedAccount.companyInsight.challenges_priorities}
+                              </Typography>
+                            </ListItem>
+                        ) : (
+                          <ListItem sx={{ pl: 0 }}>
+                            <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                              {selectedAccount.updates === 'completed' 
+                                ? 'No information available' 
+                                : 'Analysis in progress...'}
+                            </Typography>
+                          </ListItem>
+                        )}
+                      </List>
+                    </Box>
+                  </Collapse>
+                </Paper>
 
-                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                  <Button 
-                    variant="contained" 
+                {/* Third insight question */}
+                <Paper 
+                  elevation={0} 
+                  sx={{ 
+                    mb: 2, 
+                    overflow: 'hidden', 
+                    borderRadius: (theme) => theme.shape.borderRadius,
+                    border: '1px solid #eee'
+                  }}
+                >
+                  <Box 
+                    sx={{ 
+                      p: 2, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      bgcolor: expandedInsights.includes(2) ? '#f5f5f5' : 'transparent',
+                      '&:hover': { bgcolor: '#f5f5f5' }
+                    }}
+                    onClick={() => toggleInsight(2)}
+                  >
+                    <Typography variant="body2" fontWeight={600}>
+                      3. Who are the key decision-makers, and how are they shaping the company's direction?
+                    </Typography>
+                    <ExpandMoreIcon 
+                      sx={{ 
+                        transform: expandedInsights.includes(2) ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.3s'
+                      }} 
+                    />
+                  </Box>
+                  <Collapse in={expandedInsights.includes(2)}>
+                    <Box sx={{ px: 2, pb: 2 }}>
+                      <List dense sx={{ pl: 2, mt: 0 }}>
+                        {selectedAccount.companyInsight?.key_decision_makers ? (
+                          Array.isArray(selectedAccount.companyInsight.key_decision_makers) ? 
+                            selectedAccount.companyInsight.key_decision_makers.map((point, i) => (
+                              <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
+                                <Typography variant="body2">{point}</Typography>
+                              </ListItem>
+                            )) 
+                            : 
+                            <ListItem sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
+                              <Typography variant="body2">
+                                {selectedAccount.companyInsight.key_decision_makers}
+                              </Typography>
+                            </ListItem>
+                        ) : (
+                          <ListItem sx={{ pl: 0 }}>
+                            <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                              {selectedAccount.updates === 'completed' 
+                                ? 'No information available' 
+                                : 'Analysis in progress...'}
+                            </Typography>
+                          </ListItem>
+                        )}
+                      </List>
+                    </Box>
+                  </Collapse>
+                </Paper>
+
+                {/* Fourth insight question */}
+                <Paper 
+                  elevation={0} 
+                  sx={{ 
+                    mb: 2, 
+                    overflow: 'hidden', 
+                    borderRadius: (theme) => theme.shape.borderRadius,
+                    border: '1px solid #eee'
+                  }}
+                >
+                  <Box 
                     sx={{ 
                       borderRadius: '3px', 
                       textTransform: 'none', 
-                      bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#f5f5f5', 
-                      color: (theme) => theme.palette.mode === 'dark' ? '#fff' : '#000',
+                      bgcolor: '#f5f5f5', 
+                      color: '#000',
                       fontWeight: 500,
                       px: 2,
                       '&:hover': {
-                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : '#e0e0e0'
+                        bgcolor: '#e0e0e0'
                       }
                     }}
                   >
@@ -2854,13 +2979,10 @@ const Accounts: React.FC = () => {
                     sx={{ 
                       borderRadius: '3px', 
                       textTransform: 'none', 
-                      bgcolor: (theme) => theme.palette.mode === 'dark' ? '#333' : '#000', 
+                      bgcolor: '#000', 
                       color: '#fff',
                       fontWeight: 500,
-                      px: 2,
-                      '&:hover': {
-                        bgcolor: (theme) => theme.palette.mode === 'dark' ? '#444' : '#333'
-                      }
+                      px: 2
                     }}
                   >
                     Talking Points
@@ -2880,7 +3002,7 @@ const Accounts: React.FC = () => {
                   clickable 
                   sx={{ 
                     borderRadius: '3px',
-                    '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#f5f5f5' }
+                    '&:hover': { bgcolor: '#f5f5f5' }
                   }} 
                 />
                 <Chip 
@@ -2888,7 +3010,7 @@ const Accounts: React.FC = () => {
                   clickable 
                   sx={{ 
                     borderRadius: '3px',
-                    '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#f5f5f5' }
+                    '&:hover': { bgcolor: '#f5f5f5' }
                   }} 
                 />
                 <Chip 
@@ -2896,7 +3018,7 @@ const Accounts: React.FC = () => {
                   clickable 
                   sx={{ 
                     borderRadius: '3px',
-                    '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#f5f5f5' }
+                    '&:hover': { bgcolor: '#f5f5f5' }
                   }} 
                 />
                 <Chip 
@@ -3043,6 +3165,92 @@ const Accounts: React.FC = () => {
 
   const theme = useMuiTheme();
   const { mode } = useTheme();
+
+  // Function to poll for company insights
+  const pollCompanyInsights = (
+    accountIds: string[],
+    onInsightReady: (accountId: string) => void,
+    intervalMs: number = 5000
+  ) => {
+    // Keep track of which accounts already have insights
+    const accountsWithInsights = new Set<string>();
+    let timer: NodeJS.Timeout | null = null;
+    
+    // Function to check insights status
+    const checkInsights = async () => {
+      try {
+        // Skip if no accounts to check
+        if (accountIds.length === 0) return;
+        
+        // Get accounts that don't already have insights
+        const accountsToCheck = accountIds.filter(id => !accountsWithInsights.has(id));
+        
+        // Skip if all accounts already have insights
+        if (accountsToCheck.length === 0) {
+          stopPolling();
+          return;
+        }
+        
+        // Call API to check which accounts have insights ready
+        const response = await axios.post(
+          'https://ino-by-sam-be-production.up.railway.app/accounts/check-insights',
+          { account_ids: accountsToCheck },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': getAuthToken()
+            }
+          }
+        );
+        
+        // Process accounts with ready insights
+        if (response.data && response.data.ready_insights) {
+          response.data.ready_insights.forEach((accountId: string) => {
+            // Only process if not already processed
+            if (!accountsWithInsights.has(accountId)) {
+              // Mark as processed
+              accountsWithInsights.add(accountId);
+              
+              // Notify caller
+              onInsightReady(accountId);
+            }
+          });
+          
+          // If all accounts have insights, stop polling
+          if (accountsWithInsights.size === accountIds.length) {
+            stopPolling();
+          }
+        }
+      } catch (error) {
+        console.error('Error polling for company insights:', error);
+      }
+    };
+    
+    // Start polling
+    const startPolling = () => {
+      // Check immediately
+      checkInsights();
+      
+      // Then check at intervals
+      timer = setInterval(checkInsights, intervalMs);
+    };
+    
+    // Stop polling
+    const stopPolling = () => {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+    };
+    
+    // Start polling immediately
+    startPolling();
+    
+    // Return control object
+    return {
+      stop: stopPolling
+    };
+  };
 
   return (
     <AccountsContainer>
@@ -3510,10 +3718,10 @@ const Accounts: React.FC = () => {
                                       sx={{ ml: 1, p: 0.5 }}
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        toggleBookmark(account.id as unknown as number, e);
+                                        toggleBookmark(account.id, e);
                                       }}
                                     >
-                                      {bookmarked.includes(account.id as unknown as number) ?
+                                      {bookmarked.includes(String(account.id)) ?
                                         <BookmarkIcon fontSize="small" color="warning" /> :
                                         <BookmarkBorderIcon fontSize="small" color="disabled" />
                                       }
@@ -3530,7 +3738,7 @@ const Accounts: React.FC = () => {
                                   <Box
                                     display="flex"
                                     alignItems="center"
-                                    onClick={(e) => handleToggleAssetsDropdown(e, account.id as unknown as string)}
+                                    onClick={(e) => handleToggleAssetsDropdown(e, account.id)}
                                     sx={{
                                       cursor: 'pointer',
                                       position: 'relative',
