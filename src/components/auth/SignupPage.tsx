@@ -111,8 +111,8 @@ const SignupPage: React.FC = () => {
 
   // Form states
   const [signupForm, setSignupForm] = useState({
-    firstName: '',
-    lastName: '',
+    first_name: '',
+    last_name: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -121,8 +121,8 @@ const SignupPage: React.FC = () => {
 
   // Form errors
   const [signupErrors, setSignupErrors] = useState({
-    firstName: '',
-    lastName: '',
+    first_name: '',
+    last_name: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -193,8 +193,8 @@ const SignupPage: React.FC = () => {
 
   const validateSignupForm = () => {
     const errors = {
-      firstName: '',
-      lastName: '',
+      first_name: '',
+      last_name: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -202,13 +202,13 @@ const SignupPage: React.FC = () => {
     };
     let isValid = true;
 
-    if (!signupForm.firstName) {
-      errors.firstName = 'First name is required';
+    if (!signupForm.first_name) {
+      errors.first_name = 'First name is required';
       isValid = false;
     }
 
-    if (!signupForm.lastName) {
-      errors.lastName = 'Last name is required';
+    if (!signupForm.last_name) {
+      errors.last_name = 'Last name is required';
       isValid = false;
     }
 
@@ -259,8 +259,8 @@ const SignupPage: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          first_name: signupForm.firstName,
-          last_name: signupForm.lastName,
+          first_name: signupForm.first_name,
+          last_name: signupForm.last_name,
           email: signupForm.email,
           password: signupForm.password,
         }),
@@ -277,8 +277,8 @@ const SignupPage: React.FC = () => {
 
       // Call the signup function from AuthContext
       await signup(
-        signupForm.firstName,
-        signupForm.lastName,
+        signupForm.first_name,
+        signupForm.last_name,
         signupForm.email,
         signupForm.password
       );
@@ -346,11 +346,11 @@ const SignupPage: React.FC = () => {
                     label="First Name"
                     variant="outlined"
                     fullWidth
-                    name="firstName"
-                    value={signupForm.firstName}
+                    name="first_name"
+                    value={signupForm.first_name}
                     onChange={handleSignupChange}
-                    error={!!signupErrors.firstName}
-                    helperText={signupErrors.firstName}
+                    error={!!signupErrors.first_name}
+                    helperText={signupErrors.first_name}
                     required
                   />
                 </Grid>
@@ -359,11 +359,11 @@ const SignupPage: React.FC = () => {
                     label="Last Name"
                     variant="outlined"
                     fullWidth
-                    name="lastName"
-                    value={signupForm.lastName}
+                    name="last_name"
+                    value={signupForm.last_name}
                     onChange={handleSignupChange}
-                    error={!!signupErrors.lastName}
-                    helperText={signupErrors.lastName}
+                    error={!!signupErrors.last_name}
+                    helperText={signupErrors.last_name}
                     required
                   />
                 </Grid>
