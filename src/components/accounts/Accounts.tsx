@@ -302,11 +302,14 @@ interface Account {
   assets: string[];
   createdAt: string;
   updatedAt: string;
+  // New fields from API
+  strength?: string;
+  opportunities?: string;
   // Keep UI state properties
   updates?: 'completed' | 'pending' | 'failed' | 'loading';
   color?: string;
   logoSrc?: string;
-  // Add companyInsight property
+  // Add both variations for compatibility
   companyInsight?: {
     action_plan?: Array<{
       recommendation: string;
@@ -320,6 +323,25 @@ interface Account {
     future_plans?: string[];
     status?: number;
   };
+  // Add the actual backend response structure
+  CompanyInsights?: Array<{
+    id: string;
+    account_id: string;
+    action_plan: Array<{
+      recommendation: string;
+      description: string;
+    }>;
+    latest_updates: string;
+    challenges: string;
+    decision_makers: string;
+    market_position: string;
+    future_plans: string;
+    solution: string;
+    status: number;
+    fetched_at: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
 }
 
 interface CompanyInsight {
@@ -920,29 +942,29 @@ const fetchAccounts = async () => {
 
     // Parse the response data to include companyInsight
     const accountData = response.data;
-    const enhancedAccounts = await Promise.all(accountData.map(async (account: Account) => {
-      // For accounts with status=1 (completed), fetch company insights
-      if (account.status === 1) {
-        try {
-          const insightResponse = await axios.get(`https://ino-by-sam-be-production.up.railway.app/accounts/insight/${account.id}`, {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': getAuthToken()
-            }
-          });
-          
-          if (insightResponse.data && insightResponse.data.isReady) {
-            return {
-              ...account,
-              companyInsight: insightResponse.data.insight
-            };
-          }
-        } catch (error) {
-          console.error(`Error fetching insight for account ${account.id}:`, error);
-        }
+    const enhancedAccounts = accountData.map((account: Account) => {
+      // Initialize with account data
+      const enhancedAccount = {
+        ...account,
+      };
+      
+      // Convert CompanyInsights to companyInsight format for backward compatibility
+      if (account.CompanyInsights && account.CompanyInsights.length > 0) {
+        const insightData = account.CompanyInsights[0]; // Use the first insight
+        enhancedAccount.companyInsight = {
+          action_plan: insightData.action_plan,
+          // Convert string fields to arrays for compatibility
+          latest_updates: insightData.latest_updates ? insightData.latest_updates.split('\n') : [],
+          challenges: insightData.challenges ? insightData.challenges.split('\n') : [],
+          decision_makers: insightData.decision_makers ? insightData.decision_makers.split('\n') : [],
+          market_position: insightData.market_position ? insightData.market_position.split('\n') : [],
+          future_plans: insightData.future_plans ? insightData.future_plans.split('\n') : [],
+          status: insightData.status
+        };
       }
-      return account;
-    }));
+      
+      return enhancedAccount;
+    });
     
     return {
       success: true,
@@ -2449,9 +2471,31 @@ const Accounts: React.FC = () => {
                 </SectionTitle>
               </Box>
               <Box sx={{ p: 3 }}>
-                <Typography variant="body2">
+                <Typography variant="body2" sx={{ mb: 3 }}>
                   {selectedAccount.company_info || 'No company information available.'}
                 </Typography>
+                
+                {selectedAccount.strength && (
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="subtitle2" fontWeight={600} color="primary" sx={{ mb: 1 }}>
+                      Strengths
+                    </Typography>
+                    <Typography variant="body2">
+                      {selectedAccount.strength}
+                    </Typography>
+                  </Box>
+                )}
+
+                {selectedAccount.opportunities && (
+                  <Box>
+                    <Typography variant="subtitle2" fontWeight={600} color="primary" sx={{ mb: 1 }}>
+                      Opportunities
+                    </Typography>
+                    <Typography variant="body2">
+                      {selectedAccount.opportunities}
+                    </Typography>
+                  </Box>
+                )}
               </Box>
             </Paper>
 
@@ -2649,40 +2693,27 @@ const Accounts: React.FC = () => {
                 </Menu>
               </Box>
 
-              <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-                <Button 
-                  variant="contained" 
-                  sx={{ 
-                    borderRadius: '3px', 
-                    textTransform: 'none', 
-                    bgcolor: '#333', 
-                    color: '#fff',
-                    fontWeight: 500,
-                    px: 2
-                  }}
-                  startIcon={<StarIcon sx={{ fontSize: 16 }} />}
-                >
-                  Risk
-                </Button>
-                <Button 
-                  variant="contained" 
-                  sx={{ 
-                    borderRadius: '3px', 
-                    textTransform: 'none', 
-                    bgcolor: '#f5f5f5', 
-                    color: '#000',
-                    fontWeight: 500,
-                    px: 2,
-                    '&:hover': {
-                      bgcolor: '#e0e0e0'
-                    }
-                  }}
-                >
-                  Finance
-                </Button>
-              </Box>
-
-              {mockSolutions.map((solution, index) => (
+              {getSolution(selectedAccount) ? (
+                <Box sx={{ px: 1 }}>
+                  <div 
+                    dangerouslySetInnerHTML={{ 
+                      __html: getSolution(selectedAccount)
+                        .replace(/\n/g, '<br>')
+                        .replace(/---/g, '<hr style="border: none; border-top: 1px solid #eee; margin: 15px 0;">')
+                        .replace(/#{1,6}\s+(.+?)(?=\n|$)/g, '<h3 style="margin: 15px 0 10px; font-weight: 600; font-size: 16px;">$1</h3>')
+                        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                        .replace(/- (.+?)(?=\n|$)/g, '<li style="margin-bottom: 5px;">$1</li>')
+                    }} 
+                    style={{
+                      fontSize: '14px',
+                      lineHeight: '1.6',
+                      color: '#333'
+                    }}
+                  />
+                </Box>
+              ) : (
+                mockSolutions.map((solution, index) => (
                 <Paper 
                   key={index} 
                   elevation={0}
@@ -2745,7 +2776,8 @@ const Accounts: React.FC = () => {
                     </Box>
                   </Box>
                 </Paper>
-              ))}
+                ))
+              )}
             </Paper>
           </Box>
 
@@ -2812,19 +2844,12 @@ const Accounts: React.FC = () => {
                     <Box sx={{ px: 2, pb: 2 }}>
                       <List dense sx={{ pl: 2, mt: 0 }}>
                         {/* For the latest_updates section */}
-                        {selectedAccount.companyInsight?.latest_updates ? (
-                          Array.isArray(selectedAccount.companyInsight.latest_updates) ? 
-                            selectedAccount.companyInsight.latest_updates.map((point, i) => (
-                              <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
-                                <Typography variant="body2">{point}</Typography>
-                              </ListItem>
-                            )) 
-                            : 
-                            <ListItem sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
-                              <Typography variant="body2">
-                                {selectedAccount.companyInsight.latest_updates}
-                              </Typography>
+                        {getInsightData(selectedAccount, 'latest_updates') ? (
+                          getInsightData(selectedAccount, 'latest_updates')!.map((point, i) => (
+                            <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
+                              <Typography variant="body2">{point}</Typography>
                             </ListItem>
+                          ))
                         ) : (
                           <ListItem sx={{ pl: 0 }}>
                             <Typography variant="body2" color="text.secondary" fontStyle="italic">
@@ -2893,19 +2918,12 @@ const Accounts: React.FC = () => {
                   <Collapse in={expandedInsights.includes(1)}>
                     <Box sx={{ px: 2, pb: 2 }}>
                       <List dense sx={{ pl: 2, mt: 0 }}>
-                        {selectedAccount.companyInsight?.challenges ? (
-                          Array.isArray(selectedAccount.companyInsight.challenges) ? 
-                            selectedAccount.companyInsight.challenges.map((point, i) => (
-                              <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
-                                <Typography variant="body2">{point}</Typography>
-                              </ListItem>
-                            )) 
-                            : 
-                            <ListItem sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
-                              <Typography variant="body2">
-                                {selectedAccount.companyInsight.challenges}
-                              </Typography>
+                        {getInsightData(selectedAccount, 'challenges') ? (
+                          getInsightData(selectedAccount, 'challenges')!.map((point, i) => (
+                            <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
+                              <Typography variant="body2">{point}</Typography>
                             </ListItem>
+                          ))
                         ) : (
                           <ListItem sx={{ pl: 0 }}>
                             <Typography variant="body2" color="text.secondary" fontStyle="italic">
@@ -2955,19 +2973,12 @@ const Accounts: React.FC = () => {
                   <Collapse in={expandedInsights.includes(2)}>
                     <Box sx={{ px: 2, pb: 2 }}>
                       <List dense sx={{ pl: 2, mt: 0 }}>
-                        {selectedAccount.companyInsight?.decision_makers ? (
-                          Array.isArray(selectedAccount.companyInsight.decision_makers) ? 
-                            selectedAccount.companyInsight.decision_makers.map((point, i) => (
-                              <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
-                                <Typography variant="body2">{point}</Typography>
-                              </ListItem>
-                            )) 
-                            : 
-                            <ListItem sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
-                              <Typography variant="body2">
-                                {selectedAccount.companyInsight.decision_makers}
-                              </Typography>
+                        {getInsightData(selectedAccount, 'decision_makers') ? (
+                          getInsightData(selectedAccount, 'decision_makers')!.map((point, i) => (
+                            <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
+                              <Typography variant="body2">{point}</Typography>
                             </ListItem>
+                          ))
                         ) : (
                           <ListItem sx={{ pl: 0 }}>
                             <Typography variant="body2" color="text.secondary" fontStyle="italic">
@@ -3017,9 +3028,9 @@ const Accounts: React.FC = () => {
                   <Collapse in={expandedInsights.includes(3)}>
                     <Box sx={{ px: 2, pb: 2 }}>
                       <List dense sx={{ pl: 2, mt: 0 }}>
-                        {selectedAccount.companyInsight?.position_market_trends ? (
-                          Array.isArray(selectedAccount.companyInsight.position_market_trends) ? 
-                            selectedAccount.companyInsight.position_market_trends.map((point, i) => (
+                        {selectedAccount.companyInsight?.market_position ? (
+                          Array.isArray(selectedAccount.companyInsight.market_position) ? 
+                            selectedAccount.companyInsight.market_position.map((point, i) => (
                               <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
                                 <Typography variant="body2">{point}</Typography>
                               </ListItem>
@@ -3027,7 +3038,7 @@ const Accounts: React.FC = () => {
                             : 
                             <ListItem sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
                               <Typography variant="body2">
-                                {selectedAccount.companyInsight.position_market_trends}
+                                {selectedAccount.companyInsight.market_position}
                               </Typography>
                             </ListItem>
                         ) : (
@@ -3079,9 +3090,9 @@ const Accounts: React.FC = () => {
                   <Collapse in={expandedInsights.includes(4)}>
                     <Box sx={{ px: 2, pb: 2 }}>
                       <List dense sx={{ pl: 2, mt: 0 }}>
-                        {selectedAccount.companyInsight?.upcoming_initiatives ? (
-                          Array.isArray(selectedAccount.companyInsight.upcoming_initiatives) ? 
-                            selectedAccount.companyInsight.upcoming_initiatives.map((point, i) => (
+                        {selectedAccount.companyInsight?.future_plans ? (
+                          Array.isArray(selectedAccount.companyInsight.future_plans) ? 
+                            selectedAccount.companyInsight.future_plans.map((point, i) => (
                               <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
                                 <Typography variant="body2">{point}</Typography>
                               </ListItem>
@@ -3089,7 +3100,7 @@ const Accounts: React.FC = () => {
                             : 
                             <ListItem sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
                               <Typography variant="body2">
-                                {selectedAccount.companyInsight.upcoming_initiatives}
+                                {selectedAccount.companyInsight.future_plans}
                               </Typography>
                             </ListItem>
                         ) : (
@@ -3118,7 +3129,7 @@ const Accounts: React.FC = () => {
                 </SectionTitle>
               </Box>
               <Box sx={{ p: 3 }}>
-                {selectedAccount.companyInsight?.action_plan?.map((action, index) => (
+                {getActionPlan(selectedAccount)?.map((action, index) => (
                   <Paper
                     key={index}
                     elevation={0}
@@ -3217,59 +3228,90 @@ const Accounts: React.FC = () => {
           return;
         }
         
-        // Call API to check which accounts have insights ready
-        const response = await axios.post(
-          'https://ino-by-sam-be-production.up.railway.app/accounts/check-insights',
-          { account_ids: remainingAccounts },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': getAuthToken()
+        try {
+          // Call API to check which accounts have insights ready
+          const response = await axios.post(
+            'https://ino-by-sam-be-production.up.railway.app/accounts/check-insights',
+            { account_ids: remainingAccounts },
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': getAuthToken()
+              }
+            }
+          );
+          
+          // Process accounts with ready insights
+          if (response.data) {
+            // Handle successful insights
+            if (response.data.ready_insights && Array.isArray(response.data.ready_insights)) {
+              response.data.ready_insights.forEach((accountId: string) => {
+                // Only process if not already processed
+                if (!accountsWithInsights.has(accountId)) {
+                  console.log(`Insight ready for account ${accountId}`);
+                  // Mark as processed
+                  accountsWithInsights.add(accountId);
+                  
+                  // Notify caller
+                  onInsightReady(accountId);
+                }
+              });
+            }
+            
+            // Handle failed insights
+            if (response.data.failed_insights && Array.isArray(response.data.failed_insights)) {
+              response.data.failed_insights.forEach((accountId: string) => {
+                // Only process if not already processed
+                if (!accountsWithFailedInsights.has(accountId)) {
+                  console.log(`Insight failed for account ${accountId}`);
+                  // Mark as processed
+                  accountsWithFailedInsights.add(accountId);
+                  
+                  // Notify caller
+                  onInsightFailed(accountId);
+                }
+              });
+            }
+            
+            // If all accounts have been processed, stop polling
+            if (accountsWithInsights.size + accountsWithFailedInsights.size === accountIds.length) {
+              console.log("All accounts processed, stopping polling");
+              stopPolling();
             }
           }
-        );
-        
-        // Process accounts with ready insights
-        if (response.data) {
-          // Handle successful insights
-          if (response.data.ready_insights && Array.isArray(response.data.ready_insights)) {
-            response.data.ready_insights.forEach((accountId: string) => {
-              // Only process if not already processed
-              if (!accountsWithInsights.has(accountId)) {
-                console.log(`Insight ready for account ${accountId}`);
-                // Mark as processed
-                accountsWithInsights.add(accountId);
-                
-                // Notify caller
-                onInsightReady(accountId);
+        } catch (error) {
+          console.error('Error during insight checking:', error);
+          
+          // For any error in the API call, try to fetch the full accounts again to get updated insights
+          try {
+            const userId = await fetchUserProfile();
+            const accountsResponse = await axios.get(`https://ino-by-sam-be-production.up.railway.app/accounts/${userId}`, {
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': getAuthToken()
               }
             });
-          }
-          
-          // Handle failed insights
-          if (response.data.failed_insights && Array.isArray(response.data.failed_insights)) {
-            response.data.failed_insights.forEach((accountId: string) => {
-              // Only process if not already processed
-              if (!accountsWithFailedInsights.has(accountId)) {
-                console.log(`Insight failed for account ${accountId}`);
-                // Mark as processed
-                accountsWithFailedInsights.add(accountId);
-                
-                // Notify caller
-                onInsightFailed(accountId);
-              }
-            });
-          }
-          
-          // If all accounts have been processed, stop polling
-          if (accountsWithInsights.size + accountsWithFailedInsights.size === accountIds.length) {
-            console.log("All accounts processed, stopping polling");
-            stopPolling();
+            
+            if (accountsResponse.data) {
+              // Check which accounts now have CompanyInsights attached
+              const accountsWithData = accountsResponse.data.filter((account: Account) => 
+                account.CompanyInsights && account.CompanyInsights.length > 0
+              );
+              
+              // Mark these accounts as having insights
+              accountsWithData.forEach((account: Account) => {
+                if (remainingAccounts.includes(account.id) && !accountsWithInsights.has(account.id)) {
+                  accountsWithInsights.add(account.id);
+                  onInsightReady(account.id);
+                }
+              });
+            }
+          } catch (fetchError) {
+            console.error('Error fetching updated accounts:', fetchError);
           }
         }
       } catch (error) {
         console.error('Error polling for company insights:', error);
-        
         // Don't mark as failed immediately on network errors, 
         // only if max attempts are reached per account
       }
@@ -3314,6 +3356,52 @@ const Accounts: React.FC = () => {
       handleAPIUploadClick();
     }
   }, [addAccountStep, importMethod, csvFile, isApiUploading, apiUploadStatus]);
+
+  // Helper function to access insight data regardless of format
+  const getInsightData = (account: Account, field: string): string[] | undefined => {
+    // Try the new format first (CompanyInsights array)
+    if (account.CompanyInsights && account.CompanyInsights.length > 0) {
+      const insight = account.CompanyInsights[0];
+      const value = insight[field as keyof typeof insight];
+      if (value && typeof value === 'string') {
+        return value.split('\n');
+      }
+    }
+    
+    // Fall back to the old format
+    if (account.companyInsight) {
+      const value = account.companyInsight[field as keyof typeof account.companyInsight];
+      if (Array.isArray(value)) {
+        return value;
+      } else if (value && typeof value === 'string') {
+        return [value];
+      }
+    }
+    
+    return undefined;
+  };
+
+  // Helper to get action plan
+  const getActionPlan = (account: Account) => {
+    // Try new format first
+    if (account.CompanyInsights && account.CompanyInsights.length > 0 && account.CompanyInsights[0].action_plan) {
+      return account.CompanyInsights[0].action_plan;
+    }
+    
+    // Fall back to old format
+    return account.companyInsight?.action_plan;
+  };
+
+  // Helper to get solution
+  const getSolution = (account: Account): string => {
+    // Try new format first
+    if (account.CompanyInsights && account.CompanyInsights.length > 0 && account.CompanyInsights[0].solution) {
+      return account.CompanyInsights[0].solution;
+    }
+    
+    // Fall back to empty string
+    return '';
+  };
 
   return (
     <AccountsContainer>
