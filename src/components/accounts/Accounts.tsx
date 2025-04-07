@@ -2439,6 +2439,22 @@ const Accounts: React.FC = () => {
             width: '60%', 
             pr: 3
           }}>
+            <Paper elevation={0} sx={{ borderRadius: (theme) => theme.shape.borderRadius, overflow: 'hidden', mb: 3 }}>
+              <Box sx={{ p: 2, bgcolor: '#f5f5f5', color: 'black' }}>
+                <SectionTitle sx={{ mb: 1 }}>
+                  <BusinessIcon sx={{ mr: 1 }} />
+                  <Typography variant="h6" fontWeight={600}>
+                    Company Overview
+                  </Typography>
+                </SectionTitle>
+              </Box>
+              <Box sx={{ p: 3 }}>
+                <Typography variant="body2">
+                  {selectedAccount.company_info || 'No company information available.'}
+                </Typography>
+              </Box>
+            </Paper>
+
             <Paper elevation={0} sx={{ borderRadius: (theme) => theme.shape.borderRadius, mb: 3, overflow: 'hidden' }}>
               <Box sx={{
                 display: 'flex',
@@ -2734,22 +2750,6 @@ const Accounts: React.FC = () => {
           </Box>
 
           <Box sx={{ width: '40%' }}>
-            <Paper elevation={0} sx={{ borderRadius: (theme) => theme.shape.borderRadius, overflow: 'hidden', mb: 3 }}>
-              <Box sx={{ p: 2, bgcolor: '#f5f5f5', color: 'black' }}>
-                <SectionTitle sx={{ mb: 1 }}>
-                  <BusinessIcon sx={{ mr: 1 }} />
-                  <Typography variant="h6" fontWeight={600}>
-                    Company Overview
-                  </Typography>
-                </SectionTitle>
-              </Box>
-              <Box sx={{ p: 3 }}>
-                <Typography variant="body2">
-                  {selectedAccount.company_info || 'No company information available.'}
-                </Typography>
-              </Box>
-            </Paper>
-
             <Paper elevation={0} sx={{ borderRadius: (theme) => theme.shape.borderRadius, overflow: 'hidden', mb: 3 }}>
               <Box sx={{ p: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? '#212121' : '#212121', color: 'white' }}>
                 <SectionTitle sx={{ mb: 1 }}>
