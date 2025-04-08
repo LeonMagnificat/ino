@@ -611,6 +611,340 @@ const Dashboard: React.FC = () => {
       <SectionHeader>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" fontWeight={700} mr={2}>
+            Account Value-Potential Matrix
+          </Typography>
+          <MuiTooltip
+            title="Classifies accounts based on their exit rate (value) and growth potential"
+            arrow
+            placement="top"
+          >
+            <IconButton size="small" sx={{ ml: 1 }}>
+              <InfoOutlinedIcon fontSize="small" />
+            </IconButton>
+          </MuiTooltip>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Button
+            variant="text"
+            size="small"
+            sx={{
+              mr: 1,
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              color: theme.palette.primary.main,
+            }}
+            onClick={() => navigate('/accounts')}
+            endIcon={<ArrowForwardIcon fontSize="small" />}
+          >
+            View All Accounts
+          </Button>
+        </Box>
+      </SectionHeader>
+
+      <ChartContainer>
+        <Box sx={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gridTemplateRows: '1fr 1fr',
+          gap: 2,
+          height: '400px',
+          mb: 2
+        }}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2,
+              border: '1px solid #e0e0e0',
+              bgcolor: 'rgba(46, 204, 113, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+              High Value, High Potential
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Strategic Accounts
+            </Typography>
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
+              overflow: 'auto',
+              flex: 1
+            }}>
+              {organizationTypes
+                .filter(org => org.exitRate > 4.0 && Math.random() > 0.5) // Simulating "high potential" for demo
+                .slice(0, 3)
+                .map((org, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      p: 1,
+                      borderRadius: 1,
+                      bgcolor: 'background.paper',
+                      '&:hover': { bgcolor: 'action.hover' }
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: '50%',
+                        bgcolor: org.color,
+                        mr: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '0.75rem'
+                      }}
+                    >
+                      {org.type.charAt(0)}
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="body2" noWrap>
+                        {org.type}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Exit Rate: {org.exitRate}%
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))
+              }
+            </Box>
+          </Paper>
+
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2,
+              border: '1px solid #e0e0e0',
+              bgcolor: 'rgba(52, 152, 219, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+              High Value, Low Potential
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Maintain Accounts
+            </Typography>
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
+              overflow: 'auto',
+              flex: 1
+            }}>
+              {organizationTypes
+                .filter(org => org.exitRate > 4.0 && Math.random() <= 0.5) // Simulating "low potential" for demo
+                .slice(0, 3)
+                .map((org, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      p: 1,
+                      borderRadius: 1,
+                      bgcolor: 'background.paper',
+                      '&:hover': { bgcolor: 'action.hover' }
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: '50%',
+                        bgcolor: org.color,
+                        mr: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '0.75rem'
+                      }}
+                    >
+                      {org.type.charAt(0)}
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="body2" noWrap>
+                        {org.type}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Exit Rate: {org.exitRate}%
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))
+              }
+            </Box>
+          </Paper>
+
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2,
+              border: '1px solid #e0e0e0',
+              bgcolor: 'rgba(241, 196, 15, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+              Low Value, High Potential
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Growth Accounts
+            </Typography>
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
+              overflow: 'auto',
+              flex: 1
+            }}>
+              {organizationTypes
+                .filter(org => org.exitRate <= 4.0 && Math.random() > 0.5) // Simulating "high potential" for demo
+                .slice(0, 3)
+                .map((org, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      p: 1,
+                      borderRadius: 1,
+                      bgcolor: 'background.paper',
+                      '&:hover': { bgcolor: 'action.hover' }
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: '50%',
+                        bgcolor: org.color,
+                        mr: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '0.75rem'
+                      }}
+                    >
+                      {org.type.charAt(0)}
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="body2" noWrap>
+                        {org.type}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Exit Rate: {org.exitRate}%
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))
+              }
+            </Box>
+          </Paper>
+
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2,
+              border: '1px solid #e0e0e0',
+              bgcolor: 'rgba(231, 76, 60, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+              Low Value, Low Potential
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Review Accounts
+            </Typography>
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
+              overflow: 'auto',
+              flex: 1
+            }}>
+              {organizationTypes
+                .filter(org => org.exitRate <= 4.0 && Math.random() <= 0.5) // Simulating "low potential" for demo
+                .slice(0, 3)
+                .map((org, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      p: 1,
+                      borderRadius: 1,
+                      bgcolor: 'background.paper',
+                      '&:hover': { bgcolor: 'action.hover' }
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: '50%',
+                        bgcolor: org.color,
+                        mr: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '0.75rem'
+                      }}
+                    >
+                      {org.type.charAt(0)}
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="body2" noWrap>
+                        {org.type}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Exit Rate: {org.exitRate}%
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))
+              }
+            </Box>
+          </Paper>
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center' }}>
+          Value is based on Exit Rate • Potential is based on growth indicators and market analysis
+        </Typography>
+      </ChartContainer>
+
+      <Divider sx={{ my: 4 }} />
+
+      <SectionHeader>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography variant="h6" fontWeight={700} mr={2}>
             Current Analysis
           </Typography>
           <Typography variant="body2" color="text.secondary">

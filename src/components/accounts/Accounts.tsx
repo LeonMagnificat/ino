@@ -2291,10 +2291,10 @@ const Accounts: React.FC = () => {
         </Paper>
 
         <Box sx={{ display: 'flex', gap: 3 }}>
-          <Box sx={{ 
+          <Box sx={{
             display: 'flex',
             flexDirection: 'column',
-            width: '60%', 
+            width: '60%',
             pr: 3
           }}>
             <Paper elevation={0} sx={{ borderRadius: (theme) => theme.shape.borderRadius, mb: 3, overflow: 'hidden' }}>
@@ -2303,25 +2303,25 @@ const Accounts: React.FC = () => {
                 borderBottom: (theme) => `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#eee'}`,
                 backgroundColor: (theme) => theme.palette.background.paper
               }}>
-                <DetailTab 
+                <DetailTab
                   active={activeTab === 'tasks'}
                   onClick={() => handleDetailTabChange('tasks')}
                 >
                   Tasks
                 </DetailTab>
-                <DetailTab 
-                  active={activeTab === 'notes'} 
+                <DetailTab
+                  active={activeTab === 'notes'}
                   onClick={() => handleDetailTabChange('notes')}
                 >
                   Notes
                 </DetailTab>
-                <DetailTab 
-                  active={activeTab === 'comments'} 
+                <DetailTab
+                  active={activeTab === 'comments'}
                   onClick={() => handleDetailTabChange('comments')}
                 >
                   Comments
                 </DetailTab>
-                
+
                 <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', pr: 2 }}>
                   <Tooltip title="Add new task">
                     <IconButton size="small" onClick={handleShowTaskForm}>
