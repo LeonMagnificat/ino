@@ -2,14 +2,15 @@ import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
 
 export default function LandingPage(): JSX.Element {
-<<<<<<< Updated upstream
   const executeScroll = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
       const navbarHeight = 80; // Height of your fixed navbar
-      const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+      const elementPosition = element.offsetTop; // Using offsetTop for more reliable positioning
+      const offsetPosition = elementPosition - navbarHeight;
+      
       window.scrollTo({
-        top: elementPosition - navbarHeight,
+        top: offsetPosition,
         behavior: 'smooth'
       });
     }
@@ -25,22 +26,6 @@ export default function LandingPage(): JSX.Element {
       document.body.style.overflowY = '';
     };
   }, []);
-
-=======
-const executeScroll = (id: string) => {
-  const element = document.getElementById(id);
-  if (element) {
-    const navbarHeight = 80; // Height of your fixed navbar
-    const elementPosition = element.offsetTop; // Use offsetTop instead of getBoundingClientRect
-    const offsetPosition = elementPosition - navbarHeight;
-    
-    window.scrollTo({
-      top: offsetPosition,
-      behavior: 'smooth'
-    });
-  }
-};
->>>>>>> Stashed changes
   return (
     <div className="bg-gradient-to-b from-[#0F051D] to-[#1A0B2E] text-white flex flex-col items-center px-6 overflow-x-hidden min-h-screen">
       {/* Navbar */}
