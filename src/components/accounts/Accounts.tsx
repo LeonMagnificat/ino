@@ -1707,7 +1707,7 @@ const Accounts: React.FC = () => {
       assets: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      updates: 'pending' as const, // Ensure updates is properly typed
+      updates: 'pending' as const,
       color: stringToColor(newAccount.accountName || ''),
       logoSrc: '/images/avatar.png',
     };
@@ -1916,7 +1916,9 @@ const Accounts: React.FC = () => {
               sbu_and_sub_sbu: '',
               product_family: accountData.productFamily || '',
               risk_product_category: null,
-              exit_rate_usd: '0.00',
+              exit_rate_usd: accountData.exit_rate_usd ? 
+                (isNaN(Number(accountData.exit_rate_usd)) ? '0.00' : Number(accountData.exit_rate_usd).toFixed(2)) : 
+                '0.00',
               industry: '',
               company_info: '',
               linkedin: '',
@@ -2384,6 +2386,9 @@ const Accounts: React.FC = () => {
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {selectedAccount.location}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedAccount.organisation_type}
                   </Typography>
                 </Box>
                 
