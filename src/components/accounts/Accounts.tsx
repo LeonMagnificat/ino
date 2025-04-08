@@ -1,5 +1,6 @@
 import React, { useState, useRef, useContext, useEffect } from 'react';
-import axios from 'axios';
+// Import our custom fetch client that mimics axios interface
+import fetchClient, { axios } from '../../utils/fetchClient';
 import {
   Box,
   Typography,
@@ -723,7 +724,7 @@ const getAuthToken = (): string => {
 // Fetch user profile to get user ID
 const fetchUserProfile = async (): Promise<string> => {
   try {
-    const response = await axios.get('https://ino-by-sam-be-production.up.railway.app/auth/profile', {
+    const response = await fetchClient.get('/auth/profile', {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': getAuthToken()
@@ -857,8 +858,8 @@ const parseAndSendAccountsCSV = async (csvContent: string) => {
         });
         
         // Send the batch to the backend
-        const response = await axios.post(
-          'https://ino-by-sam-be-production.up.railway.app/accounts',
+        const response = await fetchClient.post(
+          '/accounts',
           batchPayload,
           {
             headers: {
@@ -933,7 +934,7 @@ const fetchAccounts = async () => {
       };
     }
     
-    const response = await axios.get(`https://ino-by-sam-be-production.up.railway.app/accounts/${userId}`, {
+    const response = await fetchClient.get(`/accounts/${userId}`, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': getAuthToken()
@@ -3235,8 +3236,8 @@ const Accounts: React.FC = () => {
         
         try {
           // Call API to check which accounts have insights ready
-          const response = await axios.post(
-            'https://ino-by-sam-be-production.up.railway.app/accounts/check-insights',
+          const response = await fetchClient.post(
+            '/accounts/check-insights',
             { account_ids: remainingAccounts },
             {
               headers: {
@@ -3290,7 +3291,7 @@ const Accounts: React.FC = () => {
           // For any error in the API call, try to fetch the full accounts again to get updated insights
           try {
             const userId = await fetchUserProfile();
-            const accountsResponse = await axios.get(`https://ino-by-sam-be-production.up.railway.app/accounts/${userId}`, {
+            const accountsResponse = await fetchClient.get(`/accounts/${userId}`, {
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': getAuthToken()

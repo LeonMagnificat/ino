@@ -253,29 +253,7 @@ const SignupPage: React.FC = () => {
     setAuthError('');
 
     try {
-      const response = await fetch('https://ino-by-sam-be-production.up.railway.app/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          first_name: signupForm.first_name,
-          last_name: signupForm.last_name,
-          email: signupForm.email,
-          password: signupForm.password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to register');
-      }
-
-      // Extract token from response if available
-      const token = data.token;
-
-      // Call the signup function from AuthContext
+      // Use the signup function from AuthContext instead of making a direct API call
       await signup(
         signupForm.first_name,
         signupForm.last_name,
@@ -283,12 +261,7 @@ const SignupPage: React.FC = () => {
         signupForm.password
       );
       
-      // If token is available, store it
-      if (token) {
-        localStorage.setItem('token', token);
-      }
-
-      // Redirect will happen via useEffect
+      // Redirect will happen via useEffect when isAuthenticated changes
     } catch (error: any) {
       console.error('Signup error:', error);
       setAuthError(error.message || 'Failed to create account. Please try again.');
