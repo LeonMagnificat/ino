@@ -86,6 +86,10 @@ import BusinessIcon from '@mui/icons-material/Business';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import FilePresentIcon from '@mui/icons-material/FilePresent';
 import InfoIcon from '@mui/icons-material/Info';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
+import EmailIcon from '@mui/icons-material/Email';
+import PhoneIcon from '@mui/icons-material/Phone';
+import VideocamIcon from '@mui/icons-material/Videocam';
 
 // Use the global theme from ThemeContext
 
@@ -1018,6 +1022,7 @@ const Accounts: React.FC = () => {
   const [accountMenuAnchor, setAccountMenuAnchor] = useState<null | HTMLElement>(null);
   const [filterMenuAnchor, setFilterMenuAnchor] = useState<null | HTMLElement>(null);
   const [expandedInsights, setExpandedInsights] = useState<number[]>([]);
+  const [analyzeMenuAnchor, setAnalyzeMenuAnchor] = useState<null | HTMLElement>(null);
   
   // Filters
   const [filters, setFilters] = useState<{
@@ -1079,6 +1084,38 @@ const Accounts: React.FC = () => {
   const [importMethod, setImportMethod] = useState<'single' | 'csv'>('single');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // State variables
+  const [templateType, setTemplateType] = useState<string | null>(null);
+  const [generatingTemplate, setGeneratingTemplate] = useState<boolean>(false);
+  const [templateSaved, setTemplateSaved] = useState<boolean>(false);
+
+  // Template generation function
+  const handleGenerateTemplate = (type: string) => {
+    setTemplateType(type);
+    setGeneratingTemplate(true);
+    setTemplateSaved(false);
+    
+    // Simulate template generation with AI
+    setTimeout(() => {
+      setGeneratingTemplate(false);
+      setTemplateSaved(true);
+      
+      // Show notification that template was saved
+      setNotification({
+        open: true,
+        severity: 'success',
+        message: `${type} template for ${selectedAccount?.account_name} has been saved to templates`,
+        accountId: selectedAccount?.id as unknown as number
+      });
+      
+      // Reset template states after a delay
+      setTimeout(() => {
+        setTemplateType(null);
+        setTemplateSaved(false);
+      }, 3000);
+    }, 2000);
+  };
 
   // Fetch accounts on component mount
   useEffect(() => {
@@ -1954,6 +1991,86 @@ const Accounts: React.FC = () => {
     }
   };
 
+  // Mock insights data
+  const mockInsights = [
+    {
+      question: "What are the latest company updates, including leadership changes, financial health, and strategic moves?",
+      points: [
+        "XYZ Corp recently raised $50M in Series B funding, led by ABC Ventures, to expand its AI-powered analytics platform.",
+        "CEO Jane Doe stepped down last month, with John Smith, former CTO, taking over as interim CEO.",
+        "The company announced a 5% workforce reduction as part of cost-cutting measures despite steady revenue growth."
+      ]
+    },
+    {
+      question: "What are the company's biggest challenges, priorities, or inefficiencies right now?",
+      points: [
+        "Struggling to integrate their new customer data platform, leading to inefficiencies in sales and marketing.",
+        "Facing regulatory pressure due to new industry compliance rules, which could delay product launches.",
+        "Recent customer feedback suggests poor user experience on their mobile app, with complaints about slow performance."
+      ]
+    },
+    {
+      question: "Who are the key decision-makers, and how are they shaping the company's direction?",
+      points: [
+        "John Smith (CEO) is prioritizing AI-driven automation and expanding into international markets.",
+        "Emma Chen (CFO) is focused on improving profitability and optimizing operational costs.",
+        "New VP of Product, David Patel, was hired from a top competitor and is expected to introduce a major product revamp."
+      ]
+    },
+    {
+      question: "How does the company position itself against competitors, and what market trends are affecting them?",
+      points: [
+        "Positions as the premium, enterprise-focused solution in the market with higher pricing but better support.",
+        "Facing increasing competition from new startups offering similar solutions at lower price points.",
+        "Industry shift toward integrated platforms is favorable for their all-in-one solution approach."
+      ]
+    }
+  ];
+
+  // Add analyze function
+  const handleAnalyze = (accountId?: string) => {
+    setNotification({
+      open: true,
+      severity: 'info',
+      message: accountId 
+        ? `Starting analysis for ${mockAccounts.find(a => a.id === accountId)?.account_name}`
+        : 'Starting analysis for all selected accounts',
+      accountId: accountId as unknown as number
+    });
+    
+    // Simulate analysis starting
+    setTimeout(() => {
+      setNotification({
+        open: true,
+        severity: 'success',
+        message: accountId
+          ? `Analysis complete for ${mockAccounts.find(a => a.id === accountId)?.account_name}`
+          : 'Analysis complete for all selected accounts',
+        accountId: accountId as unknown as number
+      });
+    }, 3000);
+  };
+
+  // Add analyze by type function
+  const handleAnalyzeByType = (organizationType: string) => {
+    setNotification({
+      open: true,
+      severity: 'info',
+      message: `Starting analysis for all ${organizationType} accounts`,
+      accountId: null
+    });
+    
+    // Simulate analysis starting
+    setTimeout(() => {
+      setNotification({
+        open: true,
+        severity: 'success',
+        message: `Analysis complete for all ${organizationType} accounts`,
+        accountId: null
+      });
+    }, 3000);
+  };
+
   const renderAccountList = () => {
     return (
       <>
@@ -2159,7 +2276,24 @@ const Accounts: React.FC = () => {
                   </Typography>
                 </Box>
                 
-                <Box>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<AnalyticsIcon />}
+                    onClick={() => handleAnalyze(selectedAccount.id)}
+                    sx={{
+                      borderRadius: '3px',
+                      textTransform: 'none',
+                      bgcolor: (theme) => theme.palette.warning.main,
+                      color: (theme) => theme.palette.warning.contrastText,
+                      fontWeight: 500,
+                      '&:hover': {
+                        bgcolor: (theme) => theme.palette.warning.dark
+                      }
+                    }}
+                  >
+                    Analyze
+                  </Button>
                   <Tooltip title="Account settings">
                     <IconButton onClick={handleAccountMenuOpen} size="small">
                       <MoreVertIcon />
@@ -2277,7 +2411,7 @@ const Accounts: React.FC = () => {
                 {activeTab === 'tasks' && (
                   <>
                     <Collapse in={showTaskForm}>
-                      <Box sx={{ mb: 2, p: 2, bgcolor: '#f9f9f9', borderRadius: '3px' }}>
+                      <Box sx={{ mb: 2, p: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f9f9f9', borderRadius: '3px' }}>
                         <Typography variant="subtitle2" fontWeight={500} sx={{ mb: 1 }}>
                           New Task
                         </Typography>
@@ -2306,8 +2440,11 @@ const Accounts: React.FC = () => {
                             sx={{ 
                               borderRadius: '3px', 
                               textTransform: 'none', 
-                              bgcolor: '#000',
-                              '&:hover': { bgcolor: '#333' }
+                              bgcolor: (theme) => theme.palette.mode === 'dark' ? '#333' : '#000',
+                              color: '#fff', 
+                              '&:hover': { 
+                                bgcolor: (theme) => theme.palette.mode === 'dark' ? '#444' : '#333'
+                              }
                             }}
                           >
                             Add Task
@@ -2532,7 +2669,7 @@ const Accounts: React.FC = () => {
 
           <Box sx={{ width: '40%' }}>
             <Paper elevation={0} sx={{ borderRadius: (theme) => theme.shape.borderRadius, overflow: 'hidden', mb: 3 }}>
-              <Box sx={{ p: 2, bgcolor: '#212121', color: 'white' }}>
+              <Box sx={{ p: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? '#212121' : '#212121', color: 'white' }}>
                 <SectionTitle sx={{ mb: 1 }}>
                   <BarChartIcon sx={{ color: 'white', mr: 1 }} />
                   <Typography variant="h6" fontWeight={600} color="white">
@@ -2611,9 +2748,9 @@ const Accounts: React.FC = () => {
             </Paper>
 
             <Paper elevation={0} sx={{ borderRadius: (theme) => theme.shape.borderRadius, overflow: 'hidden', mb: 3 }}>
-              <Box sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+              <Box sx={{ p: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5' }}>
                 <SectionTitle sx={{ mb: 0 }}>
-                  <AssignmentIcon sx={{ color: '#666', mr: 1 }} />
+                  <AssignmentIcon sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#aaa' : '#666', mr: 1 }} />
                   <Typography variant="h6" fontWeight={600}>
                     Action Plan
                   </Typography>
@@ -2701,12 +2838,12 @@ const Accounts: React.FC = () => {
                     sx={{ 
                       borderRadius: '3px', 
                       textTransform: 'none', 
-                      bgcolor: '#f5f5f5', 
-                      color: '#000',
+                      bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#f5f5f5', 
+                      color: (theme) => theme.palette.mode === 'dark' ? '#fff' : '#000',
                       fontWeight: 500,
                       px: 2,
                       '&:hover': {
-                        bgcolor: '#e0e0e0'
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : '#e0e0e0'
                       }
                     }}
                   >
@@ -2717,10 +2854,13 @@ const Accounts: React.FC = () => {
                     sx={{ 
                       borderRadius: '3px', 
                       textTransform: 'none', 
-                      bgcolor: '#000', 
+                      bgcolor: (theme) => theme.palette.mode === 'dark' ? '#333' : '#000', 
                       color: '#fff',
                       fontWeight: 500,
-                      px: 2
+                      px: 2,
+                      '&:hover': {
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? '#444' : '#333'
+                      }
                     }}
                   >
                     Talking Points
@@ -2740,7 +2880,7 @@ const Accounts: React.FC = () => {
                   clickable 
                   sx={{ 
                     borderRadius: '3px',
-                    '&:hover': { bgcolor: '#f5f5f5' }
+                    '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#f5f5f5' }
                   }} 
                 />
                 <Chip 
@@ -2748,7 +2888,7 @@ const Accounts: React.FC = () => {
                   clickable 
                   sx={{ 
                     borderRadius: '3px',
-                    '&:hover': { bgcolor: '#f5f5f5' }
+                    '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#f5f5f5' }
                   }} 
                 />
                 <Chip 
@@ -2756,7 +2896,7 @@ const Accounts: React.FC = () => {
                   clickable 
                   sx={{ 
                     borderRadius: '3px',
-                    '&:hover': { bgcolor: '#f5f5f5' }
+                    '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#f5f5f5' }
                   }} 
                 />
                 <Chip 
@@ -2771,6 +2911,132 @@ const Accounts: React.FC = () => {
             </Paper>
           </Box>
         </Box>
+        
+        {/* Template Generation Buttons */}
+        <Paper 
+          elevation={0} 
+          sx={{ 
+            mt: 2, 
+            p: 3, 
+            borderRadius: (theme) => theme.shape.borderRadius,
+            border: '1px solid',
+            borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)'
+          }}
+        >
+          <Typography variant="h6" fontWeight={600} gutterBottom>
+            Generate AI Templates
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Create targeted templates based on AI analysis of this account's data and market insights.
+          </Typography>
+          
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Button
+              variant="contained"
+              startIcon={<EmailIcon />}
+              disabled={generatingTemplate}
+              onClick={() => handleGenerateTemplate('Email Campaign')}
+              sx={{
+                bgcolor: (theme) => theme.palette.warning.main, // Yellow
+                color: (theme) => theme.palette.warning.contrastText,
+                fontWeight: 500,
+                px: 3,
+                py: 1.5,
+                borderRadius: '3px',
+                '&:hover': {
+                  bgcolor: (theme) => theme.palette.warning.dark,
+                },
+                '&.Mui-disabled': {
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
+                }
+              }}
+            >
+              {templateType === 'Email Campaign' && generatingTemplate ? (
+                <>
+                  <CircularProgress size={16} color="inherit" sx={{ mr: 1 }} />
+                  Generating...
+                </>
+              ) : templateType === 'Email Campaign' && templateSaved ? (
+                <>
+                  <CheckCircleIcon sx={{ mr: 1 }} />
+                  Template Saved
+                </>
+              ) : (
+                'Create Email Campaign'
+              )}
+            </Button>
+            
+            <Button
+              variant="contained"
+              startIcon={<PhoneIcon />}
+              disabled={generatingTemplate}
+              onClick={() => handleGenerateTemplate('Cold Call')}
+              sx={{
+                bgcolor: (theme) => theme.palette.primary.main, // Blue
+                color: '#fff',
+                fontWeight: 500,
+                px: 3,
+                py: 1.5,
+                borderRadius: '3px',
+                '&:hover': {
+                  bgcolor: (theme) => theme.palette.primary.dark,
+                },
+                '&.Mui-disabled': {
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
+                }
+              }}
+            >
+              {templateType === 'Cold Call' && generatingTemplate ? (
+                <>
+                  <CircularProgress size={16} color="inherit" sx={{ mr: 1 }} />
+                  Generating...
+                </>
+              ) : templateType === 'Cold Call' && templateSaved ? (
+                <>
+                  <CheckCircleIcon sx={{ mr: 1 }} />
+                  Template Saved
+                </>
+              ) : (
+                'Cold Call Talk Points'
+              )}
+            </Button>
+            
+            <Button
+              variant="contained"
+              startIcon={<VideocamIcon />}
+              disabled={generatingTemplate}
+              onClick={() => handleGenerateTemplate('Teams Meeting')}
+              sx={{
+                bgcolor: (theme) => theme.palette.success.main, // Green
+                color: '#fff',
+                fontWeight: 500,
+                px: 3,
+                py: 1.5,
+                borderRadius: '3px',
+                '&:hover': {
+                  bgcolor: (theme) => theme.palette.success.dark,
+                },
+                '&.Mui-disabled': {
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
+                }
+              }}
+            >
+              {templateType === 'Teams Meeting' && generatingTemplate ? (
+                <>
+                  <CircularProgress size={16} color="inherit" sx={{ mr: 1 }} />
+                  Generating...
+                </>
+              ) : templateType === 'Teams Meeting' && templateSaved ? (
+                <>
+                  <CheckCircleIcon sx={{ mr: 1 }} />
+                  Template Saved
+                </>
+              ) : (
+                'Teams Meeting Points'
+              )}
+            </Button>
+          </Box>
+        </Paper>
       </AnimatedContainer>
     );
   };
@@ -2981,6 +3247,57 @@ const Accounts: React.FC = () => {
                 >
                   Add Account
                 </ActionButton>
+                <Box>
+                  <ActionButton
+                    variant="contained"
+                    startIcon={<AnalyticsIcon />}
+                    onClick={(e) => {
+                      const anchorEl = e.currentTarget;
+                      setAnalyzeMenuAnchor(anchorEl);
+                    }}
+                    endIcon={<KeyboardArrowDownIcon />}
+                    sx={{
+                      bgcolor: (theme) => theme.palette.warning.main,
+                      color: (theme) => theme.palette.warning.contrastText,
+                      '&:hover': {
+                        bgcolor: (theme) => theme.palette.warning.dark
+                      }
+                    }}
+                  >
+                    Analyze
+                  </ActionButton>
+                  <Menu
+                    anchorEl={analyzeMenuAnchor}
+                    open={Boolean(analyzeMenuAnchor)}
+                    onClose={() => setAnalyzeMenuAnchor(null)}
+                    TransitionComponent={Fade}
+                  >
+                    <MenuItem 
+                      onClick={() => {
+                        handleAnalyze();
+                        setAnalyzeMenuAnchor(null);
+                      }}
+                      sx={{ fontWeight: 600 }}
+                    >
+                      Analyze All Accounts
+                    </MenuItem>
+                    <Divider />
+                    <Typography variant="caption" sx={{ px: 2, py: 1, color: 'text.secondary', display: 'block' }}>
+                      By Organization Type
+                    </Typography>
+                    {filterOptions.organisationTypes.map((type) => (
+                      <MenuItem 
+                        key={type} 
+                        onClick={() => {
+                          handleAnalyzeByType(type);
+                          setAnalyzeMenuAnchor(null);
+                        }}
+                      >
+                        {type}
+                      </MenuItem>
+                    ))}
+                  </Menu>
+                </Box>
               </Box>
             ) : (
               <IconButton 
