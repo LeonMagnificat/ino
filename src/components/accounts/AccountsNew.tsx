@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -30,7 +30,9 @@ import {
   Divider,
   Alert,
   Snackbar,
-  styled
+  styled,
+  LinearProgress,
+  CircularProgress
 } from '@mui/material';
 import { CloseIcon, ContentCopyIcon } from '../icons/FallbackIcons';
 import SearchIcon from '@mui/icons-material/Search';
@@ -42,6 +44,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import PeopleIcon from '@mui/icons-material/People';
 import GroupIcon from '@mui/icons-material/Group';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useTheme } from '../../context/ThemeContext';
 import { BORDER_RADIUS, TRANSITIONS } from '../ui/common/constants';
 
@@ -228,6 +232,29 @@ const AccountsNew: React.FC = () => {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<string[][]>([]);
   const [importError, setImportError] = useState<string | null>(null);
+  
+  // New state for upload progress
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [uploadStage, setUploadStage] = useState<'idle' | 'uploading' | 'processing' | 'complete' | 'error'>('idle');
+  const [dragActive, setDragActive] = useState<boolean>(false);
+  
+  // Pulsing effect for progress bar during processing
+  const [pulseEffect, setPulseEffect] = useState<boolean>(false);
+  
+  // Create pulsing effect during processing
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (uploadStage === 'processing') {
+      interval = setInterval(() => {
+        setPulseEffect(prev => !prev);
+      }, 1000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [uploadStage]);
 
   // Handle tab change
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -347,47 +374,118 @@ const AccountsNew: React.FC = () => {
     });
   };
 
+  // Handle drag events
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  }, []);
+  
+  // Handle drop event
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+        handleFileProcessing(file);
+      } else {
+        setImportError('Please upload a CSV file');
+      }
+    }
+  }, []);
+
   // Handle file selection for CSV import
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
       const file = files[0];
-      setCsvFile(file);
-      
-      // Read the file to preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const text = e.target?.result as string;
-          const lines = text.split('\n');
-          const parsedData = lines.map(line => line.split(',').map(cell => cell.trim()));
-          
-          // Validate CSV format
-          if (parsedData.length < 2) {
-            setImportError('CSV file must contain at least a header row and one data row');
-            setCsvPreview([]);
-            return;
-          }
-          
-          const headers = parsedData[0];
-          const requiredHeaders = ['name', 'industry', 'location', 'size', 'status'];
-          const missingHeaders = requiredHeaders.filter(header => !headers.map(h => h.toLowerCase()).includes(header));
-          
-          if (missingHeaders.length > 0) {
-            setImportError(`Missing required headers: ${missingHeaders.join(', ')}`);
-            setCsvPreview([]);
-            return;
-          }
-          
-          setImportError(null);
-          setCsvPreview(parsedData.slice(0, 6)); // Show first 5 rows plus header
-        } catch (error) {
-          setImportError('Error parsing CSV file');
-          setCsvPreview([]);
-        }
-      };
-      reader.readAsText(file);
+      handleFileProcessing(file);
     }
+  };
+  
+  // Process the selected file
+  const handleFileProcessing = (file: File) => {
+    setCsvFile(file);
+    setUploadStage('uploading');
+    setIsUploading(true);
+    setUploadProgress(0);
+    setImportError(null);
+    
+    // Simulate upload progress
+    const progressInterval = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90;
+        }
+        return prev + 10;
+      });
+    }, 200);
+    
+    // Read the file using FileReader
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        clearInterval(progressInterval);
+        setUploadProgress(100);
+        setUploadStage('processing');
+        
+        const text = e.target?.result as string;
+        const lines = text.split('\n');
+        const parsedData = lines.map(line => line.split(',').map(cell => cell.trim()));
+        
+        // Validate CSV format
+        if (parsedData.length < 2) {
+          setImportError('CSV file must contain at least a header row and one data row');
+          setCsvPreview([]);
+          setUploadStage('error');
+          setIsUploading(false);
+          return;
+        }
+        
+        const headers = parsedData[0].map(h => h.toLowerCase());
+        const requiredHeaders = ['name', 'industry', 'location', 'size', 'status'];
+        const missingHeaders = requiredHeaders.filter(header => !headers.includes(header));
+        
+        if (missingHeaders.length > 0) {
+          setImportError(`Missing required headers: ${missingHeaders.join(', ')}`);
+          setCsvPreview([]);
+          setUploadStage('error');
+          setIsUploading(false);
+          return;
+        }
+        
+        setImportError(null);
+        setCsvPreview(parsedData.slice(0, 6)); // Show first 5 rows plus header
+        setUploadStage('complete');
+        setIsUploading(false);
+      } catch (error) {
+        clearInterval(progressInterval);
+        setImportError('Error parsing CSV file');
+        setCsvPreview([]);
+        setUploadStage('error');
+        setIsUploading(false);
+      }
+    };
+    
+    reader.onerror = () => {
+      clearInterval(progressInterval);
+      setImportError('Error reading CSV file');
+      setCsvPreview([]);
+      setUploadStage('error');
+      setIsUploading(false);
+    };
+    
+    reader.readAsText(file);
   };
 
   // Handle importing accounts from CSV
@@ -396,6 +494,10 @@ const AccountsNew: React.FC = () => {
       setImportError('Please select a valid CSV file');
       return;
     }
+    
+    setUploadStage('processing');
+    setIsUploading(true);
+    setUploadProgress(0);
     
     try {
       const headers = csvPreview[0].map(header => header.toLowerCase());
@@ -407,49 +509,95 @@ const AccountsNew: React.FC = () => {
       
       if (nameIndex === -1 || industryIndex === -1 || locationIndex === -1 || sizeIndex === -1 || statusIndex === -1) {
         setImportError('CSV file must contain name, industry, location, size, and status columns');
+        setUploadStage('error');
+        setIsUploading(false);
         return;
       }
       
-      // Read the entire file
+      // Read the file using FileReader
       const reader = new FileReader();
+      
       reader.onload = (e) => {
-        const text = e.target?.result as string;
-        const lines = text.split('\n');
-        const parsedData = lines.map(line => line.split(',').map(cell => cell.trim()));
-        
-        // Skip header row
-        const dataRows = parsedData.slice(1).filter(row => row.length >= Math.max(nameIndex, industryIndex, locationIndex, sizeIndex, statusIndex) + 1);
-        
-        const newAccounts: Account[] = dataRows.map((row, index) => {
-          const status = row[statusIndex].toLowerCase();
-          const validStatus: 'active' | 'inactive' | 'pending' = 
-            status === 'active' ? 'active' : 
-            status === 'inactive' ? 'inactive' : 'pending';
+        try {
+          const text = e.target?.result as string;
+          const lines = text.split('\n');
+          const parsedData = lines.map(line => line.split(',').map(cell => cell.trim()));
           
-          return {
-            id: Math.max(...accounts.map(account => account.id), 0) + index + 1,
-            name: row[nameIndex],
-            industry: row[industryIndex],
-            location: row[locationIndex],
-            size: row[sizeIndex],
-            status: validStatus,
-            contacts: 0,
-            dateAdded: new Date().toISOString().split('T')[0]
-          };
-        });
-        
-        setAccounts([...accounts, ...newAccounts]);
-        handleCloseImportDialog();
-        
-        setSnackbar({
-          open: true,
-          message: `Successfully imported ${newAccounts.length} accounts`,
-          severity: 'success'
-        });
+          // Simulate progress updates
+          let currentProgress = 0;
+          const totalRows = parsedData.length;
+          const progressInterval = setInterval(() => {
+            currentProgress += 5;
+            if (currentProgress >= 95) {
+              clearInterval(progressInterval);
+              setUploadProgress(95);
+            } else {
+              setUploadProgress(currentProgress);
+            }
+          }, 100);
+          
+          // Skip header row
+          const dataRows = parsedData.slice(1).filter(row => 
+            row.length >= Math.max(nameIndex, industryIndex, locationIndex, sizeIndex, statusIndex) + 1
+          );
+          
+          const newAccounts: Account[] = dataRows.map((row, index) => {
+            const status = row[statusIndex].toLowerCase();
+            const validStatus: 'active' | 'inactive' | 'pending' = 
+              status === 'active' ? 'active' : 
+              status === 'inactive' ? 'inactive' : 'pending';
+            
+            return {
+              id: Math.max(...accounts.map(account => account.id), 0) + index + 1,
+              name: row[nameIndex],
+              industry: row[industryIndex],
+              location: row[locationIndex],
+              size: row[sizeIndex],
+              status: validStatus,
+              contacts: 0,
+              dateAdded: new Date().toISOString().split('T')[0]
+            };
+          });
+          
+          // Simulate final processing
+          setTimeout(() => {
+            clearInterval(progressInterval);
+            setUploadProgress(100);
+            setAccounts([...accounts, ...newAccounts]);
+            
+            // Show success message and close dialog
+            setSnackbar({
+              open: true,
+              message: `Successfully imported ${newAccounts.length} accounts`,
+              severity: 'success'
+            });
+            
+            setUploadStage('complete');
+            setIsUploading(false);
+            
+            // Close dialog after a short delay to show completion
+            setTimeout(() => {
+              handleCloseImportDialog();
+            }, 1000);
+          }, 500);
+        } catch (error) {
+          setImportError('Error processing CSV data');
+          setUploadStage('error');
+          setIsUploading(false);
+        }
       };
+      
+      reader.onerror = () => {
+        setImportError('Error reading CSV file');
+        setUploadStage('error');
+        setIsUploading(false);
+      };
+      
       reader.readAsText(csvFile);
     } catch (error) {
       setImportError('Error importing accounts from CSV');
+      setUploadStage('error');
+      setIsUploading(false);
     }
   };
 
@@ -538,8 +686,61 @@ const AccountsNew: React.FC = () => {
         </Box>
       </Box>
 
+      {/* Analyse Banner */}
+      <Box sx={{ 
+        px: 3, 
+        py: 2,
+        mb: 2,
+        backgroundColor: '#FF5722',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        boxShadow: '0 4px 12px rgba(255, 87, 34, 0.3)'
+      }}>
+        <Box>
+          <Typography variant="h6" fontWeight="bold" color="white">
+            Analyse Your Accounts
+          </Typography>
+          <Typography variant="body2" color="rgba(255, 255, 255, 0.9)">
+            Get insights and recommendations for your client accounts
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<SearchIcon />}
+          onClick={() => {
+            // Handle analyse action
+            setSnackbar({
+              open: true,
+              message: 'Analysis started for selected accounts',
+              severity: 'info'
+            });
+          }}
+          sx={{
+            borderRadius: BORDER_RADIUS.md,
+            textTransform: 'none',
+            fontWeight: 'bold',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+            bgcolor: 'white',
+            color: '#FF5722',
+            py: 1,
+            px: 3,
+            '&:hover': {
+              bgcolor: 'rgba(255, 255, 255, 0.9)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+            }
+          }}
+        >
+          Start Analysis
+        </Button>
+      </Box>
+
       {/* Tabs */}
-      <Box sx={{ px: 3 }}>
+      <Box sx={{ 
+        px: 3, 
+        borderBottom: `1px solid ${mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)'}`
+      }}>
         <Tabs
           value={tabValue}
           onChange={handleTabChange}
@@ -573,65 +774,212 @@ const AccountsNew: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
         flexGrow: 1,
-        overflow: 'hidden',
-        borderTop: `1px solid ${mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)'}`
+        overflow: 'hidden'
       }}>
         {/* Search and filter */}
-        <Box sx={{ p: 2, display: 'flex', gap: 1 }}>
-          <TextField
-            placeholder="Search accounts..."
-            variant="outlined"
-            size="small"
-            fullWidth
-            value={searchQuery}
-            onChange={handleSearchChange}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ fontSize: 20, color: mode === 'dark' ? '#aaaaaa' : '#666666' }} />
-                </InputAdornment>
-              ),
-              sx: {
+        <Box sx={{ p: 2, display: 'flex', gap: 1, justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', gap: 1, flexGrow: 1 }}>
+            <TextField
+              placeholder="Search accounts..."
+              variant="outlined"
+              size="small"
+              fullWidth
+              value={searchQuery}
+              onChange={handleSearchChange}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ fontSize: 20, color: mode === 'dark' ? '#aaaaaa' : '#666666' }} />
+                  </InputAdornment>
+                ),
+                sx: {
+                  borderRadius: BORDER_RADIUS.md,
+                  backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                  transition: TRANSITIONS.medium,
+                  '&:hover': {
+                    backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'
+                  }
+                }
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
+                    transition: 'border-color 0.2s ease-in-out',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: mode === 'dark' ? 'white' : 'black',
+                    borderWidth: '1.5px',
+                  },
+                }
+              }}
+            />
+            <IconButton
+              sx={{
                 borderRadius: BORDER_RADIUS.md,
                 backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
                 transition: TRANSITIONS.medium,
+                padding: '8px',
                 '&:hover': {
-                  backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'
+                  backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                  transform: 'translateY(-2px)'
+                }
+              }}
+            >
+              <FilterListIcon sx={{ fontSize: 20, color: mode === 'dark' ? '#ffffff' : '#000000' }} />
+            </IconButton>
+          </Box>
+          
+          {/* Action buttons */}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            {/* Add Account Button */}
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={(e) => setMenuAnchorEl(e.currentTarget)}
+              sx={{
+                borderRadius: BORDER_RADIUS.md,
+                textTransform: 'none',
+                fontWeight: 'bold',
+                boxShadow: 'none',
+                bgcolor: mode === 'dark' ? 'white' : 'black',
+                color: mode === 'dark' ? 'black' : 'white',
+                '&:hover': {
+                  bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)',
+                  boxShadow: 'none',
+                }
+              }}
+            >
+              Add Account
+            </Button>
+            <Menu
+              anchorEl={menuAnchorEl}
+              open={Boolean(menuAnchorEl) && selectedAccountId === null}
+              onClose={() => setMenuAnchorEl(null)}
+              PaperProps={{
+                sx: {
+                  borderRadius: BORDER_RADIUS.md,
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                  mt: 1
+                }
+              }}
+            >
+              <MenuItem 
+                onClick={() => {
+                  setMenuAnchorEl(null);
+                  handleOpenAddDialog();
+                }}
+                sx={{ 
+                  py: 1.5, 
+                  px: 2,
+                  '&:hover': {
+                    backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'
+                  }
+                }}
+              >
+                <AddIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                <Typography variant="body2">Add Single Account</Typography>
+              </MenuItem>
+              <MenuItem 
+                onClick={() => {
+                  setMenuAnchorEl(null);
+                  handleOpenImportDialog();
+                }}
+                sx={{ 
+                  py: 1.5, 
+                  px: 2,
+                  '&:hover': {
+                    backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'
+                  }
+                }}
+              >
+                <CloudUploadIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                <Typography variant="body2">Import from CSV</Typography>
+              </MenuItem>
+              <Divider sx={{ my: 1 }} />
+              <MenuItem 
+                onClick={() => {
+                  setMenuAnchorEl(null);
+                  // Handle analyse action
+                  setSnackbar({
+                    open: true,
+                    message: 'Analysis started for selected accounts',
+                    severity: 'info'
+                  });
+                }}
+                sx={{ 
+                  py: 1.5, 
+                  px: 2,
+                  '&:hover': {
+                    backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'
+                  }
+                }}
+              >
+                <SearchIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                <Typography variant="body2">Analyse Accounts</Typography>
+              </MenuItem>
+            </Menu>
+          </Box>
+        </Box>
+
+        {/* Analyse Button above table - Large and prominent */}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          mb: 2, 
+          mt: 1,
+          px: 2
+        }}>
+          <Button
+            variant="contained"
+            color="primary"
+            size="large"
+            startIcon={<SearchIcon />}
+            onClick={() => {
+              // Handle analyse action
+              setSnackbar({
+                open: true,
+                message: 'Analysis started for selected accounts',
+                severity: 'info'
+              });
+            }}
+            sx={{
+              borderRadius: BORDER_RADIUS.md,
+              textTransform: 'none',
+              fontWeight: 'bold',
+              fontSize: '1rem',
+              boxShadow: '0 4px 12px rgba(255, 87, 34, 0.4)',
+              bgcolor: '#FF5722', // Orange for high visibility
+              color: 'white',
+              py: 1.5,
+              px: 4,
+              width: '50%', // Make it wider
+              '&:hover': {
+                bgcolor: '#E64A19',
+                boxShadow: '0 6px 16px rgba(255, 87, 34, 0.5)',
+                transform: 'translateY(-2px)'
+              },
+              animation: 'pulse 2s infinite',
+              '@keyframes pulse': {
+                '0%': {
+                  boxShadow: '0 0 0 0 rgba(255, 87, 34, 0.7)'
+                },
+                '70%': {
+                  boxShadow: '0 0 0 10px rgba(255, 87, 34, 0)'
+                },
+                '100%': {
+                  boxShadow: '0 0 0 0 rgba(255, 87, 34, 0)'
                 }
               }
             }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': {
-                  borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
-                  transition: 'border-color 0.2s ease-in-out',
-                },
-                '&:hover fieldset': {
-                  borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: mode === 'dark' ? 'white' : 'black',
-                  borderWidth: '1.5px',
-                },
-              }
-            }}
-          />
-          <IconButton
-            sx={{
-              borderRadius: BORDER_RADIUS.md,
-              backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
-              transition: TRANSITIONS.medium,
-              padding: '8px',
-              '&:hover': {
-                backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
-                transform: 'translateY(-2px)'
-              }
-            }}
           >
-            <FilterListIcon sx={{ fontSize: 20, color: mode === 'dark' ? '#ffffff' : '#000000' }} />
-          </IconButton>
+            ANALYSE ACCOUNTS
+          </Button>
         </Box>
-
+        
         {/* Accounts table */}
         <TableContainer 
           component={Paper} 
@@ -643,6 +991,42 @@ const AccountsNew: React.FC = () => {
           }}
         >
           <Table sx={{ minWidth: 650 }} aria-label="accounts table">
+            {/* Special header row for Analyse button */}
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#FFF3E0' }}>
+                <TableCell colSpan={8} align="center" sx={{ py: 2 }}>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={<SearchIcon />}
+                    onClick={() => {
+                      // Handle analyse action
+                      setSnackbar({
+                        open: true,
+                        message: 'Analysis started for selected accounts',
+                        severity: 'info'
+                      });
+                    }}
+                    sx={{
+                      borderRadius: BORDER_RADIUS.md,
+                      textTransform: 'none',
+                      fontWeight: 'bold',
+                      boxShadow: '0 4px 12px rgba(255, 87, 34, 0.4)',
+                      bgcolor: '#FF5722', // Orange for high visibility
+                      color: 'white',
+                      py: 1.5,
+                      px: 4,
+                      '&:hover': {
+                        bgcolor: '#E64A19',
+                        boxShadow: '0 6px 16px rgba(255, 87, 34, 0.5)',
+                      }
+                    }}
+                  >
+                    ANALYSE ACCOUNTS
+                  </Button>
+                </TableCell>
+              </TableRow>
+            </TableHead>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 'bold' }}>Account</TableCell>
@@ -961,7 +1345,7 @@ const AccountsNew: React.FC = () => {
       {/* Import CSV Dialog */}
       <Dialog 
         open={openImportDialog} 
-        onClose={handleCloseImportDialog}
+        onClose={!isUploading ? handleCloseImportDialog : undefined}
         PaperProps={{
           sx: {
             borderRadius: BORDER_RADIUS.lg,
@@ -977,9 +1361,11 @@ const AccountsNew: React.FC = () => {
           pb: 1
         }}>
           <Typography variant="h6" fontWeight="bold">Import Accounts from CSV</Typography>
-          <IconButton onClick={handleCloseImportDialog} size="small">
-            <CloseIcon size={18} />
-          </IconButton>
+          {!isUploading && (
+            <IconButton onClick={handleCloseImportDialog} size="small">
+              <CloseIcon size={18} />
+            </IconButton>
+          )}
         </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -987,46 +1373,200 @@ const AccountsNew: React.FC = () => {
               Upload a CSV file with the following columns: name, industry, location, size, status
             </Typography>
             
-            <Box 
-              sx={{ 
-                border: `2px dashed ${mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                borderRadius: BORDER_RADIUS.md,
-                p: 3,
-                textAlign: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                '&:hover': {
-                  borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)',
-                  backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)'
-                }
-              }}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <input
-                type="file"
-                accept=".csv"
-                ref={fileInputRef}
-                style={{ display: 'none' }}
-                onChange={handleFileSelect}
-              />
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                <ContentCopyIcon sx={{ fontSize: 32, color: mode === 'dark' ? '#aaaaaa' : '#666666' }} />
-                <Typography variant="body1" fontWeight="medium">
-                  {csvFile ? csvFile.name : 'Click to select a CSV file'}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {csvFile ? `${(csvFile.size / 1024).toFixed(2)} KB` : 'or drag and drop here'}
+            {/* Upload progress indicator */}
+            {isUploading && (
+              <Box sx={{ mb: 2, mt: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    {uploadStage === 'error' ? (
+                      <DeleteIcon sx={{ mr: 1, fontSize: 18, color: '#e74c3c' }} />
+                    ) : uploadStage === 'complete' ? (
+                      <CheckCircleIcon sx={{ mr: 1, fontSize: 18, color: '#2ecc71' }} />
+                    ) : (
+                      <CircularProgress size={16} sx={{ mr: 1 }} />
+                    )}
+                    <Typography variant="body2" fontWeight="medium" color={
+                      uploadStage === 'error' ? '#e74c3c' : 
+                      uploadStage === 'complete' ? '#2ecc71' : 
+                      'primary'
+                    }>
+                      {uploadStage === 'uploading' ? 'Uploading file...' : 
+                       uploadStage === 'processing' ? 'Processing data...' : 
+                       uploadStage === 'error' ? 'Error processing file' :
+                       'Completing import...'}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    {uploadProgress}%
+                  </Typography>
+                </Box>
+                <LinearProgress 
+                  variant={uploadStage === 'processing' ? (pulseEffect ? "indeterminate" : "determinate") : "determinate"}
+                  value={uploadProgress} 
+                  sx={{ 
+                    height: 10, 
+                    borderRadius: 5,
+                    backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                    '& .MuiLinearProgress-bar': {
+                      borderRadius: 5,
+                      backgroundColor: uploadStage === 'error' 
+                        ? '#e74c3c' 
+                        : uploadStage === 'complete' 
+                          ? '#2ecc71' 
+                          : mode === 'dark' ? 'white' : 'black',
+                      transition: 'transform 0.4s linear',
+                    },
+                    '@keyframes pulse': {
+                      '0%': {
+                        opacity: 0.6,
+                      },
+                      '50%': {
+                        opacity: 1,
+                      },
+                      '100%': {
+                        opacity: 0.6,
+                      },
+                    },
+                    animation: uploadStage === 'processing' ? 'pulse 1.5s infinite ease-in-out' : 'none',
+                  }}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                  {uploadStage === 'uploading' ? 'Reading file contents...' : 
+                   uploadStage === 'processing' ? 'Validating and processing data...' : 
+                   'Finalizing import...'}
                 </Typography>
               </Box>
-            </Box>
+            )}
             
+            {/* File upload area */}
+            {!isUploading && (
+              <Box 
+                sx={{ 
+                  border: `2px dashed ${dragActive 
+                    ? (mode === 'dark' ? 'white' : 'black')
+                    : csvFile 
+                      ? (mode === 'dark' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)')
+                      : (mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)')
+                  }`,
+                  borderRadius: BORDER_RADIUS.md,
+                  p: 4,
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: dragActive
+                    ? (mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)')
+                    : csvFile
+                      ? (mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)')
+                      : 'transparent',
+                  '&:hover': {
+                    borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
+                    backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)'
+                  }
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                onDragEnter={handleDrag}
+                onDragOver={handleDrag}
+                onDragLeave={handleDrag}
+                onDrop={handleDrop}
+              >
+                <input
+                  type="file"
+                  accept=".csv"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleFileSelect}
+                />
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
+                  {csvFile ? (
+                    <>
+                      <Box sx={{ 
+                        width: 60, 
+                        height: 60, 
+                        borderRadius: '50%', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                        mb: 1
+                      }}>
+                        <CheckCircleIcon sx={{ fontSize: 32, color: mode === 'dark' ? 'white' : 'black' }} />
+                      </Box>
+                      <Typography variant="body1" fontWeight="medium">
+                        {csvFile.name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {`${(csvFile.size / 1024).toFixed(2)} KB • ${new Date().toLocaleDateString()}`}
+                      </Typography>
+                      <Button 
+                        size="small" 
+                        variant="outlined" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCsvFile(null);
+                          setCsvPreview([]);
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }}
+                        sx={{ 
+                          mt: 1, 
+                          borderRadius: BORDER_RADIUS.md,
+                          textTransform: 'none',
+                          borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                          color: mode === 'dark' ? 'white' : 'black',
+                        }}
+                      >
+                        Change File
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <CloudUploadIcon sx={{ fontSize: 48, color: mode === 'dark' ? '#aaaaaa' : '#666666', mb: 1 }} />
+                      <Typography variant="body1" fontWeight="medium">
+                        Drag and drop your CSV file here
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        or click to browse files
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                        Supported format: CSV
+                      </Typography>
+                    </>
+                  )}
+                </Box>
+              </Box>
+            )}
+            
+            {/* Error message */}
             {importError && (
-              <Alert severity="error" sx={{ borderRadius: BORDER_RADIUS.md }}>
+              <Alert 
+                severity="error" 
+                sx={{ 
+                  borderRadius: BORDER_RADIUS.md,
+                  '& .MuiAlert-icon': {
+                    alignItems: 'center'
+                  }
+                }}
+              >
                 {importError}
               </Alert>
             )}
             
-            {csvPreview.length > 0 && (
+            {/* Success message when upload is complete */}
+            {uploadStage === 'complete' && !importError && (
+              <Alert 
+                severity="success" 
+                sx={{ 
+                  borderRadius: BORDER_RADIUS.md,
+                  '& .MuiAlert-icon': {
+                    alignItems: 'center'
+                  }
+                }}
+              >
+                File successfully processed and ready to import.
+              </Alert>
+            )}
+            
+            {/* CSV Preview */}
+            {csvPreview.length > 0 && !isUploading && (
               <Box sx={{ mt: 2 }}>
                 <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
                   Preview:
@@ -1061,50 +1601,116 @@ const AccountsNew: React.FC = () => {
                     </TableBody>
                   </Table>
                 </TableContainer>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                  Showing {csvPreview.length - 1} of {csvFile ? 'many' : '0'} rows
+                </Typography>
               </Box>
             )}
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button 
-            onClick={handleCloseImportDialog}
-            sx={{
-              borderRadius: BORDER_RADIUS.md,
-              textTransform: 'none',
-              fontWeight: 'bold',
-              color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-              '&:hover': {
-                backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-              }
-            }}
-          >
-            Cancel
-          </Button>
-          <Button 
-            variant="contained"
-            onClick={handleImportAccounts}
-            disabled={!csvFile || csvPreview.length === 0 || importError !== null}
-            sx={{
-              borderRadius: BORDER_RADIUS.md,
-              textTransform: 'none',
-              fontWeight: 'bold',
-              boxShadow: 'none',
-              bgcolor: mode === 'dark' ? 'white' : 'black',
-              color: mode === 'dark' ? 'black' : 'white',
-              '&:hover': {
-                bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)',
-                boxShadow: 'none',
-              },
-              '&.Mui-disabled': {
-                bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-                color: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-              }
-            }}
-          >
-            Import Accounts
-          </Button>
+          {!isUploading ? (
+            <>
+              <Button 
+                onClick={handleCloseImportDialog}
+                sx={{
+                  borderRadius: BORDER_RADIUS.md,
+                  textTransform: 'none',
+                  fontWeight: 'bold',
+                  color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                  '&:hover': {
+                    backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                  }
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="contained"
+                onClick={handleImportAccounts}
+                disabled={!csvFile || csvPreview.length === 0 || importError !== null}
+                sx={{
+                  borderRadius: BORDER_RADIUS.md,
+                  textTransform: 'none',
+                  fontWeight: 'bold',
+                  boxShadow: 'none',
+                  bgcolor: mode === 'dark' ? 'white' : 'black',
+                  color: mode === 'dark' ? 'black' : 'white',
+                  '&:hover': {
+                    bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)',
+                    boxShadow: 'none',
+                  },
+                  '&.Mui-disabled': {
+                    bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                    color: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                  }
+                }}
+              >
+                Import Accounts
+              </Button>
+            </>
+          ) : (
+            <Button 
+              variant="text"
+              disabled
+              startIcon={<CircularProgress size={16} />}
+              sx={{
+                borderRadius: BORDER_RADIUS.md,
+                textTransform: 'none',
+                fontWeight: 'bold',
+                color: mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+              }}
+            >
+              {uploadStage === 'uploading' ? 'Uploading...' : 
+               uploadStage === 'processing' ? 'Processing...' : 
+               'Completing...'}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
+
+      {/* Floating Action Button for Analyse */}
+      <Box
+        sx={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          zIndex: 9999
+        }}
+      >
+        <Button
+          variant="contained"
+          color="primary"
+          size="large"
+          startIcon={<SearchIcon />}
+          onClick={() => {
+            // Handle analyse action
+            setSnackbar({
+              open: true,
+              message: 'Analysis started for selected accounts',
+              severity: 'info'
+            });
+          }}
+          sx={{
+            borderRadius: BORDER_RADIUS.md,
+            textTransform: 'none',
+            fontWeight: 'bold',
+            boxShadow: '0 4px 20px rgba(255, 87, 34, 0.5)',
+            bgcolor: '#FF5722', // Orange for high visibility
+            color: 'white',
+            py: 1.5,
+            px: 3,
+            '&:hover': {
+              bgcolor: '#E64A19',
+              boxShadow: '0 6px 25px rgba(255, 87, 34, 0.6)',
+              transform: 'translateY(-3px)'
+            },
+            transition: 'all 0.3s ease'
+          }}
+        >
+          Analyse Accounts
+        </Button>
+      </Box>
 
       {/* Snackbar for notifications */}
       <Snackbar

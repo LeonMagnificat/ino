@@ -1,3 +1,21 @@
+// Add this at the top of the file
+declare module '../../utils/fetchClient' {
+  interface FetchResponse {
+    data: any;
+    success: boolean;
+  }
+  
+  const fetchClient: {
+    get: (url: string, options?: any) => Promise<FetchResponse>;
+    post: (url: string, data: any, options?: any) => Promise<FetchResponse>;
+    put: (url: string, data: any, options?: any) => Promise<FetchResponse>;
+    delete: (url: string, options?: any) => Promise<FetchResponse>;
+  };
+  
+  export default fetchClient;
+  export const axios: typeof fetchClient;
+}
+
 import React, { useState, useRef, useContext, useEffect } from 'react';
 // Import our custom fetch client that mimics axios interface
 import fetchClient, { axios } from '../../utils/fetchClient';
@@ -53,6 +71,7 @@ import {
   Stepper,
   FormControlLabel,
   Switch,
+  ButtonGroup,
 } from '@mui/material';
 import { useTheme as useMuiTheme } from '@mui/material/styles';
 import { useTheme } from '../../context/ThemeContext';
@@ -88,6 +107,8 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import FilePresentIcon from '@mui/icons-material/FilePresent';
 import InfoIcon from '@mui/icons-material/Info';
 import StatusIndicator from './StatusIndicator';
+import { useNotification } from '../../context/NotificationContext';
+import ErrorIcon from '@mui/icons-material/Error';
 
 // Use the global theme from ThemeContext
 
@@ -1014,6 +1035,74 @@ const handleCSVUploadAndSend = async (file: File) => {
   });
 };
 
+// Add type definitions at the top of the file
+type Status = 'loading' | 'completed' | 'pending' | 'failed';
+
+// Add status color helper function
+const getStatusColor = (status: Status): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
+  switch (status) {
+    case 'loading':
+      return 'info';
+    case 'completed':
+      return 'success';
+    case 'pending':
+      return 'warning';
+    case 'failed':
+      return 'error';
+    default:
+      return 'default';
+  }
+};
+
+// Update the helper function for type safety
+const getAccountProperty = (account: Account | undefined, property: keyof Account): string | number | string[] => {
+  if (!account) return '';
+  const value = account[property];
+  
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value;
+  
+  return String(value);
+};
+
+// Update sorting function
+const sortAccounts = (a: Account, b: Account, field: keyof Account): number => {
+  const aValue = a[field];
+  const bValue = b[field];
+  
+  if (typeof aValue === 'number' && typeof bValue === 'number') {
+    return aValue - bValue;
+  }
+  
+  return String(aValue).localeCompare(String(bValue));
+};
+
+// Update the table row rendering
+const renderTableRow = (account: Account) => (
+  <TableRow key={account.id}>
+    <TableCell>
+      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Avatar sx={{ mr: 2, bgcolor: stringToColor(account.account_name) }}>
+          {getInitials(account.account_name)}
+        </Avatar>
+        <Typography variant="body1">{account.account_name}</Typography>
+      </Box>
+    </TableCell>
+    <TableCell>{account.location}</TableCell>
+    <TableCell>{account.organisation_type}</TableCell>
+    <TableCell>{account.quantity}</TableCell>
+    <TableCell>{account.product_family}</TableCell>
+    <TableCell>{account.exit_rate_usd}</TableCell>
+    <TableCell>
+      <StatusChip status={account.updates}>
+        {account.updates || 'pending'}
+      </StatusChip>
+    </TableCell>
+  </TableRow>
+);
+
 const Accounts: React.FC = () => {
   const { theme: appTheme } = useTheme();
   const muiTheme = useMuiTheme(); // Fallback to MUI theme if context theme is not available
@@ -1110,6 +1199,7 @@ const Accounts: React.FC = () => {
   const [importMethod, setImportMethod] = useState<'single' | 'csv'>('single');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { addNotification } = useNotification();
 
   // Fetch accounts on component mount
   useEffect(() => {
