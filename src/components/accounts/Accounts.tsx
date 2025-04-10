@@ -106,6 +106,7 @@ import BusinessIcon from '@mui/icons-material/Business';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import FilePresentIcon from '@mui/icons-material/FilePresent';
 import InfoIcon from '@mui/icons-material/Info';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 import StatusIndicator from './StatusIndicator';
 import { useNotification } from '../../context/NotificationContext';
 import ErrorIcon from '@mui/icons-material/Error';
@@ -237,7 +238,7 @@ interface StatusChipProps {
 }
 
 // Status indicator component
-const StatusChip = styled(Box)<{ status: 'completed' | 'pending' | 'failed' | 'loading' }>(({ theme, status }) => ({
+const StatusChip = styled(Box)<{ status?: 'completed' | 'pending' | 'failed' | 'loading' }>(({ theme, status }) => ({
   width: 10,
   height: 10,
   borderRadius: '2px',
@@ -1775,7 +1776,7 @@ const Accounts: React.FC = () => {
     if (!validateAccountForm()) return;
 
     // Generate a new ID (would be handled by backend in real app)
-    const newId = Math.max(...mockAccounts.map(a => a.id)) + 1;
+    const newId = String(Math.max(...mockAccounts.map(a => parseInt(a.id, 10))) + 1);
 
     // Create new account object
     const accountToAdd: Account = {
@@ -2927,7 +2928,7 @@ const Accounts: React.FC = () => {
                     onClick={() => toggleInsight(0)}
                   >
                     <Typography variant="body2" fontWeight={600}>
-                      1. What are the latest company updates, including leadership changes, financial health, and strategic moves?
+                      1. What are the latest developments or updates about the company?
                     </Typography>
                     <ExpandMoreIcon 
                       sx={{ 
@@ -2939,7 +2940,6 @@ const Accounts: React.FC = () => {
                   <Collapse in={expandedInsights.includes(0)}>
                     <Box sx={{ px: 2, pb: 2 }}>
                       <List dense sx={{ pl: 2, mt: 0 }}>
-                        {/* For the latest_updates section */}
                         {getInsightData(selectedAccount, 'latest_updates') ? (
                           getInsightData(selectedAccount, 'latest_updates')!.map((point, i) => (
                             <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
@@ -2949,11 +2949,9 @@ const Accounts: React.FC = () => {
                         ) : (
                           <ListItem sx={{ pl: 0 }}>
                             <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                              {selectedAccount.updates === 'pending' 
-                                ? 'Analysis in progress...' 
-                                : selectedAccount.updates === 'failed' 
-                                  ? 'Analysis failed. Please try again.' 
-                                  : 'No information available'}
+                              {selectedAccount.updates === 'completed' 
+                                ? 'No information available' 
+                                : 'Analysis in progress...'}
                             </Typography>
                           </ListItem>
                         )}
@@ -2962,42 +2960,25 @@ const Accounts: React.FC = () => {
                   </Collapse>
                 </Paper>
 
-            <Paper elevation={0} sx={{ borderRadius: (theme) => theme.shape.borderRadius, overflow: 'hidden', mb: 3 }}>
-              <Box sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-                <SectionTitle sx={{ mb: 0 }}>
-                  <AssignmentIcon sx={{ color: '#666', mr: 1 }} />
-                  <Typography variant="h6" fontWeight={600}>
-                    Action Plan
-                  </Typography>
-                </SectionTitle>
-              </Box>
-              
-              <Box sx={{ p: 3 }}>
-                <Alert 
-                  severity="info" 
+                {/* Second insight question */}
+                <Paper 
+                  elevation={0} 
                   sx={{ 
-                    mb: 3, 
-                    '& .MuiAlert-icon': { alignItems: 'center' },
-                    borderRadius: (theme) => theme.shape.borderRadius
+                    mb: 2, 
+                    overflow: 'hidden', 
+                    borderRadius: (theme) => theme.shape.borderRadius,
+                    border: '1px solid #eee'
                   }}
                 >
-                  Personalized recommendations based on recent client activity and market trends.
-                </Alert>
-
-                <Box sx={{ mb: 3 }}>
-                  <Paper 
-                    elevation={0} 
+                  <Box 
                     sx={{ 
-                      mb: 2, 
-                      p: 3, 
-                      bgcolor: '#fff', 
-                      borderRadius: (theme) => theme.shape.borderRadius, 
-                      borderLeft: '3px solid #1a73e8',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                      transition: 'all 0.2s ease-in-out',
-                      '&:hover': {
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                      }
+                      p: 2, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      bgcolor: expandedInsights.includes(1) ? '#f5f5f5' : 'transparent',
+                      '&:hover': { bgcolor: '#f5f5f5' }
                     }}
                     onClick={() => toggleInsight(1)}
                   >
@@ -3124,19 +3105,12 @@ const Accounts: React.FC = () => {
                   <Collapse in={expandedInsights.includes(3)}>
                     <Box sx={{ px: 2, pb: 2 }}>
                       <List dense sx={{ pl: 2, mt: 0 }}>
-                        {selectedAccount.companyInsight?.market_position ? (
-                          Array.isArray(selectedAccount.companyInsight.market_position) ? 
-                            selectedAccount.companyInsight.market_position.map((point, i) => (
-                              <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
-                                <Typography variant="body2">{point}</Typography>
-                              </ListItem>
-                            )) 
-                            : 
-                            <ListItem sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
-                              <Typography variant="body2">
-                                {selectedAccount.companyInsight.market_position}
-                              </Typography>
+                        {getInsightData(selectedAccount, 'market_position') ? (
+                          getInsightData(selectedAccount, 'market_position')!.map((point, i) => (
+                            <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
+                              <Typography variant="body2">{point}</Typography>
                             </ListItem>
+                          ))
                         ) : (
                           <ListItem sx={{ pl: 0 }}>
                             <Typography variant="body2" color="text.secondary" fontStyle="italic">
@@ -3186,19 +3160,12 @@ const Accounts: React.FC = () => {
                   <Collapse in={expandedInsights.includes(4)}>
                     <Box sx={{ px: 2, pb: 2 }}>
                       <List dense sx={{ pl: 2, mt: 0 }}>
-                        {selectedAccount.companyInsight?.future_plans ? (
-                          Array.isArray(selectedAccount.companyInsight.future_plans) ? 
-                            selectedAccount.companyInsight.future_plans.map((point, i) => (
-                              <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
-                                <Typography variant="body2">{point}</Typography>
-                              </ListItem>
-                            )) 
-                            : 
-                            <ListItem sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
-                              <Typography variant="body2">
-                                {selectedAccount.companyInsight.future_plans}
-                              </Typography>
+                        {getInsightData(selectedAccount, 'future_plans') ? (
+                          getInsightData(selectedAccount, 'future_plans')!.map((point, i) => (
+                            <ListItem key={i} sx={{ display: 'list-item', listStyleType: 'disc', pl: 0, py: 0.5 }}>
+                              <Typography variant="body2">{point}</Typography>
                             </ListItem>
+                          ))
                         ) : (
                           <ListItem sx={{ pl: 0 }}>
                             <Typography variant="body2" color="text.secondary" fontStyle="italic">
