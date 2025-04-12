@@ -233,7 +233,7 @@ const TableContent = styled(TableCell)(({ theme }) => ({
 }));
 
 interface StatusChipProps {
-  status: 'completed' | 'pending' | 'failed' | 'loading' | undefined;
+  status: 'completed' | 'pending' | 'failed' | 'loading';
   children?: React.ReactNode;
 }
 
@@ -739,6 +739,20 @@ const getAuthToken = (): string => {
     return token.startsWith('Bearer ') ? token : `Bearer ${token}`;
   }
   
+  // If no token in localStorage, try to get from user context or other sources
+  const userJson = localStorage.getItem('user');
+  if (userJson) {
+    try {
+      const user = JSON.parse(userJson);
+      if (user && user.token) {
+        return user.token.startsWith('Bearer ') ? user.token : `Bearer ${user.token}`;
+      }
+    } catch (e) {
+      console.error('Error parsing user from localStorage:', e);
+    }
+  }
+  
+  console.warn('No authentication token found, using default token');
   // Fallback to hardcoded token if process.env is not available or token is not set
   return 'Bearer default_token_for_development';
 };
@@ -1104,6 +1118,39 @@ const renderTableRow = (account: Account) => (
   </TableRow>
 );
 
+// Add this at the top of the file, after imports
+interface AccountForm {
+  accountNumber: string;
+  accountOwner: string;
+  billingCountry: string;
+  shippingCity: string;
+  accountName: string;
+  organisationType: string;
+  quantity: string;
+  productName: string;
+  lastBilledPrice: string;
+  sbuAndSubSbu: string;
+  riskAssets: string;
+  riskProductCategory: string;
+  exitRateUsd: string;
+}
+
+interface AccountFormErrors {
+  accountNumber?: string;
+  accountOwner?: string;
+  billingCountry?: string;
+  shippingCity?: string;
+  accountName?: string;
+  organisationType?: string;
+  quantity?: string;
+  productName?: string;
+  lastBilledPrice?: string;
+  sbuAndSubSbu?: string;
+  riskAssets?: string;
+  riskProductCategory?: string;
+  exitRateUsd?: string;
+}
+
 const Accounts: React.FC = () => {
   const { theme: appTheme } = useTheme();
   const muiTheme = useMuiTheme(); // Fallback to MUI theme if context theme is not available
@@ -1163,24 +1210,23 @@ const Accounts: React.FC = () => {
   // Account creation and import states
   const [openAddAccountDialog, setOpenAddAccountDialog] = useState(false);
   const [addAccountStep, setAddAccountStep] = useState(0);
-  const [newAccount, setNewAccount] = useState<{
-    accountName: string;
-    location: string;
-    organisationType: string;
-    productFamily: string;
-  }>({
+  const [accountForm, setAccountForm] = useState<AccountForm>({
+    accountNumber: '',
+    accountOwner: '',
+    billingCountry: '',
+    shippingCity: '',
     accountName: '',
-    location: '',
     organisationType: '',
-    productFamily: ''
+    quantity: '1',
+    productName: '',
+    lastBilledPrice: '',
+    sbuAndSubSbu: '',
+    riskAssets: '',
+    riskProductCategory: '',
+    exitRateUsd: ''
   });
-  
-  const [accountFormErrors, setAccountFormErrors] = useState<{
-    accountName?: string;
-    location?: string;
-    organisationType?: string;
-    productFamily?: string;
-  }>({});
+
+  const [accountFormErrors, setAccountFormErrors] = useState<AccountFormErrors>({});
   
   // CSV import states
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -1683,11 +1729,20 @@ const Accounts: React.FC = () => {
   const handleOpenAddAccountDialog = () => {
     setOpenAddAccountDialog(true);
     setAddAccountStep(0);
-    setNewAccount({
+    setAccountForm({
+      accountNumber: '',
+      accountOwner: '',
+      billingCountry: '',
+      shippingCity: '',
       accountName: '',
-      location: '',
       organisationType: '',
-      productFamily: ''
+      quantity: '1',
+      productName: '',
+      lastBilledPrice: '',
+      sbuAndSubSbu: '',
+      riskAssets: '',
+      riskProductCategory: '',
+      exitRateUsd: ''
     });
     setAccountFormErrors({});
     setCsvFile(null);
@@ -1703,41 +1758,48 @@ const Accounts: React.FC = () => {
 
   const handleAccountFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setNewAccount(prev => ({ ...prev, [name]: value }));
+    setAccountForm((prev: AccountForm) => ({ ...prev, [name]: value }));
 
     // Clear error for this field if it exists
-    if (accountFormErrors[name as keyof typeof accountFormErrors]) {
-      setAccountFormErrors(prev => ({ ...prev, [name]: undefined }));
+    if (accountFormErrors[name as keyof AccountFormErrors]) {
+      setAccountFormErrors(prev => ({
+        ...prev,
+        [name]: undefined
+      }));
     }
   };
 
   const handleAccountTypeChange = (e: SelectChangeEvent<string>) => {
     const { name, value } = e.target;
-    setNewAccount(prev => ({ ...prev, [name]: value }));
+    setAccountForm(prev => ({ ...prev, [name]: value }));
 
     // Clear error for this field if it exists
-    if (accountFormErrors[name as keyof typeof accountFormErrors]) {
+    if (accountFormErrors[name as keyof AccountFormErrors]) {
       setAccountFormErrors(prev => ({ ...prev, [name]: undefined }));
     }
   };
 
   const validateAccountForm = (): boolean => {
-    const errors: {[key: string]: string} = {};
-
-    if (!newAccount.accountName?.trim()) {
-      errors.accountName = 'Account name is required';
+    const errors: AccountFormErrors = {};
+    
+    // Required fields validation
+    if (!accountForm.billingCountry.trim()) {
+      errors.billingCountry = 'Billing Country is required';
     }
-
-    if (!newAccount.location?.trim()) {
-      errors.location = 'Location is required';
+    if (!accountForm.shippingCity.trim()) {
+      errors.shippingCity = 'Shipping City is required';
     }
-
-    if (!newAccount.organisationType?.trim()) {
-      errors.organisationType = 'Organization type is required';
+    if (!accountForm.accountName.trim()) {
+      errors.accountName = 'Account Name is required';
     }
-
-    if (!newAccount.productFamily?.trim()) {
-      errors.productFamily = 'Product family is required';
+    if (!accountForm.organisationType.trim()) {
+      errors.organisationType = 'Organisation Type is required';
+    }
+    if (!accountForm.productName.trim()) {
+      errors.productName = 'Product Name is required';
+    }
+    if (!accountForm.riskAssets.trim()) {
+      errors.riskAssets = 'Risk Assets is required';
     }
 
     setAccountFormErrors(errors);
@@ -1771,52 +1833,127 @@ const Accounts: React.FC = () => {
     setAddAccountStep(prev => Math.max(0, prev - 1));
   };
 
-  const handleCreateAccount = () => {
-    // Final validation before creating the account
-    if (!validateAccountForm()) return;
+  const handleCreateAccount = async () => {
+    if (!validateAccountForm()) {
+      return;
+    }
 
-    // Generate a new ID (would be handled by backend in real app)
-    const newId = String(Math.max(...mockAccounts.map(a => parseInt(a.id, 10))) + 1);
+    try {
+      setNotification({
+        open: true,
+        severity: 'info',
+        message: 'Creating new account...',
+        accountId: null
+      });
 
-    // Create new account object
-    const accountToAdd: Account = {
-      id: newId,
-      account_number: newAccount.accountName || '',
-      account_name: newAccount.accountName || '',
-      organisation_type: newAccount.organisationType || '',
-      location: newAccount.location || '',
-      quantity: 0,
-      last_billed_price_total: '0.00',
-      sbu_and_sub_sbu: '',
-      product_family: newAccount.productFamily || '',
-      risk_product_category: null,
-      exit_rate_usd: '0.00',
-      industry: '',
-      company_info: '',
-      linkedin: '',
-      status: 0,
-      news: '',
-      assets: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      updates: 'pending' as const,
-      color: stringToColor(newAccount.accountName || ''),
-      logoSrc: '/images/avatar.png',
-    };
+      const userId = await fetchUserProfile();
+      const authToken = getAuthToken();
 
-    // Add to mock accounts
-    mockAccounts.unshift(accountToAdd);
+      // Prepare the account data in the required structure
+      const accountData = {
+        user_id: userId,
+        accounts: [{
+          "Account Number": accountForm.accountNumber,
+          "Account Owner": accountForm.accountOwner,
+          "Billing Country": accountForm.billingCountry,
+          "Shipping City": accountForm.shippingCity,
+          "Account Name": accountForm.accountName,
+          "Organisation Type": accountForm.organisationType,
+          "Quantity": parseInt(accountForm.quantity) || 1,
+          "Product Name": accountForm.productName,
+          "Last Billed Price (Total)": accountForm.lastBilledPrice,
+          "SBU & Sub SBU": accountForm.sbuAndSubSbu,
+          "Risk Assets": accountForm.riskAssets,
+          "Risk Product Category": accountForm.riskProductCategory,
+          "Exit Rate USD": accountForm.exitRateUsd
+        }]
+      };
 
-    // Show success notification
-    setNotification({
-      open: true,
-      message: `Account "${accountToAdd.account_name}" has been created successfully`,
-      severity: 'success',
-      accountId: accountToAdd.id
-    });
+      // Call the API to create the account
+      const response = await fetchClient.post(
+        `/accounts`,
+        accountData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authToken
+          }
+        }
+      );
 
-    // Close dialog
-    handleCloseAddAccountDialog();
+      if (response.data && response.status >= 200 && response.status < 300) {
+        // Add the new account to the state with the response data
+        const createdAccount: Account = {
+          ...response.data,
+          updates: 'pending' as const,
+          color: stringToColor(accountForm.accountName),
+          logoSrc: '/images/avatar.png'
+        };
+
+        setAccounts(prevAccounts => [...prevAccounts, createdAccount]);
+        
+        setNotification({
+          open: true,
+          severity: 'success',
+          message: 'Account created successfully',
+          accountId: null
+        });
+
+        // Close the dialog and reset form
+        handleCloseAddAccountDialog();
+        setAccountForm({
+          accountNumber: '',
+          accountOwner: '',
+          billingCountry: '',
+          shippingCity: '',
+          accountName: '',
+          organisationType: '',
+          quantity: '1',
+          productName: '',
+          lastBilledPrice: '',
+          sbuAndSubSbu: '',
+          riskAssets: '',
+          riskProductCategory: '',
+          exitRateUsd: ''
+        });
+        setAddAccountStep(0);
+
+        // Start polling for insights for the new account
+        if (createdAccount.id) {
+          pollCompanyInsights(
+            [createdAccount.id],
+            (accountId) => {
+              setAccounts(currentAccounts => 
+                currentAccounts.map(account => 
+                  account.id === accountId 
+                    ? { ...account, updates: 'completed' as const } 
+                    : account
+                )
+              );
+            },
+            (accountId) => {
+              setAccounts(currentAccounts => 
+                currentAccounts.map(account => 
+                  account.id === accountId 
+                    ? { ...account, updates: 'failed' as const } 
+                    : account
+                )
+              );
+            }
+          );
+        }
+      } else {
+        throw new Error('Failed to create account');
+      }
+    } catch (error) {
+      console.error('Error creating account:', error);
+      setNotification({
+        open: true,
+        severity: 'error',
+        message: 'Failed to create account. Please try again.',
+        accountId: null
+      });
+    }
   };
 
   // CSV import handlers
@@ -2227,48 +2364,219 @@ const Accounts: React.FC = () => {
     }
   ];
 
-  // Add analyze function
-  const handleAnalyze = (accountId?: string) => {
-    setNotification({
-      open: true,
-      severity: 'info',
-      message: accountId 
-        ? `Starting analysis for ${mockAccounts.find(a => a.id === accountId)?.account_name}`
-        : 'Starting analysis for all selected accounts',
-      accountId: accountId as unknown as number
-    });
-    
-    // Simulate analysis starting
-    setTimeout(() => {
+  const handleAnalyze = async (accountId?: string) => {
+    try {
+      const userId = await fetchUserProfile();
+      const authToken = getAuthToken();
+
+      // Get the account to analyze
+      const accountToAnalyze = accountId 
+        ? accounts.find(acc => acc.id === accountId)
+        : selectedAccount;
+
+      if (!accountToAnalyze) {
+        setNotification({
+          open: true,
+          severity: 'error',
+          message: 'Account not found',
+          accountId: null
+        });
+        return;
+      }
+
       setNotification({
         open: true,
-        severity: 'success',
-        message: accountId
-          ? `Analysis complete for ${mockAccounts.find(a => a.id === accountId)?.account_name}`
-          : 'Analysis complete for all selected accounts',
-        accountId: accountId as unknown as number
+        severity: 'info',
+        message: `Starting analysis for ${accountToAnalyze.account_name}`,
+        accountId: accountToAnalyze.id
       });
-    }, 3000);
+
+      // Prepare the data for the webhook
+      const analysisData = {
+        id: accountToAnalyze.id,
+        account_name: accountToAnalyze.account_name,
+        location: accountToAnalyze.location,
+        organisation_type: accountToAnalyze.organisation_type,
+        user_id: userId
+      };
+
+      // Call the webhook API
+      const response = await fetchClient.post(
+        'https://primary-production-a43c.up.railway.app/webhook-test/8f0792c8-d816-459d-803d-c69a6d3ca4fa',
+        analysisData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authToken
+          }
+        }
+      );
+
+      if (response.data && response.status >= 200 && response.status < 300) {
+        // Update the account status to pending
+        setAccounts(currentAccounts => 
+          currentAccounts.map(account => 
+            account.id === accountToAnalyze.id 
+              ? { ...account, updates: 'pending' as const } 
+              : account
+          )
+        );
+
+        // Start polling for insights
+        pollCompanyInsights(
+          [accountToAnalyze.id],
+          (accountId) => {
+            setAccounts(currentAccounts => 
+              currentAccounts.map(account => 
+                account.id === accountId 
+                  ? { ...account, updates: 'completed' as const } 
+                  : account
+              )
+            );
+            setNotification({
+              open: true,
+              severity: 'success',
+              message: `Analysis complete for ${accountToAnalyze.account_name}`,
+              accountId: accountToAnalyze.id
+            });
+          },
+          (accountId) => {
+            setAccounts(currentAccounts => 
+              currentAccounts.map(account => 
+                account.id === accountId 
+                  ? { ...account, updates: 'failed' as const } 
+                  : account
+              )
+            );
+            setNotification({
+              open: true,
+              severity: 'error',
+              message: `Analysis failed for ${accountToAnalyze.account_name}`,
+              accountId: accountToAnalyze.id
+            });
+          }
+        );
+      } else {
+        throw new Error('Failed to start analysis');
+      }
+    } catch (error) {
+      console.error('Error starting analysis:', error);
+      setNotification({
+        open: true,
+        severity: 'error',
+        message: 'Failed to start analysis. Please try again.',
+        accountId: null
+      });
+    }
   };
 
   // Add analyze by type function
-  const handleAnalyzeByType = (organizationType: string) => {
+  const handleAnalyzeByType = async (organizationType: string) => {
+    // Example: If organizationType is "Custody & Fund Accounting", we'll only process accounts with that exact type
     setNotification({
       open: true,
       severity: 'info',
-      message: `Starting analysis for all ${organizationType} accounts`,
+      message: `Starting analysis for all accounts with type: ${organizationType}`,
       accountId: null
     });
     
-    // Simulate analysis starting
-    setTimeout(() => {
+    try {
+      // Get user ID once
+      const userId = await fetchUserProfile();
+      
+      // Get ONLY accounts that exactly match the organization type (exact string match)
+      const selectedAccounts = accounts.filter(account => 
+        account.organisation_type === organizationType // This ensures exact match
+      ).map(account => ({
+        id: String(account.id),
+        account_name: account.account_name || '',
+        location: account.location || '',
+        organisation_type: account.organisation_type || '',
+        user_id: userId
+      }));
+      
+      if (selectedAccounts.length === 0) {
+        setNotification({
+          open: true,
+          severity: 'warning',
+          message: `No accounts found with organization type: ${organizationType}`,
+          accountId: null
+        });
+        return;
+      }
+      
+      console.log(`Found ${selectedAccounts.length} accounts with organization type "${organizationType}"`);
+      console.log('Selected accounts for analysis:', selectedAccounts);
+      
+      // Log token for debugging
+      const authToken = getAuthToken();
+      console.log('Using auth token:', authToken.substring(0, 15) + '...');
+      
+      // Extract just the account names and IDs for a more efficient GET request
+      const accountData = selectedAccounts.map(account => ({
+        id: account.id,
+        account_name: account.account_name
+      }));
+      console.log(`Sending ${accountData.length} accounts with organization type "${organizationType}" for analysis:`, accountData);
+      
+      // Call the webhook API using POST method
+      const response = await fetchClient.post(
+        `https://primary-production-a43c.up.railway.app/webhook-test/8f0792c8-d816-459d-803d-c69a6d3ca4fa`,
+        {
+          user_id: userId,
+          organization_type: organizationType,
+          accounts: selectedAccounts
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authToken
+          }
+        }
+      );
+      
+      console.log('Analysis API response:', response);
+      
+      if (response.data && response.status >= 200 && response.status < 300) {
+        setNotification({
+          open: true,
+          severity: 'success',
+          message: `Analysis complete for all ${organizationType} accounts`,
+          accountId: null
+        });
+        
+        // Update the accounts data with new insights if provided in the response
+        if (response.data.accounts) {
+          // Handle the updated accounts data from the response
+          // This would depend on your specific implementation
+        }
+      } else {
+        throw new Error(response.data?.message || 'Unknown error occurred');
+      }
+    } catch (error: any) {
+      console.error('Error during analysis:', error);
+      let errorMessage = 'Unknown error occurred';
+      
+      if (error.response) {
+        if (error.response.status === 401) {
+          errorMessage = 'Authentication failed. Please log out and log in again.';
+          console.error('Authentication error. Token:', getAuthToken().substring(0, 15) + '...');
+        } else if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else {
+          errorMessage = `Server error (${error.response.status}): ${error.response.statusText}`;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       setNotification({
         open: true,
-        severity: 'success',
-        message: `Analysis complete for all ${organizationType} accounts`,
+        severity: 'error',
+        message: `Analysis failed for ${organizationType} accounts: ${errorMessage}`,
         accountId: null
       });
-    }, 3000);
+    }
   };
 
   const renderAccountList = () => {
@@ -4358,81 +4666,169 @@ const Accounts: React.FC = () => {
 
             {/* Step 2A: Account Details Form */}
             {addAccountStep === 1 && importMethod === 'single' && (
-              <Box>
-                <Typography variant="subtitle1" fontWeight="600" gutterBottom>
-                  Enter Account Details
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Fill out the form below with the account information.
-                </Typography>
-
-                <Grid container spacing={3}>
+              <Box sx={{ mt: 2 }}>
+                <Grid container spacing={2}>
+                  {/* Required Fields Section */}
                   <Grid item xs={12}>
+                    <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
+                      Required Information
+                    </Typography>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
                     <TextField
+                      fullWidth
                       label="Account Name"
                       name="accountName"
-                      value={newAccount.accountName || ''}
+                      value={accountForm.accountName}
                       onChange={handleAccountFormChange}
-                      fullWidth
-                      required
                       error={!!accountFormErrors.accountName}
                       helperText={accountFormErrors.accountName}
+                      required
                     />
                   </Grid>
-
+                  
                   <Grid item xs={12} sm={6}>
                     <TextField
-                      label="Location"
-                      name="location"
-                      value={newAccount.location || ''}
-                      onChange={handleAccountFormChange}
                       fullWidth
+                      label="Product Name"
+                      name="productName"
+                      value={accountForm.productName}
+                      onChange={handleAccountFormChange}
+                      error={!!accountFormErrors.productName}
+                      helperText={accountFormErrors.productName}
                       required
-                      error={!!accountFormErrors.location}
-                      helperText={accountFormErrors.location}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Billing Country"
+                      name="billingCountry"
+                      value={accountForm.billingCountry}
+                      onChange={handleAccountFormChange}
+                      error={!!accountFormErrors.billingCountry}
+                      helperText={accountFormErrors.billingCountry}
+                      required
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Shipping City"
+                      name="shippingCity"
+                      value={accountForm.shippingCity}
+                      onChange={handleAccountFormChange}
+                      error={!!accountFormErrors.shippingCity}
+                      helperText={accountFormErrors.shippingCity}
+                      required
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Organisation Type"
+                      name="organisationType"
+                      value={accountForm.organisationType}
+                      onChange={handleAccountFormChange}
+                      error={!!accountFormErrors.organisationType}
+                      helperText={accountFormErrors.organisationType}
+                      required
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Risk Assets"
+                      name="riskAssets"
+                      value={accountForm.riskAssets}
+                      onChange={handleAccountFormChange}
+                      error={!!accountFormErrors.riskAssets}
+                      helperText={accountFormErrors.riskAssets}
+                      required
                     />
                   </Grid>
 
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth required error={!!accountFormErrors.organisationType}>
-                      <InputLabel>Organization Type</InputLabel>
-                      <Select
-                        name="organisationType"
-                        value={newAccount.organisationType || ''}
-                        onChange={handleAccountTypeChange}
-                        label="Organization Type"
-                      >
-                        {filterOptions.organisationTypes.map((type) => (
-                          <MenuItem key={type} value={type}>
-                            {type}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      {accountFormErrors.organisationType && (
-                        <FormHelperText>{accountFormErrors.organisationType}</FormHelperText>
-                      )}
-                    </FormControl>
-                  </Grid>
-
+                  {/* Optional Fields Section */}
                   <Grid item xs={12}>
-                    <FormControl fullWidth required error={!!accountFormErrors.productFamily}>
-                      <InputLabel>Product Family</InputLabel>
-                      <Select
-                        name="productFamily"
-                        value={newAccount.productFamily || ''}
-                        onChange={handleAccountTypeChange}
-                        label="Product Family"
-                      >
-                        {filterOptions.productFamilies.map((family) => (
-                          <MenuItem key={family} value={family}>
-                            {family}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      {accountFormErrors.productFamily && (
-                        <FormHelperText>{accountFormErrors.productFamily}</FormHelperText>
-                      )}
-                    </FormControl>
+                    <Typography variant="h6" sx={{ mt: 3, mb: 2, color: 'text.secondary' }}>
+                      Additional Information
+                    </Typography>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Account Number"
+                      name="accountNumber"
+                      value={accountForm.accountNumber}
+                      onChange={handleAccountFormChange}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Account Owner"
+                      name="accountOwner"
+                      value={accountForm.accountOwner}
+                      onChange={handleAccountFormChange}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Quantity"
+                      name="quantity"
+                      type="number"
+                      value={accountForm.quantity}
+                      onChange={handleAccountFormChange}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Last Billed Price (Total)"
+                      name="lastBilledPrice"
+                      value={accountForm.lastBilledPrice}
+                      onChange={handleAccountFormChange}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="SBU & Sub SBU"
+                      name="sbuAndSubSbu"
+                      value={accountForm.sbuAndSubSbu}
+                      onChange={handleAccountFormChange}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Risk Product Category"
+                      name="riskProductCategory"
+                      value={accountForm.riskProductCategory}
+                      onChange={handleAccountFormChange}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Exit Rate USD"
+                      name="exitRateUsd"
+                      value={accountForm.exitRateUsd}
+                      onChange={handleAccountFormChange}
+                    />
                   </Grid>
                 </Grid>
               </Box>
@@ -4629,14 +5025,14 @@ const Accounts: React.FC = () => {
                           height: 48,
                           fontWeight: 600,
                           fontSize: '1rem',
-                          backgroundColor: stringToColor(newAccount.accountName || ''),
+                          backgroundColor: stringToColor(accountForm.accountName || ''),
                           mr: 2
                         }}
                       >
-                        {getInitials(newAccount.accountName || '')}
+                        {getInitials(accountForm.accountName || '')}
                       </Avatar>
                       <Typography variant="h6" fontWeight="600">
-                        {newAccount.accountName}
+                        {accountForm.accountName}
                       </Typography>
                     </Grid>
 
@@ -4645,7 +5041,7 @@ const Accounts: React.FC = () => {
                         Location
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
-                        {newAccount.location}
+                        {accountForm.location}
                       </Typography>
                     </Grid>
 
@@ -4654,7 +5050,7 @@ const Accounts: React.FC = () => {
                         Organization Type
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
-                        {newAccount.organisationType}
+                        {accountForm.organisationType}
                       </Typography>
                     </Grid>
 
@@ -4663,7 +5059,7 @@ const Accounts: React.FC = () => {
                         Product Family
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
-                        {newAccount.productFamily}
+                        {accountForm.productFamily}
                       </Typography>
                     </Grid>
                   </Grid>
@@ -4782,7 +5178,7 @@ const Accounts: React.FC = () => {
                 variant="contained"
                 onClick={handleNextStep}
                 disabled={(importMethod === 'csv' && !csvFile) || 
-                         (importMethod === 'single' && (!newAccount.accountName || !newAccount.location || !newAccount.organisationType || !newAccount.productFamily))}
+                         (importMethod === 'single' && (!accountForm.accountName || !accountForm.location || !accountForm.organisationType || !accountForm.productFamily))}
               >
                 Next
               </Button>
