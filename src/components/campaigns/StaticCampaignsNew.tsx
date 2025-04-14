@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -27,6 +27,10 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PendingIcon from '@mui/icons-material/Pending';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import FavoriteIcon from '@mui/icons-material/Favorite';
+import fetchClient from '../../utils/fetchClient.js';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
 // Import our fallback Lucide icons directly
 import {
@@ -44,7 +48,6 @@ import {
   PhoneIcon,
   SmartToyIcon,
   AutoAwesomeIcon,
-  ContentCopyIcon,
   EditIcon,
   DeleteIcon
 } from '../icons/FallbackIcons';
@@ -140,6 +143,177 @@ interface Campaign {
   };
 }
 
+// Update interfaces for API data
+interface ActionPlan {
+  benefit: string;
+  description: string;
+  recommendation: string;
+}
+
+interface CompanyInsight {
+  id: string;
+  account_id: string;
+  solution: {
+    text: string;
+  };
+  action_plan: ActionPlan[];
+  latest_updates: string;
+  challenges: string;
+  decision_makers: string;
+  market_position: string;
+  future_plans: string;
+  email: string;
+  call: string | null;
+  meeting: string | null;
+  status: number;
+  fetched_at: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Account {
+  id: string;
+  account_number: string;
+  account_name: string;
+  organisation_type: string;
+  location: string;
+  quantity: number | null;
+  last_billed_price_total: string | null;
+  sbu_and_sub_sbu: string;
+  product_family: string;
+  risk_product_category: string | null;
+  exit_rate_usd: string;
+  industry: string;
+  company_info: string;
+  linkedin: string;
+  status: number;
+  news: string;
+  opportunities: string;
+  strength: string;
+  assets: string;
+  createdAt: string;
+  updatedAt: string;
+  CompanyInsights: CompanyInsight[];
+}
+
+// Add interface for profile response
+interface UserProfile {
+  id: string;
+  // Add other profile fields as needed
+}
+
+// Convert Account to Campaign
+const accountToCampaign = (account: Account): Campaign => {
+  const latestInsight = account.CompanyInsights[0];
+  
+  return {
+    id: parseInt(account.id.slice(0, 8), 16),
+    title: account.account_name,
+    description: `${account.organisation_type} - ${account.industry}`,
+    image: `https://logo.clearbit.com/${account.account_name.toLowerCase().replace(/[^a-zA-Z0-9]/g, '')}.com`,
+    clientGroup: account.organisation_type,
+    solution: account.product_family,
+    type: latestInsight?.email ? 'email' : latestInsight?.call ? 'call' : latestInsight?.meeting ? 'meeting' : 'email',
+    status: account.status === 1 ? 'active' : 'inactive',
+    progress: 100,
+    engagement: Math.floor(Math.random() * 30) + 70,
+    createdAt: account.createdAt,
+    aiGenerated: true,
+    content: latestInsight?.email || latestInsight?.call || latestInsight?.meeting || '',
+    owner: {
+      name: 'AI Assistant',
+      avatar: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
+    }
+  };
+};
+
+// Add email templates interface
+interface EmailTemplate {
+  id: number;
+  title: string;
+  subject: string;
+  content: string;
+}
+
+const EMAIL_TEMPLATES: EmailTemplate[] = [
+  {
+    id: 1,
+    title: "Strategic Enhancements Template",
+    subject: "Exploring Strategic Enhancements and Partnership Opportunities",
+    content: `Dear [Recipient's Name],
+
+I hope this message finds you well. My name is [Your Name] from LSEG Data & Analytics, and I wanted to reach out regarding the innovative work being done at i-Deal Corp Limited. As a leading FinTech company focused on enhancing investment experiences through cutting-edge technology, I believe there may be valuable synergies between our organizations.
+
+Given i-Deal Corp's commitment to empowering clients with advanced financial solutions, coupled with your mission to enhance investment strategies efficiently, we see potential avenues for collaboration that could further drive growth and operational efficiency. Recent insights suggest that the evolving financial landscape presents unique opportunities for companies to enhance their service offerings, and we believe we can support i-Deal Corp in this quest.
+
+LSEG Data & Analytics provides a comprehensive suite of products and services designed to support financial decision-making and streamline operations. Specifically:
+
+1. **Market Analytics Tools**: These can provide deeper insights into market trends and client behavior, potentially allowing i-Deal Corp to tailor their offerings even more precisely to client needs.
+
+2. **Risk Management Solutions**: Enhancing the existing suite of smart trading tools with our robust risk management capabilities can help in safeguarding clients' portfolios against market volatility.
+
+3. **Data-Driven Advisory Services**: Leveraging our analytics, your personalized financial advisory services can be enriched with data-driven insights, further improving the advisory experience for your clients.
+
+I would love the opportunity to arrange a brief discussion to explore how we can align our offerings with your strategic goals and address any operational needs you may currently have. I believe that our collaboration could create significant value for both our organizations.
+
+Thank you for considering this opportunity. I look forward to the possibility of discussing this further with you.
+
+Best regards,
+[Your Name]
+[Your Position]
+LSEG Data & Analytics
+[Your Contact Information]`
+  },
+  {
+    id: 2,
+    title: "Strategic Growth Template",
+    subject: "Exploring Opportunities for Strategic Growth",
+    content: `Dear [Recipient's Name],
+
+I hope this message finds you well. I wanted to reach out in light of some recent developments that highlight significant opportunities for [Recipient's Company] to leverage our expertise at LSEG Data & Analytics.
+
+Given [specific updates or events relevant to their business], I believe there are clear indications of potential growth and strategic shifts within your organization. These shifts may open avenues for enhanced operational efficiency, deeper insights, and ultimately stronger decision-making processes.
+
+To align with your current business context, I would like to discuss how our portfolio can support your objectives. Here are a few specific offerings that may be particularly relevant:
+
+1. **[Product/Service 1]**: How this can help [specific need or opportunity based on their updates].
+2. **[Product/Service 2]**: This could assist in [specific need or opportunity].
+3. **[Insights/Analytics Solution]**: Leveraging data analytics for [specific goal or strategy].
+
+I would love to set up a time to discuss how we can support [Recipient's Company] in navigating this exciting phase and help you achieve your strategic goals. Please let me know your availability for a brief call.
+
+Looking forward to the possibility of collaborating with you.
+
+Best regards,
+[Your Name]
+[Your Position]
+[Your Contact Information]
+LSEG Data & Analytics`
+  },
+  {
+    id: 3,
+    title: "Strategic Opportunities Template",
+    subject: "Exploring Strategic Opportunities Together",
+    content: `Hi [Recipient's Name],
+
+I hope this message finds you well! I wanted to take a moment to recognize the recent developments at [Company Name], particularly [specific update or initiative they have announced, such as expansion in a new market, adoption of new technologies, or shifts in strategy]. These changes signify exciting potential for growth and innovation within your organization.
+
+Given your focus on [mention specific goals or challenges based on their updates, such as improving data accuracy, streamlining operations, or enhancing decision-making capabilities], I believe there are several synergies that we could explore. At LSEG Data & Analytics, we offer a range of solutions designed to support organizations like yours as they navigate these dynamic circumstances.
+
+One product worth discussing could be [specific product or service relevant to their updates, e.g., advanced analytics tools, market insights, or risk assessment services]. This could help [describe how the product/service addresses their specific needs or goals related to recent updates]. Additionally, our [another relevant service or insight] has been beneficial for clients aiming to [highlight benefits that align with their current initiatives].
+
+I would love to schedule a time to discuss how we can collaborate for mutual benefit. Please let me know your availability for a brief call next week, and I'll do my best to accommodate.
+
+Looking forward to the opportunity to connect!
+
+Best regards,
+[Your Name]
+[Your Job Title]
+LSEG Data & Analytics
+[Your Contact Information]`
+  }
+];
+
 const StaticCampaignsNew: React.FC = () => {
   const { mode } = useTheme();
   const [tabValue, setTabValue] = useState<number>(0);
@@ -150,124 +324,61 @@ const StaticCampaignsNew: React.FC = () => {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editedContent, setEditedContent] = useState<string>('');
   const [openCreateDialog, setOpenCreateDialog] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [currentTemplateIndex, setCurrentTemplateIndex] = useState(0);
+  const [showCopySuccess, setShowCopySuccess] = useState(false);
 
-  // Sample data for AI-suggested campaigns
-  const campaigns = [
-    {
-      id: 1,
-      title: 'Cloud Migration Email for Enterprise',
-      description: 'Personalized email template for enterprise clients considering cloud migration.',
-      image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
-      clientGroup: 'Enterprise',
-      solution: 'Cloud Infrastructure',
-      type: 'email',
-      status: 'active',
-      progress: 100,
-      engagement: 89,
-      createdAt: '2023-11-01',
-      aiGenerated: true,
-      content: `Dear [Client Name],\n\nI hope this email finds you well. Based on our recent discussions about your IT infrastructure challenges, I wanted to share some insights on how our Cloud Migration Solutions could address your specific needs.\n\nOur enterprise-grade migration approach has helped companies like yours reduce operational costs by an average of 35% while improving system reliability by 99.9%.\n\nWould you be available for a brief call next week to discuss how we could tailor this solution for [Company Name]?\n\nBest regards,\n[Your Name]`,
-      owner: {
-        name: 'Alex Johnson',
-        avatar: 'https://randomuser.me/api/portraits/men/32.jpg'
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // First fetch user profile to get the ID
+        const profileResponse = await fetchClient.get<UserProfile>('/auth/profile', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (!profileResponse.data?.id) {
+          throw new Error('User profile not found');
+        }
+
+        // Then fetch accounts for this specific user
+        const response = await fetchClient.get<Account[]>(`/accounts/${profileResponse.data.id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (response.data) {
+          const accounts = response.data;
+          // Filter accounts to only include those with campaigns (CompanyInsights)
+          const accountsWithCampaigns = accounts.filter(account => 
+            account.CompanyInsights && 
+            account.CompanyInsights.length > 0 &&
+            (account.CompanyInsights[0].email || 
+             account.CompanyInsights[0].call || 
+             account.CompanyInsights[0].meeting)
+          );
+          
+          const convertedCampaigns = accountsWithCampaigns.map(accountToCampaign);
+          setCampaigns(convertedCampaigns);
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch campaigns';
+        setError(`${errorMessage}. Please try again later.`);
+        console.error('Error fetching campaigns:', err);
+      } finally {
+        setIsLoading(false);
       }
-    },
-    {
-      id: 2,
-      title: 'Cybersecurity Call Script for Financial',
-      description: 'Talking points for calls with financial institutions about security solutions.',
-      image: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
-      clientGroup: 'Financial',
-      solution: 'Cybersecurity',
-      type: 'call',
-      status: 'active',
-      progress: 100,
-      engagement: 72,
-      createdAt: '2023-10-15',
-      aiGenerated: true,
-      content: `1. Introduction: "Hello [Name], I'm calling regarding the increasing cybersecurity threats specifically targeting financial institutions like yours."\n\n2. Pain Points: "Many of our financial clients have expressed concerns about regulatory compliance and data protection. Is this something your team is currently addressing?"\n\n3. Solution Overview: "Our specialized security framework for financial institutions includes real-time threat monitoring and compliance reporting."\n\n4. Success Story: "We recently helped [Similar Bank] achieve complete regulatory compliance while reducing security incidents by 78%."\n\n5. Call to Action: "I'd like to arrange a security assessment with our financial sector specialists. Would next Tuesday work for your team?"`,
-      owner: {
-        name: 'Sarah Chen',
-        avatar: 'https://randomuser.me/api/portraits/women/44.jpg'
-      }
-    },
-    {
-      id: 3,
-      title: 'AI Analytics Meeting Points for Retail',
-      description: 'Key talking points for meetings with retail clients about AI analytics.',
-      image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
-      clientGroup: 'Retail',
-      solution: 'Analytics',
-      type: 'meeting',
-      status: 'active',
-      progress: 100,
-      engagement: 85,
-      createdAt: '2023-11-05',
-      aiGenerated: true,
-      content: `Meeting Agenda:\n\n1. Introduction (5 min)\n   - Thank client for their time\n   - Brief overview of their retail challenges based on previous discussions\n\n2. Industry Trends (10 min)\n   - Share retail analytics benchmarks\n   - Discuss how competitors are leveraging AI\n\n3. Solution Presentation (15 min)\n   - Demonstrate customer behavior prediction models\n   - Show inventory optimization dashboard\n   - Present personalization engine results\n\n4. ROI Analysis (10 min)\n   - Average 24% increase in basket size\n   - 18% reduction in inventory costs\n   - 40% improvement in campaign conversion rates\n\n5. Implementation Timeline (5 min)\n   - 4-week setup process\n   - Training and onboarding schedule\n\n6. Q&A and Next Steps (10 min)`,
-      owner: {
-        name: 'Michael Torres',
-        avatar: 'https://randomuser.me/api/portraits/men/67.jpg'
-      }
-    },
-    {
-      id: 4,
-      title: 'Healthcare Data Email Template',
-      description: 'HIPAA-compliant email template for healthcare data management solutions.',
-      image: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
-      clientGroup: 'Healthcare',
-      solution: 'Data Management',
-      type: 'email',
-      status: 'active',
-      progress: 100,
-      engagement: 92,
-      createdAt: '2023-11-10',
-      aiGenerated: true,
-      content: `Subject: HIPAA-Compliant Data Management Solution for [Healthcare Provider]\n\nDear [Decision Maker],\n\nAs healthcare providers continue to navigate the complexities of patient data management while maintaining strict HIPAA compliance, I wanted to share how our specialized Healthcare Data Management solution addresses these unique challenges.\n\nOur platform offers:\n• Fully HIPAA-compliant data storage and processing\n• Seamless integration with major EHR systems\n• Advanced patient data analytics with 99.99% accuracy\n• Automated compliance reporting\n\nMany providers like [Similar Healthcare Organization] have reduced data management costs by 42% while improving patient data security.\n\nI've attached a case study demonstrating how we helped them achieve these results. Would you be available for a brief demonstration next week?\n\nBest regards,\n[Your Name]\n[Your Contact Information]`,
-      owner: {
-        name: 'Emily Wilson',
-        avatar: 'https://randomuser.me/api/portraits/women/33.jpg'
-      }
-    },
-    {
-      id: 5,
-      title: 'Supply Chain Call Script for Manufacturing',
-      description: 'Talking points for calls with manufacturing companies about supply chain solutions.',
-      image: 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
-      clientGroup: 'Manufacturing',
-      solution: 'Supply Chain',
-      type: 'call',
-      status: 'active',
-      progress: 100,
-      engagement: 94,
-      createdAt: '2023-09-01',
-      aiGenerated: true,
-      content: `1. Introduction:\n"Hello [Name], I'm calling about the supply chain challenges we discussed at the [Previous Meeting/Event]. Has your team made any progress addressing those issues?"\n\n2. Pain Point Confirmation:\n"Many manufacturing companies like yours are still struggling with inventory visibility and supplier delays. Are these still concerns for your operations?"\n\n3. Solution Overview:\n"Our end-to-end supply chain platform provides real-time visibility across your entire supply network, with predictive analytics to anticipate disruptions before they impact production."\n\n4. Key Differentiators:\n"What sets our solution apart is the manufacturing-specific optimization algorithms that have helped companies reduce inventory costs by 27% while improving on-time delivery by 34%."\n\n5. Relevant Case Study:\n"We recently implemented this for [Similar Manufacturer], and they were able to reduce production downtime by 62% in the first six months."\n\n6. Call to Action:\n"I'd like to arrange a brief demonstration with your operations team. Would you be available next Thursday?"`,
-      owner: {
-        name: 'David Kim',
-        avatar: 'https://randomuser.me/api/portraits/men/22.jpg'
-      }
-    },
-    {
-      id: 6,
-      title: 'Digital Transformation Meeting Points for SMBs',
-      description: 'Key talking points for meetings with SMBs about digital transformation.',
-      image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80',
-      clientGroup: 'SMB',
-      solution: 'Digital Transformation',
-      type: 'meeting',
-      status: 'active',
-      progress: 100,
-      engagement: 88,
-      createdAt: '2023-10-20',
-      aiGenerated: true,
-      content: `Meeting Agenda: Digital Transformation for [SMB Name]\n\n1. Introduction (5 min)\n   - Thank the client for their time\n   - Acknowledge their specific business challenges\n\n2. SMB Digital Landscape (10 min)\n   - Current state of digital adoption in their industry\n   - Competitive advantages of digital transformation\n   - Cost-effective approaches for smaller organizations\n\n3. Tailored Solution Presentation (15 min)\n   - Modular approach allowing step-by-step implementation\n   - Cloud-based infrastructure with minimal upfront investment\n   - Mobile-first customer engagement tools\n   - Streamlined operations through automation\n\n4. Implementation Approach (10 min)\n   - Phased rollout to minimize disruption\n   - Training program for staff\n   - Ongoing support options\n\n5. ROI Projection (5 min)\n   - Expected efficiency gains: 30-40%\n   - Customer satisfaction improvements: 25%\n   - Typical payback period: 6-9 months\n\n6. Budget-Friendly Pricing (5 min)\n   - Subscription-based model\n   - Scaling options as business grows\n\n7. Q&A and Next Steps (10 min)`,
-      owner: {
-        name: 'Jessica Martinez',
-        avatar: 'https://randomuser.me/api/portraits/women/56.jpg'
-      }
-    }
-  ];
+    };
+
+    fetchCampaigns();
+  }, []);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -317,6 +428,77 @@ const StaticCampaignsNew: React.FC = () => {
     setOpenCreateDialog(false);
   };
 
+  // Add template navigation functions
+  const handleNextTemplate = () => {
+    setCurrentTemplateIndex((prev) => (prev + 1) % EMAIL_TEMPLATES.length);
+  };
+
+  const handlePrevTemplate = () => {
+    setCurrentTemplateIndex((prev) => (prev - 1 + EMAIL_TEMPLATES.length) % EMAIL_TEMPLATES.length);
+  };
+
+  const handleCopyTemplate = async () => {
+    try {
+      await navigator.clipboard.writeText(EMAIL_TEMPLATES[currentTemplateIndex].content);
+      setShowCopySuccess(true);
+      setTimeout(() => setShowCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy template:', err);
+    }
+  };
+
+  // Render loading state
+  if (isLoading) {
+    return (
+      <Box sx={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        p: 3
+      }}>
+        <Typography variant="h6" color="text.secondary">
+          Loading campaigns...
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Render error state
+  if (error) {
+    return (
+      <Box sx={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        p: 3,
+        gap: 2
+      }}>
+        <Typography variant="h6" color="error">
+          {error}
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={() => window.location.reload()}
+          sx={{
+            borderRadius: BORDER_RADIUS.md,
+            bgcolor: mode === 'dark' ? 'white' : 'black',
+            color: mode === 'dark' ? 'black' : 'white',
+            '&:hover': {
+              bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)',
+            }
+          }}
+        >
+          Retry
+        </Button>
+      </Box>
+    );
+  }
+
   // Filter campaigns based on search query and selected tab
   const filteredCampaigns = campaigns.filter(campaign => {
     // Filter by search query
@@ -337,6 +519,85 @@ const StaticCampaignsNew: React.FC = () => {
   });
 
   const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId);
+
+  // Add this inside the Campaign detail section, before the existing content
+  const renderEmailTemplateSlider = () => (
+    <Box sx={{ 
+      p: 3, 
+      borderBottom: 1, 
+      borderColor: 'divider',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 2 
+    }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h6">Email Templates</Typography>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <IconButton 
+            onClick={handlePrevTemplate}
+            sx={{ 
+              borderRadius: BORDER_RADIUS.md,
+              bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+            }}
+          >
+            <ArrowBackIcon fontSize="small" />
+          </IconButton>
+          <IconButton 
+            onClick={handleNextTemplate}
+            sx={{ 
+              borderRadius: BORDER_RADIUS.md,
+              bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+            }}
+          >
+            <ArrowForwardIcon fontSize="small" />
+          </IconButton>
+          <Button
+            variant="contained"
+            startIcon={<ContentCopyIcon fontSize="small" />}
+            onClick={handleCopyTemplate}
+            sx={{
+              borderRadius: BORDER_RADIUS.md,
+              bgcolor: mode === 'dark' ? 'white' : 'black',
+              color: mode === 'dark' ? 'black' : 'white',
+              '&:hover': {
+                bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)',
+              }
+            }}
+          >
+            {showCopySuccess ? 'Copied!' : 'Copy Template'}
+          </Button>
+        </Box>
+      </Box>
+      
+      <Paper 
+        elevation={0}
+        sx={{
+          p: 3,
+          borderRadius: BORDER_RADIUS.md,
+          bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+          border: 1,
+          borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+        }}
+      >
+        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+          {EMAIL_TEMPLATES[currentTemplateIndex].title}
+        </Typography>
+        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+          Subject: {EMAIL_TEMPLATES[currentTemplateIndex].subject}
+        </Typography>
+        <Typography
+          variant="body2"
+          sx={{
+            whiteSpace: 'pre-wrap',
+            mt: 2,
+            fontFamily: 'monospace'
+          }}
+        >
+          {EMAIL_TEMPLATES[currentTemplateIndex].content}
+        </Typography>
+      </Paper>
+    </Box>
+  );
 
   return (
     <Box sx={{
@@ -553,7 +814,7 @@ const StaticCampaignsNew: React.FC = () => {
             {filteredCampaigns.length === 0 ? (
               <Box sx={{ p: 3, textAlign: 'center' }}>
                 <Typography variant="body1" color="text.secondary">
-                  No campaigns found
+                  No accounts with campaigns found
                 </Typography>
               </Box>
             ) : (
@@ -583,7 +844,7 @@ const StaticCampaignsNew: React.FC = () => {
                         <Box sx={{ display: 'flex', gap: 1 }}>
                           <TypeBadge type={campaign.type} label={campaign.type.toUpperCase()} />
                           <Chip
-                            label={campaign.clientGroup}
+                            label={campaign.solution}
                             size="small"
                             sx={{
                               backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
@@ -615,6 +876,8 @@ const StaticCampaignsNew: React.FC = () => {
         }}>
           {selectedCampaign ? (
             <>
+              {/* Add template slider here */}
+              {renderEmailTemplateSlider()}
               {/* Campaign header */}
               <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>

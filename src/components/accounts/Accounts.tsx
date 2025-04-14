@@ -110,6 +110,10 @@ import AnalyticsIcon from '@mui/icons-material/Analytics';
 import StatusIndicator from './StatusIndicator';
 import { useNotification } from '../../context/NotificationContext';
 import ErrorIcon from '@mui/icons-material/Error';
+import EmailIcon from '@mui/icons-material/Email';
+import PhoneIcon from '@mui/icons-material/Phone';
+import VideocamIcon from '@mui/icons-material/Videocam';
+import { useNavigate } from 'react-router-dom';
 
 // Use the global theme from ThemeContext
 
@@ -238,60 +242,34 @@ interface StatusChipProps {
 }
 
 // Status indicator component
-const StatusChip = styled(Box)<{ status?: 'completed' | 'pending' | 'failed' | 'loading' }>(({ theme, status }) => ({
-  width: 10,
-  height: 10,
-  borderRadius: '2px',
-  backgroundColor:
-    status === 'completed' ? theme.palette.success.main :
-    status === 'failed' ? theme.palette.error.main :
-    status === 'loading' ? theme.palette.info.main :
-    theme.palette.warning.main,
-  marginRight: theme.spacing(0.75),
-  display: 'inline-block',
-  transition: 'all 0.2s ease-in-out',
+const StatusChip = styled(Box)<{ status?: 'completed' | 'pending' | 'failed' | 'loading' | undefined }>(({ theme, status }) => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  fontSize: '0.75rem',
+  borderRadius: '4px',
+  padding: '3px 8px',
+  fontWeight: 500,
+  backgroundColor: status === 'completed' ? 'rgba(46, 204, 113, 0.15)' :
+                  status === 'pending' ? 'rgba(243, 156, 18, 0.15)' :
+                  status === 'loading' ? 'rgba(52, 152, 219, 0.15)' :
+                  status === 'failed' ? 'rgba(231, 76, 60, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+  color: status === 'completed' ? 'rgb(46, 204, 113)' :
+         status === 'pending' ? 'rgb(243, 156, 18)' :
+         status === 'loading' ? 'rgb(52, 152, 219)' :
+         status === 'failed' ? 'rgb(231, 76, 60)' : 'rgba(0, 0, 0, 0.7)',
 }));
 
 // Define and update StatusLabel component to handle undefined status
 const StatusLabel: React.FC<StatusChipProps> = ({ status, children }) => {
-  // Determine color based on status
-  let color = '';
-  let bgColor = '';
-  
-  switch (status) {
-    case 'completed':
-      color = '#2ecc71';
-      bgColor = 'rgba(46, 204, 113, 0.1)';
-      break;
-    case 'failed':
-      color = '#e74c3c';
-      bgColor = 'rgba(231, 76, 60, 0.1)';
-      break;
-    case 'loading':
-      color = '#3498db';
-      bgColor = 'rgba(52, 152, 219, 0.1)';
-      break;
-    default: // pending or undefined
-      color = '#f1c40f';
-      bgColor = 'rgba(241, 196, 15, 0.1)';
-  }
+  // Provide a default value if status is undefined
+  const safeStatus: Status = (status as Status) || 'pending';
   
   return (
     <Chip
       label={children}
-      sx={{
-        borderRadius: '16px',
-        color,
-        backgroundColor: bgColor,
-        fontWeight: 600,
-        fontSize: '0.75rem',
-        height: 24,
-        '& .MuiChip-label': {
-          padding: '0 8px',
-          display: 'flex',
-          alignItems: 'center',
-        }
-      }}
+      size="small"
+      color={getStatusColor(safeStatus)}
+      sx={{ height: 24, fontWeight: 500 }}
     />
   );
 };
@@ -1111,8 +1089,11 @@ const renderTableRow = (account: Account) => (
     <TableCell>{account.product_family}</TableCell>
     <TableCell>{account.exit_rate_usd}</TableCell>
     <TableCell>
-      <StatusChip status={account.updates}>
-        {account.updates || 'pending'}
+      <StatusChip status={(account.updates || 'pending') as Status}>
+        {account.updates === 'completed' ? 'Analysis Complete' :
+         account.updates === 'failed' ? 'Analysis Failed' :
+         account.updates === 'pending' ? 'Analysis in Progress' :
+         account.updates === 'loading' ? 'Loading' : 'Unknown Status'}
       </StatusChip>
     </TableCell>
   </TableRow>
@@ -1133,6 +1114,8 @@ interface AccountForm {
   riskAssets: string;
   riskProductCategory: string;
   exitRateUsd: string;
+  location: string;
+  productFamily: string;
 }
 
 interface AccountFormErrors {
@@ -1149,6 +1132,8 @@ interface AccountFormErrors {
   riskAssets?: string;
   riskProductCategory?: string;
   exitRateUsd?: string;
+  location?: string;
+  productFamily?: string;
 }
 
 const Accounts: React.FC = () => {
@@ -1223,7 +1208,9 @@ const Accounts: React.FC = () => {
     sbuAndSubSbu: '',
     riskAssets: '',
     riskProductCategory: '',
-    exitRateUsd: ''
+    exitRateUsd: '',
+    location: '',
+    productFamily: ''
   });
 
   const [accountFormErrors, setAccountFormErrors] = useState<AccountFormErrors>({});
@@ -1247,6 +1234,10 @@ const Accounts: React.FC = () => {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { addNotification } = useNotification();
+  const navigate = useNavigate();
+
+  // Add state to track which button is loading
+  const [loadingDraft, setLoadingDraft] = useState<string | null>(null);
 
   // Fetch accounts on component mount
   useEffect(() => {
@@ -1565,22 +1556,22 @@ const Accounts: React.FC = () => {
 
     // Status filter
     const matchesStatus = filters.status.length === 0 ||
-      filters.status.includes(account.updates);
+      (account.updates && filters.status.includes(account.updates));
 
     return matchesSearch && matchesLocation && matchesOrgType && matchesProductFamily && matchesStatus;
   });
 
   const getFilteredAccountsByStatus = () => {
     if (tabValue === 0) return filteredAccounts; // All accounts
-    if (tabValue === 1) return filteredAccounts.filter(account => account.updates === 'completed');
-    if (tabValue === 2) return filteredAccounts.filter(account => account.updates === 'failed');
-    if (tabValue === 3) return filteredAccounts.filter(account => account.updates === 'pending');
-    return filteredAccounts;
+    if (tabValue === 1) return filteredAccounts.filter(account => account.updates && account.updates === 'completed');
+    if (tabValue === 2) return filteredAccounts.filter(account => account.updates && account.updates === 'failed');
+    if (tabValue === 3) return filteredAccounts.filter(account => account.updates && (account.updates === 'pending' || account.updates === 'loading'));
+    return filteredAccounts; // Default fallback
   };
 
-  const completedCount = accounts.filter(account => account.updates === 'completed').length;
-  const failedCount = accounts.filter(account => account.updates === 'failed').length;
-  const pendingCount = accounts.filter(account => account.updates === 'pending').length;
+  const completedCount = accounts.filter(account => account.updates && account.updates === 'completed').length;
+  const failedCount = accounts.filter(account => account.updates && account.updates === 'failed').length;
+  const pendingCount = accounts.filter(account => account.updates && account.updates === 'pending').length;
 
   const filteredByStatusAccounts = getFilteredAccountsByStatus();
 
@@ -1742,7 +1733,9 @@ const Accounts: React.FC = () => {
       sbuAndSubSbu: '',
       riskAssets: '',
       riskProductCategory: '',
-      exitRateUsd: ''
+      exitRateUsd: '',
+      location: '',
+      productFamily: ''
     });
     setAccountFormErrors({});
     setCsvFile(null);
@@ -1914,7 +1907,9 @@ const Accounts: React.FC = () => {
           sbuAndSubSbu: '',
           riskAssets: '',
           riskProductCategory: '',
-          exitRateUsd: ''
+          exitRateUsd: '',
+          location: '',
+          productFamily: ''
         });
         setAddAccountStep(0);
 
@@ -2133,17 +2128,17 @@ const Accounts: React.FC = () => {
             }
 
             // Generate ID and add other required fields
-            const newId = Math.max(...mockAccounts.map(a => a.id), ...newAccounts.map(a => a.id || 0)) + 1;
+            const newId = Math.max(...mockAccounts.map(a => parseInt(a.id)), ...newAccounts.map(a => parseInt(a.id || '0'))) + 1;
             const newAccount: Account = {
-              id: newId,
-              account_number: accountData.accountName || '',
-              account_name: accountData.accountName || '',
-              organisation_type: accountData.organisationType || '',
+              id: String(newId), // Convert to string to match Account interface
+              account_number: accountData.account_name || '',
+              account_name: accountData.account_name || '',
+              organisation_type: accountData.organisation_type || '',
               location: accountData.location || '',
               quantity: 0,
               last_billed_price_total: '0.00',
               sbu_and_sub_sbu: '',
-              product_family: accountData.productFamily || '',
+              product_family: accountData.product_family || '',
               risk_product_category: null,
               exit_rate_usd: accountData.exit_rate_usd ? 
                 (isNaN(Number(accountData.exit_rate_usd)) ? '0.00' : Number(accountData.exit_rate_usd).toFixed(2)) : 
@@ -2157,7 +2152,7 @@ const Accounts: React.FC = () => {
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
               updates: 'pending',
-              color: stringToColor(accountData.accountName || ''),
+              color: stringToColor(accountData.account_name || ''),
               logoSrc: '/images/avatar.png',
             };
 
@@ -2695,7 +2690,7 @@ const Accounts: React.FC = () => {
                         {account.organisation_type}
                       </Typography>
                     </Box>
-                    <StatusLabel status={account.updates}>
+                    <StatusLabel status={(account.updates || 'pending') as Status}>
                       {account.updates === 'completed' ? 'Analysis Complete' :
                        account.updates === 'failed' ? 'Analysis Failed' :
                        account.updates === 'pending' ? 'Analysis in Progress' :
@@ -3098,11 +3093,12 @@ const Accounts: React.FC = () => {
                 </Menu>
               </Box>
 
-              {getSolution(selectedAccount) ? (
+              {Boolean(getSolution(selectedAccount)) ? (
                 <Box sx={{ px: 1 }}>
                   <div 
                     dangerouslySetInnerHTML={{ 
-                      __html: getSolution(selectedAccount)
+                      __html: (getSolution(selectedAccount) || '')
+                        // Ensure we're working with a string before applying replacements
                         .replace(/\n/g, '<br>')
                         .replace(/---/g, '<hr style="border: none; border-top: 1px solid #eee; margin: 15px 0;">')
                         .replace(/#{1,6}\s+(.+?)(?=\n|$)/g, '<h3 style="margin: 15px 0 10px; font-weight: 600; font-size: 16px;">$1</h3>')
@@ -3530,6 +3526,62 @@ const Accounts: React.FC = () => {
                     </Typography>
                   </Box>
                 )}
+                
+                {/* Action Buttons for campaigns */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'flex-start', 
+                  gap: 2, 
+                  mt: 3,
+                  borderTop: '1px solid #eee',
+                  pt: 3
+                }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={loadingDraft === 'email' ? <CircularProgress size={16} /> : <EmailIcon />}
+                    onClick={() => handleDraftClick('email')}
+                    disabled={loadingDraft !== null}
+                    sx={{
+                      borderRadius: (theme) => theme.shape.borderRadius,
+                      textTransform: 'none',
+                      color: '#3498db',
+                      borderColor: '#3498db',
+                      '&:hover': { backgroundColor: 'rgba(52, 152, 219, 0.08)' }
+                    }}
+                  >
+                    {loadingDraft === 'email' ? 'Creating...' : 'Draft Email'}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={loadingDraft === 'call' ? <CircularProgress size={16} /> : <PhoneIcon />}
+                    onClick={() => handleDraftClick('call')}
+                    disabled={loadingDraft !== null}
+                    sx={{
+                      borderRadius: (theme) => theme.shape.borderRadius,
+                      textTransform: 'none',
+                      color: '#2ecc71',
+                      borderColor: '#2ecc71',
+                      '&:hover': { backgroundColor: 'rgba(46, 204, 113, 0.08)' }
+                    }}
+                  >
+                    {loadingDraft === 'call' ? 'Creating...' : 'Draft Call'}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={loadingDraft === 'meeting' ? <CircularProgress size={16} /> : <VideocamIcon />}
+                    onClick={() => handleDraftClick('meeting')}
+                    disabled={loadingDraft !== null}
+                    sx={{
+                      borderRadius: (theme) => theme.shape.borderRadius,
+                      textTransform: 'none',
+                      color: '#f39c12',
+                      borderColor: '#f39c12',
+                      '&:hover': { backgroundColor: 'rgba(243, 156, 18, 0.08)' }
+                    }}
+                  >
+                    {loadingDraft === 'meeting' ? 'Creating...' : 'Draft Meeting'}
+                  </Button>
+                </Box>
               </Box>
             </Paper>
           </Box>
@@ -3730,12 +3782,13 @@ const Accounts: React.FC = () => {
 
   // Helper function to access insight data regardless of format
   const getInsightData = (account: Account, field: string): string[] | undefined => {
-    // Try the new format first (CompanyInsights array)
+    // Try new format first
     if (account.CompanyInsights && account.CompanyInsights.length > 0) {
       const insight = account.CompanyInsights[0];
       const value = insight[field as keyof typeof insight];
+      
       if (value && typeof value === 'string') {
-        return value.split('\n');
+        return value.split('\n').filter(line => line.trim().length > 0);
       }
     }
     
@@ -3743,7 +3796,11 @@ const Accounts: React.FC = () => {
     if (account.companyInsight) {
       const value = account.companyInsight[field as keyof typeof account.companyInsight];
       if (Array.isArray(value)) {
-        return value;
+        if (value.length > 0 && typeof value[0] === 'string') {
+          return value as string[];
+        }
+        // If array contains objects, we can't return it directly
+        return undefined;
       } else if (value && typeof value === 'string') {
         return [value];
       }
@@ -3755,23 +3812,102 @@ const Accounts: React.FC = () => {
   // Helper to get action plan
   const getActionPlan = (account: Account) => {
     // Try new format first
-    if (account.CompanyInsights && account.CompanyInsights.length > 0 && account.CompanyInsights[0].action_plan) {
+    if (account.CompanyInsights && account.CompanyInsights.length > 0 && 
+        account.CompanyInsights[0].action_plan) {
       return account.CompanyInsights[0].action_plan;
     }
     
     // Fall back to old format
-    return account.companyInsight?.action_plan;
+    if (account.companyInsight?.action_plan) {
+      return account.companyInsight.action_plan;
+    }
+    
+    return undefined;
   };
 
   // Helper to get solution
   const getSolution = (account: Account): string => {
     // Try new format first
-    if (account.CompanyInsights && account.CompanyInsights.length > 0 && account.CompanyInsights[0].solution) {
+    if (account.CompanyInsights && account.CompanyInsights.length > 0 && 
+        account.CompanyInsights[0].solution && 
+        typeof account.CompanyInsights[0].solution === 'string') {
       return account.CompanyInsights[0].solution;
     }
     
     // Fall back to empty string
     return '';
+  };
+
+  // Add a new function to handle draft button clicks with API call
+  const handleDraftClick = async (draftType: 'email' | 'call' | 'meeting'): Promise<void> => {
+    if (!selectedAccount) return;
+    
+    // Set loading state for this button
+    setLoadingDraft(draftType);
+    
+    try {
+      // Make POST request to the webhook endpoint
+      const response = await fetchClient.post(
+        'https://primary-production-a43c.up.railway.app/webhook-test/de9fa1c6-965e-4b51-aeb0-d8d919bbe46b',
+        {
+          id: selectedAccount.id,
+          account_name: selectedAccount.account_name,
+          draft: draftType
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': getAuthToken()
+          }
+        }
+      );
+      
+      console.log(`Draft ${draftType} request sent:`, response);
+      
+      // Show success notification
+      setNotification({
+        open: true,
+        severity: 'success',
+        message: `Successfully created ${draftType} draft for ${selectedAccount.account_name}`,
+        accountId: selectedAccount.id
+      });
+      
+      // Reset loading state
+      setLoadingDraft(null);
+      
+      // Navigate to campaigns page with the draft type
+      navigate('/campaigns', { 
+        state: { 
+          type: draftType, 
+          accountName: selectedAccount.account_name,
+          accountId: selectedAccount.id,
+          created: true
+        } 
+      });
+      
+    } catch (error) {
+      console.error(`Error creating ${draftType} draft:`, error);
+      
+      // Show error notification
+      setNotification({
+        open: true,
+        severity: 'error',
+        message: `Failed to create ${draftType} draft. Please try again.`,
+        accountId: null
+      });
+      
+      // Reset loading state
+      setLoadingDraft(null);
+      
+      // Still navigate to campaigns but indicate error
+      navigate('/campaigns', { 
+        state: { 
+          type: draftType, 
+          accountName: selectedAccount.account_name,
+          error: true
+        } 
+      });
+    }
   };
 
   return (
@@ -4345,16 +4481,16 @@ const Accounts: React.FC = () => {
                                 <TableContent sx={{ py: 1 }}>{account.exit_rate_usd}</TableContent>
                                 <TableContent sx={{ pr: 3, py: 1 }}>
                                   {account.updates === 'loading' ? (
-                                    <StatusLabel status={account.updates}>
+                                    <StatusLabel status={'loading' as Status}>
                                       <CircularProgress size={12} thickness={4} sx={{ mr: 0.75 }} />
                                       Processing
                                     </StatusLabel>
                                   ) : (
-                                    <StatusLabel status={account.updates}>
-                                      <StatusIndicator status={account.updates} />
+                                    <StatusLabel status={(account.updates || 'pending') as Status}>
+                                      <StatusIndicator status={(account.updates || 'pending') as Status} />
                                       {account.updates === 'completed' ? 'Analysis Complete' :
                                        account.updates === 'failed' ? 'No Results Found' :
-                                       account.updates.charAt(0).toUpperCase() + account.updates.slice(1)}
+                                       account.updates ? account.updates.charAt(0).toUpperCase() + account.updates.slice(1) : 'Pending'}
                                     </StatusLabel>
                                   )}
                                 </TableContent>
