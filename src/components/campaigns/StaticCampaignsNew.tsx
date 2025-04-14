@@ -103,7 +103,7 @@ const TypeBadge: React.FC<TypeBadgeProps> = ({ type, label, size = 'small', ...p
 
   return (
     <Chip
-      icon={<IconComponent size={16} color={color} />}
+      icon={<IconComponent style={{ width: 20, height: 20 }} color={color} />}
       label={label}
       size={size}
       sx={{
@@ -141,6 +141,7 @@ interface Campaign {
     name: string;
     avatar: string;
   };
+  allContents: CampaignContent[];
 }
 
 // Update interfaces for API data
@@ -202,10 +203,26 @@ interface UserProfile {
   // Add other profile fields as needed
 }
 
-// Convert Account to Campaign
-const accountToCampaign = (account: Account): Campaign => {
-  const latestInsight = account.CompanyInsights[0];
+// Add interface for campaign content types
+interface CampaignContent {
+  type: 'email' | 'call' | 'meeting';
+  content: string;
+}
+
+const accountToCampaign = (account: Account, insight: CompanyInsight): Campaign => {
+  // Determine campaign type and content
+  let campaignContents: CampaignContent[] = [];
   
+  if (insight.email) {
+    campaignContents.push({ type: 'email', content: insight.email });
+  }
+  if (insight.call) {
+    campaignContents.push({ type: 'call', content: insight.call });
+  }
+  if (insight.meeting) {
+    campaignContents.push({ type: 'meeting', content: insight.meeting });
+  }
+
   return {
     id: parseInt(account.id.slice(0, 8), 16),
     title: account.account_name,
@@ -213,17 +230,18 @@ const accountToCampaign = (account: Account): Campaign => {
     image: `https://logo.clearbit.com/${account.account_name.toLowerCase().replace(/[^a-zA-Z0-9]/g, '')}.com`,
     clientGroup: account.organisation_type,
     solution: account.product_family,
-    type: latestInsight?.email ? 'email' : latestInsight?.call ? 'call' : latestInsight?.meeting ? 'meeting' : 'email',
+    type: campaignContents[0]?.type || 'email',
     status: account.status === 1 ? 'active' : 'inactive',
-    progress: 100,
+      progress: 100,
     engagement: Math.floor(Math.random() * 30) + 70,
     createdAt: account.createdAt,
-    aiGenerated: true,
-    content: latestInsight?.email || latestInsight?.call || latestInsight?.meeting || '',
-    owner: {
+      aiGenerated: true,
+    content: campaignContents[0]?.content || '',
+      owner: {
       name: 'AI Assistant',
       avatar: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
-    }
+    },
+    allContents: campaignContents
   };
 };
 
@@ -263,9 +281,9 @@ Best regards,
 [Your Position]
 LSEG Data & Analytics
 [Your Contact Information]`
-  },
-  {
-    id: 2,
+    },
+    {
+      id: 2,
     title: "Strategic Growth Template",
     subject: "Exploring Opportunities for Strategic Growth",
     content: `Dear [Recipient's Name],
@@ -289,9 +307,9 @@ Best regards,
 [Your Position]
 [Your Contact Information]
 LSEG Data & Analytics`
-  },
-  {
-    id: 3,
+    },
+    {
+      id: 3,
     title: "Strategic Opportunities Template",
     subject: "Exploring Strategic Opportunities Together",
     content: `Hi [Recipient's Name],
@@ -314,6 +332,54 @@ LSEG Data & Analytics
   }
 ];
 
+// Add interface for parsed email template
+interface ParsedEmailTemplate {
+  id: string;
+  subject: string;
+  content: string;
+  type: string;
+  category: string;
+}
+
+// Function to parse email content and extract subject
+const parseEmailContent = (content: string): ParsedEmailTemplate | null => {
+  try {
+    // Look for "Subject:" line
+    const subjectMatch = content.match(/Subject:\s*([^\n]+)/);
+    if (!subjectMatch) return null;
+
+    const subject = subjectMatch[1].trim();
+    // Get content after the subject
+    const emailContent = content.slice(content.indexOf(subjectMatch[0]) + subjectMatch[0].length).trim();
+    
+    // Determine template type based on subject keywords
+    let type = 'general';
+    let category = 'General';
+    
+    if (subject.toLowerCase().includes('strategic')) {
+      type = 'strategic';
+      category = 'Strategic Communications';
+    } else if (subject.toLowerCase().includes('partnership')) {
+      type = 'partnership';
+      category = 'Partnership Proposals';
+    } else if (subject.toLowerCase().includes('opportunity')) {
+      type = 'opportunity';
+      category = 'Opportunity Discussion';
+    }
+
+    return {
+      id: Math.random().toString(36).substr(2, 9),
+      subject,
+      content: emailContent,
+      type,
+      category
+    };
+  } catch (error) {
+    console.error('Error parsing email content:', error);
+    return null;
+  }
+};
+
 const StaticCampaignsNew: React.FC = () => {
   const { mode } = useTheme();
   const [tabValue, setTabValue] = useState<number>(0);
@@ -329,6 +395,9 @@ const StaticCampaignsNew: React.FC = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [currentTemplateIndex, setCurrentTemplateIndex] = useState(0);
   const [showCopySuccess, setShowCopySuccess] = useState(false);
+  const [selectedContentType, setSelectedContentType] = useState<'email' | 'call' | 'meeting'>('email');
+  const [parsedTemplates, setParsedTemplates] = useState<ParsedEmailTemplate[]>([]);
+  const [templateCategory, setTemplateCategory] = useState<string>('All');
 
   useEffect(() => {
     const fetchCampaigns = async () => {
@@ -336,7 +405,6 @@ const StaticCampaignsNew: React.FC = () => {
         setIsLoading(true);
         setError(null);
         
-        // First fetch user profile to get the ID
         const profileResponse = await fetchClient.get<UserProfile>('/auth/profile', {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -347,7 +415,6 @@ const StaticCampaignsNew: React.FC = () => {
           throw new Error('User profile not found');
         }
 
-        // Then fetch accounts for this specific user
         const response = await fetchClient.get<Account[]>(`/accounts/${profileResponse.data.id}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -356,17 +423,14 @@ const StaticCampaignsNew: React.FC = () => {
 
         if (response.data) {
           const accounts = response.data;
-          // Filter accounts to only include those with campaigns (CompanyInsights)
-          const accountsWithCampaigns = accounts.filter(account => 
-            account.CompanyInsights && 
-            account.CompanyInsights.length > 0 &&
-            (account.CompanyInsights[0].email || 
-             account.CompanyInsights[0].call || 
-             account.CompanyInsights[0].meeting)
+          // Create campaigns for each account's insights that have content
+          const allCampaigns = accounts.flatMap(account => 
+            account.CompanyInsights
+              .filter(insight => insight.email || insight.call || insight.meeting)
+              .map(insight => accountToCampaign(account, insight))
           );
           
-          const convertedCampaigns = accountsWithCampaigns.map(accountToCampaign);
-          setCampaigns(convertedCampaigns);
+          setCampaigns(allCampaigns);
         }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch campaigns';
@@ -428,24 +492,391 @@ const StaticCampaignsNew: React.FC = () => {
     setOpenCreateDialog(false);
   };
 
-  // Add template navigation functions
-  const handleNextTemplate = () => {
-    setCurrentTemplateIndex((prev) => (prev + 1) % EMAIL_TEMPLATES.length);
+  // Function to extract templates from campaign content
+  const extractTemplatesFromCampaign = (campaign: Campaign) => {
+    const emailContent = campaign.allContents.find(content => content.type === 'email');
+    if (!emailContent) return;
+
+    // Split content by multiple dashes (---) to separate templates
+    const templates = emailContent.content.split(/\n---+\n/)
+      .map(template => parseEmailContent(template))
+      .filter((template): template is ParsedEmailTemplate => template !== null);
+
+    setParsedTemplates(templates);
   };
 
-  const handlePrevTemplate = () => {
-    setCurrentTemplateIndex((prev) => (prev - 1 + EMAIL_TEMPLATES.length) % EMAIL_TEMPLATES.length);
-  };
-
-  const handleCopyTemplate = async () => {
-    try {
-      await navigator.clipboard.writeText(EMAIL_TEMPLATES[currentTemplateIndex].content);
-      setShowCopySuccess(true);
-      setTimeout(() => setShowCopySuccess(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy template:', err);
+  // Effect to process templates when campaign changes
+  useEffect(() => {
+    if (selectedCampaignId) {
+      extractTemplatesFromCampaign(campaigns.find(c => c.id === selectedCampaignId)!);
     }
+  }, [selectedCampaignId, campaigns]);
+
+  const renderTemplateSlider = () => {
+    if (!parsedTemplates.length) return null;
+
+    const categories = ['All', ...new Set(parsedTemplates.map(t => t.category))];
+    const filteredTemplates = templateCategory === 'All' 
+      ? parsedTemplates 
+      : parsedTemplates.filter(t => t.category === templateCategory);
+
+    return (
+      <Box sx={{ 
+        p: 3, 
+        borderBottom: 1, 
+        borderColor: 'divider',
+        backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.01)'
+      }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6">Email Templates</Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {categories.map(category => (
+              <Chip
+                key={category}
+                label={category}
+                onClick={() => setTemplateCategory(category)}
+                variant={templateCategory === category ? 'filled' : 'outlined'}
+                sx={{
+                  borderRadius: BORDER_RADIUS.md,
+                  backgroundColor: templateCategory === category 
+                    ? (mode === 'dark' ? 'white' : 'black')
+                    : 'transparent',
+                  color: templateCategory === category
+                    ? (mode === 'dark' ? 'black' : 'white')
+                    : 'inherit',
+                  '&:hover': {
+                    backgroundColor: templateCategory === category
+                      ? (mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)')
+                      : (mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)')
+                  }
+                }}
+              />
+            ))}
+          </Box>
+        </Box>
+
+        <Box sx={{ position: 'relative', mt: 2 }}>
+          <IconButton
+            onClick={() => setCurrentTemplateIndex(prev => 
+              prev > 0 ? prev - 1 : filteredTemplates.length - 1
+            )}
+            sx={{
+              position: 'absolute',
+              left: -20,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              zIndex: 1,
+              backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+              '&:hover': {
+                backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'
+              }
+            }}
+          >
+            <ArrowBackIcon style={{ width: 20, height: 20 }} />
+          </IconButton>
+
+          <IconButton
+            onClick={() => setCurrentTemplateIndex(prev => 
+              prev < filteredTemplates.length - 1 ? prev + 1 : 0
+            )}
+            sx={{
+              position: 'absolute',
+              right: -20,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              zIndex: 1,
+              backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+              '&:hover': {
+                backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'
+              }
+            }}
+          >
+            <ArrowForwardIcon style={{ width: 20, height: 20 }} />
+          </IconButton>
+
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              borderRadius: BORDER_RADIUS.md,
+              backgroundColor: mode === 'dark' ? 'background.paper' : 'white',
+              border: `1px solid ${mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+              minHeight: '200px',
+              position: 'relative'
+            }}
+          >
+            {filteredTemplates.length > 0 && (
+              <>
+                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                  {filteredTemplates[currentTemplateIndex].subject}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    whiteSpace: 'pre-wrap',
+                    fontFamily: 'monospace',
+                    fontSize: '0.9rem',
+                    lineHeight: 1.7,
+                    maxHeight: '400px',
+                    overflow: 'auto'
+                  }}
+                >
+                  {filteredTemplates[currentTemplateIndex].content}
+                </Typography>
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  mt: 2,
+                  pt: 2,
+                  borderTop: 1,
+                  borderColor: 'divider'
+                }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Template {currentTemplateIndex + 1} of {filteredTemplates.length}
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<ContentCopyIcon style={{ width: 16, height: 16 }} />}
+                    onClick={() => {
+                      navigator.clipboard.writeText(filteredTemplates[currentTemplateIndex].content);
+                      // Add copy feedback here
+                    }}
+                    size="small"
+                    sx={{
+                      borderRadius: BORDER_RADIUS.md,
+                      bgcolor: mode === 'dark' ? 'white' : 'black',
+                      color: mode === 'dark' ? 'black' : 'white',
+                      '&:hover': {
+                        bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)',
+                      }
+                    }}
+                  >
+                    Copy Template
+                  </Button>
+                </Box>
+              </>
+            )}
+          </Paper>
+        </Box>
+      </Box>
+    );
   };
+
+  // Modify the campaign content display section
+  const renderCampaignContent = (campaign: Campaign) => {
+    const currentContent = campaign.allContents.find(content => content.type === selectedContentType);
+    
+    return (
+      <Box 
+        sx={{ 
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          overflow: 'hidden'
+        }}
+      >
+        <Box sx={{ 
+          p: 3, 
+          borderBottom: 1, 
+          borderColor: 'divider',
+          backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.01)'
+        }}>
+          <Tabs
+            value={selectedContentType}
+            onChange={(_, newValue) => setSelectedContentType(newValue)}
+            sx={{
+              '& .MuiTab-root': {
+                minWidth: 120,
+                textTransform: 'none',
+                fontSize: '0.9rem',
+                fontWeight: 'medium'
+              }
+            }}
+          >
+            {campaign.allContents.map(content => (
+              <Tab
+                key={content.type}
+                value={content.type}
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {content.type === 'email' ? <EmailIcon style={{ width: 20, height: 20 }} /> :
+                     content.type === 'call' ? <PhoneIcon style={{ width: 20, height: 20 }} /> :
+                     <VideocamIcon style={{ width: 20, height: 20 }} />}
+                    {content.type.charAt(0).toUpperCase() + content.type.slice(1)}
+                  </Box>
+                }
+              />
+            ))}
+          </Tabs>
+        </Box>
+        
+        <Box sx={{ 
+          flexGrow: 1, 
+          overflow: 'auto',
+          p: 3,
+          backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)'
+        }}>
+          {currentContent ? (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 4,
+                borderRadius: BORDER_RADIUS.md,
+                backgroundColor: mode === 'dark' ? 'background.paper' : 'white',
+                border: `1px solid ${mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                minHeight: '100%',
+                boxShadow: mode === 'dark' ? 
+                  '0 4px 20px rgba(0, 0, 0, 0.25)' : 
+                  '0 4px 20px rgba(0, 0, 0, 0.05)'
+              }}
+            >
+              <Typography
+                variant="body1"
+                component="div"
+                sx={{
+                  whiteSpace: 'pre-wrap',
+                  fontFamily: 'monospace',
+                  fontSize: '0.9rem',
+                  lineHeight: 1.7,
+                  color: mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)'
+                }}
+              >
+                {currentContent.content}
+              </Typography>
+            </Paper>
+          ) : (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              height: '100%'
+            }}>
+              <Typography variant="body1" color="text.secondary" align="center">
+                No content available for {selectedContentType} type
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      </Box>
+    );
+  };
+
+  // Separate the campaign content display from the template slider
+  const renderCampaignDetail = (campaign: Campaign) => (
+    <Box sx={{ 
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden'
+    }}>
+      {/* Campaign header */}
+      <Box sx={{ 
+        p: 3, 
+        borderBottom: 1, 
+        borderColor: 'divider',
+        backgroundColor: mode === 'dark' ? 'background.paper' : 'white'
+      }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Box>
+            <Typography variant="h5" fontWeight="bold" sx={{ mb: 1 }}>
+              {campaign.title}
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+              {campaign.description}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {campaign.allContents.map(content => (
+                <TypeBadge 
+                  key={content.type}
+                  type={content.type} 
+                  label={content.type.toUpperCase()} 
+                  size="medium" 
+                />
+              ))}
+              <Chip
+                label={campaign.solution}
+                sx={{
+                  backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+                  transition: 'transform 0.2s ease',
+                  '&:hover': {
+                    transform: 'scale(1.05)'
+                  }
+                }}
+              />
+              {campaign.aiGenerated && (
+                <Chip
+                  icon={<SmartToyIcon style={{ width: 16, height: 16 }} />}
+                  label="AI Generated"
+                  sx={{
+                    backgroundColor: mode === 'dark' ? 'rgba(138, 43, 226, 0.2)' : 'rgba(138, 43, 226, 0.1)',
+                    color: '#8a2be2',
+                    transition: 'transform 0.2s ease',
+                    '&:hover': {
+                      transform: 'scale(1.05)'
+                    }
+                  }}
+                />
+              )}
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <IconButton
+              sx={{
+                borderRadius: BORDER_RADIUS.md,
+                transition: TRANSITIONS.medium,
+                '&:hover': {
+                  backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                  transform: 'translateY(-2px)'
+                }
+              }}
+            >
+              <ShareIcon style={{ width: 20, height: 20 }} />
+            </IconButton>
+            <IconButton
+              sx={{
+                borderRadius: BORDER_RADIUS.md,
+                transition: TRANSITIONS.medium,
+                '&:hover': {
+                  backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                  transform: 'translateY(-2px)'
+                }
+              }}
+            >
+              <FavoriteIcon style={{ width: 20, height: 20 }} />
+            </IconButton>
+            <IconButton
+              onClick={handleMenuClick}
+              sx={{
+                borderRadius: BORDER_RADIUS.md,
+                transition: TRANSITIONS.medium,
+                '&:hover': {
+                  backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                  transform: 'translateY(-2px)'
+                }
+              }}
+            >
+              <MoreVertIcon style={{ width: 20, height: 20 }} />
+            </IconButton>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Template Slider */}
+      {renderTemplateSlider()}
+
+      {/* Campaign content */}
+      <Box sx={{ 
+        flexGrow: 1,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }}>
+        {renderCampaignContent(campaign)}
+      </Box>
+    </Box>
+  );
 
   // Render loading state
   if (isLoading) {
@@ -519,85 +950,6 @@ const StaticCampaignsNew: React.FC = () => {
   });
 
   const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId);
-
-  // Add this inside the Campaign detail section, before the existing content
-  const renderEmailTemplateSlider = () => (
-    <Box sx={{ 
-      p: 3, 
-      borderBottom: 1, 
-      borderColor: 'divider',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 2 
-    }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h6">Email Templates</Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <IconButton 
-            onClick={handlePrevTemplate}
-            sx={{ 
-              borderRadius: BORDER_RADIUS.md,
-              bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
-            }}
-          >
-            <ArrowBackIcon fontSize="small" />
-          </IconButton>
-          <IconButton 
-            onClick={handleNextTemplate}
-            sx={{ 
-              borderRadius: BORDER_RADIUS.md,
-              bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
-            }}
-          >
-            <ArrowForwardIcon fontSize="small" />
-          </IconButton>
-          <Button
-            variant="contained"
-            startIcon={<ContentCopyIcon fontSize="small" />}
-            onClick={handleCopyTemplate}
-            sx={{
-              borderRadius: BORDER_RADIUS.md,
-              bgcolor: mode === 'dark' ? 'white' : 'black',
-              color: mode === 'dark' ? 'black' : 'white',
-              '&:hover': {
-                bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)',
-              }
-            }}
-          >
-            {showCopySuccess ? 'Copied!' : 'Copy Template'}
-          </Button>
-        </Box>
-      </Box>
-      
-      <Paper 
-        elevation={0}
-        sx={{
-          p: 3,
-          borderRadius: BORDER_RADIUS.md,
-          bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
-          border: 1,
-          borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
-        }}
-      >
-        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-          {EMAIL_TEMPLATES[currentTemplateIndex].title}
-        </Typography>
-        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-          Subject: {EMAIL_TEMPLATES[currentTemplateIndex].subject}
-        </Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            whiteSpace: 'pre-wrap',
-            mt: 2,
-            fontFamily: 'monospace'
-          }}
-        >
-          {EMAIL_TEMPLATES[currentTemplateIndex].content}
-        </Typography>
-      </Paper>
-    </Box>
-  );
 
   return (
     <Box sx={{
@@ -875,217 +1227,13 @@ const StaticCampaignsNew: React.FC = () => {
           overflow: 'hidden'
         }}>
           {selectedCampaign ? (
-            <>
-              {/* Add template slider here */}
-              {renderEmailTemplateSlider()}
-              {/* Campaign header */}
-              <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                  <Box>
-                    <Typography variant="h5" fontWeight="bold" sx={{ mb: 1 }}>
-                      {selectedCampaign.title}
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                      {selectedCampaign.description}
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      <TypeBadge type={selectedCampaign.type} label={selectedCampaign.type.toUpperCase()} size="medium" />
-                      <Chip
-                        label={selectedCampaign.clientGroup}
-                        sx={{
-                          backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
-                          transition: 'transform 0.2s ease',
-                          '&:hover': {
-                            transform: 'scale(1.05)'
-                          }
-                        }}
-                      />
-                      <Chip
-                        label={selectedCampaign.solution}
-                        sx={{
-                          backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
-                          transition: 'transform 0.2s ease',
-                          '&:hover': {
-                            transform: 'scale(1.05)'
-                          }
-                        }}
-                      />
-                      {selectedCampaign.aiGenerated && (
-                        <Chip
-                          icon={<SmartToyIcon size={16} />}
-                          label="AI Generated"
-                          sx={{
-                            backgroundColor: mode === 'dark' ? 'rgba(138, 43, 226, 0.2)' : 'rgba(138, 43, 226, 0.1)',
-                            color: '#8a2be2',
-                            transition: 'transform 0.2s ease',
-                            '&:hover': {
-                              transform: 'scale(1.05)'
-                            }
-                          }}
-                        />
-                      )}
-                    </Box>
-                  </Box>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <IconButton
-                      sx={{
-                        borderRadius: BORDER_RADIUS.md,
-                        transition: TRANSITIONS.medium,
-                        '&:hover': {
-                          backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
-                          transform: 'translateY(-2px)'
-                        }
-                      }}
-                    >
-                      <ShareIcon size={20} />
-                    </IconButton>
-                    <IconButton
-                      sx={{
-                        borderRadius: BORDER_RADIUS.md,
-                        transition: TRANSITIONS.medium,
-                        '&:hover': {
-                          backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
-                          transform: 'translateY(-2px)'
-                        }
-                      }}
-                    >
-                      <FavoriteIcon />
-                    </IconButton>
-                    <IconButton
-                      onClick={handleMenuClick}
-                      sx={{
-                        borderRadius: BORDER_RADIUS.md,
-                        transition: TRANSITIONS.medium,
-                        '&:hover': {
-                          backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
-                          transform: 'translateY(-2px)'
-                        }
-                      }}
-                    >
-                      <MoreVertIcon size={20} />
-                    </IconButton>
-                  </Box>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Created on {new Date(selectedCampaign.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                    </Typography>
-                  </Box>
-                  <Button
-                    variant="outlined"
-                    startIcon={isEditing ? <CheckCircleIcon /> : <EditIcon size={18} />}
-                    onClick={handleEditToggle}
-                    sx={{
-                      borderRadius: BORDER_RADIUS.md,
-                      textTransform: 'none',
-                      borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                      '&:hover': {
-                        borderColor: mode === 'dark' ? 'white' : 'black',
-                      }
-                    }}
-                  >
-                    {isEditing ? 'Save Changes' : 'Edit Campaign'}
-                  </Button>
-                </Box>
-              </Box>
-
-              {/* Campaign content */}
-              <Box sx={{ p: 3, flexGrow: 1, overflow: 'auto' }}>
-                {isEditing ? (
-                  <TextField
-                    multiline
-                    fullWidth
-                    value={editedContent}
-                    onChange={handleContentChange}
-                    variant="outlined"
-                    minRows={20}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.01)',
-                        borderRadius: BORDER_RADIUS.md,
-                        '& fieldset': {
-                          borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
-                        },
-                        '&:hover fieldset': {
-                          borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: mode === 'dark' ? 'white' : 'black',
-                          borderWidth: '1.5px',
-                        },
-                      }
-                    }}
-                  />
-                ) : (
-                  <Typography
-                    variant="body1"
-                    component="div"
-                    sx={{
-                      whiteSpace: 'pre-wrap',
-                      backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.01)',
-                      p: 3,
-                      borderRadius: BORDER_RADIUS.md,
-                      border: `1px solid ${mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                      minHeight: '300px'
-                    }}
-                  >
-                    {selectedCampaign.content}
-                  </Typography>
-                )}
-              </Box>
-
-              {/* Campaign actions */}
-              <Box sx={{ p: 3, borderTop: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between' }}>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<ContentCopyIcon size={18} />}
-                    sx={{
-                      borderRadius: BORDER_RADIUS.md,
-                      textTransform: 'none',
-                      borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                      '&:hover': {
-                        borderColor: mode === 'dark' ? 'white' : 'black',
-                      }
-                    }}
-                  >
-                    Copy to Clipboard
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<AutoAwesomeIcon size={18} />}
-                    sx={{
-                      borderRadius: BORDER_RADIUS.md,
-                      textTransform: 'none',
-                      borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                      '&:hover': {
-                        borderColor: mode === 'dark' ? 'white' : 'black',
-                      }
-                    }}
-                  >
-                    Improve with AI
-                  </Button>
-                </Box>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  startIcon={<DeleteIcon size={18} />}
-                  sx={{
-                    borderRadius: BORDER_RADIUS.md,
-                    textTransform: 'none',
-                    '&:hover': {
-                      backgroundColor: 'error.main',
-                      color: 'white',
-                      borderColor: 'error.main',
-                    }
-                  }}
-                >
-                  Delete
-                </Button>
-              </Box>
-            </>
+            // Show actual campaign content when viewing a campaign
+            renderCampaignDetail(selectedCampaign)
+          ) : openCreateDialog ? (
+            // Show email templates only when creating a new campaign
+            renderTemplateSlider()
           ) : (
+            // Show empty state
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', p: 3 }}>
               <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
                 No campaign selected
@@ -1139,6 +1287,8 @@ const StaticCampaignsNew: React.FC = () => {
           </Box>
         }
       >
+        {/* Show email templates in the create dialog */}
+        {renderTemplateSlider()}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <TextField
             label="Campaign Title"
