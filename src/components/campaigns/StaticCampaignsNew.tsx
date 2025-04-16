@@ -17,7 +17,9 @@ import {
   ListItemText,
   Switch,
   FormControlLabel,
-  Paper
+  Paper,
+  ListItemIcon,
+  Divider
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useTheme } from '../../context/ThemeContext';
@@ -31,8 +33,6 @@ import fetchClient from '../../utils/fetchClient.js';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-
-// Import our fallback Lucide icons directly
 import {
   CampaignIcon,
   GroupIcon,
@@ -253,85 +253,6 @@ interface EmailTemplate {
   content: string;
 }
 
-const EMAIL_TEMPLATES: EmailTemplate[] = [
-  {
-    id: 1,
-    title: "Strategic Enhancements Template",
-    subject: "Exploring Strategic Enhancements and Partnership Opportunities",
-    content: `Dear [Recipient's Name],
-
-I hope this message finds you well. My name is [Your Name] from LSEG Data & Analytics, and I wanted to reach out regarding the innovative work being done at i-Deal Corp Limited. As a leading FinTech company focused on enhancing investment experiences through cutting-edge technology, I believe there may be valuable synergies between our organizations.
-
-Given i-Deal Corp's commitment to empowering clients with advanced financial solutions, coupled with your mission to enhance investment strategies efficiently, we see potential avenues for collaboration that could further drive growth and operational efficiency. Recent insights suggest that the evolving financial landscape presents unique opportunities for companies to enhance their service offerings, and we believe we can support i-Deal Corp in this quest.
-
-LSEG Data & Analytics provides a comprehensive suite of products and services designed to support financial decision-making and streamline operations. Specifically:
-
-1. **Market Analytics Tools**: These can provide deeper insights into market trends and client behavior, potentially allowing i-Deal Corp to tailor their offerings even more precisely to client needs.
-
-2. **Risk Management Solutions**: Enhancing the existing suite of smart trading tools with our robust risk management capabilities can help in safeguarding clients' portfolios against market volatility.
-
-3. **Data-Driven Advisory Services**: Leveraging our analytics, your personalized financial advisory services can be enriched with data-driven insights, further improving the advisory experience for your clients.
-
-I would love the opportunity to arrange a brief discussion to explore how we can align our offerings with your strategic goals and address any operational needs you may currently have. I believe that our collaboration could create significant value for both our organizations.
-
-Thank you for considering this opportunity. I look forward to the possibility of discussing this further with you.
-
-Best regards,
-[Your Name]
-[Your Position]
-LSEG Data & Analytics
-[Your Contact Information]`
-    },
-    {
-      id: 2,
-    title: "Strategic Growth Template",
-    subject: "Exploring Opportunities for Strategic Growth",
-    content: `Dear [Recipient's Name],
-
-I hope this message finds you well. I wanted to reach out in light of some recent developments that highlight significant opportunities for [Recipient's Company] to leverage our expertise at LSEG Data & Analytics.
-
-Given [specific updates or events relevant to their business], I believe there are clear indications of potential growth and strategic shifts within your organization. These shifts may open avenues for enhanced operational efficiency, deeper insights, and ultimately stronger decision-making processes.
-
-To align with your current business context, I would like to discuss how our portfolio can support your objectives. Here are a few specific offerings that may be particularly relevant:
-
-1. **[Product/Service 1]**: How this can help [specific need or opportunity based on their updates].
-2. **[Product/Service 2]**: This could assist in [specific need or opportunity].
-3. **[Insights/Analytics Solution]**: Leveraging data analytics for [specific goal or strategy].
-
-I would love to set up a time to discuss how we can support [Recipient's Company] in navigating this exciting phase and help you achieve your strategic goals. Please let me know your availability for a brief call.
-
-Looking forward to the possibility of collaborating with you.
-
-Best regards,
-[Your Name]
-[Your Position]
-[Your Contact Information]
-LSEG Data & Analytics`
-    },
-    {
-      id: 3,
-    title: "Strategic Opportunities Template",
-    subject: "Exploring Strategic Opportunities Together",
-    content: `Hi [Recipient's Name],
-
-I hope this message finds you well! I wanted to take a moment to recognize the recent developments at [Company Name], particularly [specific update or initiative they have announced, such as expansion in a new market, adoption of new technologies, or shifts in strategy]. These changes signify exciting potential for growth and innovation within your organization.
-
-Given your focus on [mention specific goals or challenges based on their updates, such as improving data accuracy, streamlining operations, or enhancing decision-making capabilities], I believe there are several synergies that we could explore. At LSEG Data & Analytics, we offer a range of solutions designed to support organizations like yours as they navigate these dynamic circumstances.
-
-One product worth discussing could be [specific product or service relevant to their updates, e.g., advanced analytics tools, market insights, or risk assessment services]. This could help [describe how the product/service addresses their specific needs or goals related to recent updates]. Additionally, our [another relevant service or insight] has been beneficial for clients aiming to [highlight benefits that align with their current initiatives].
-
-I would love to schedule a time to discuss how we can collaborate for mutual benefit. Please let me know your availability for a brief call next week, and I'll do my best to accommodate.
-
-Looking forward to the opportunity to connect!
-
-Best regards,
-[Your Name]
-[Your Job Title]
-LSEG Data & Analytics
-[Your Contact Information]`
-  }
-];
-
 // Add interface for parsed email template
 interface ParsedEmailTemplate {
   id: string;
@@ -380,6 +301,66 @@ const parseEmailContent = (content: string): ParsedEmailTemplate | null => {
   }
 };
 
+// Add interface for parsed script
+interface ParsedScript {
+  id: string;
+  type: 'email' | 'call' | 'meeting';
+  scriptNumber: number;
+  content: string;
+  subject?: string;
+}
+
+// Function to detect and parse scripts from content
+const parseScriptsFromContent = (content: string, type: 'email' | 'call' | 'meeting'): ParsedScript[] => {
+  try {
+    // Regular expression to match Script followed by a number
+    const scriptPattern = /Script(\d+)\s+(.*?)(?=Script\d+|$)/gs;
+    const scripts: ParsedScript[] = [];
+    let match;
+
+    while ((match = scriptPattern.exec(content)) !== null) {
+      const scriptNumber = parseInt(match[1]);
+      const scriptContent = match[2].trim();
+
+      // Try to extract subject if it exists
+      const subjectMatch = scriptContent.match(/\*\*Subject:\*\*\s*([^\n]+)/);
+      const subject = subjectMatch ? subjectMatch[1].trim() : undefined;
+
+      scripts.push({
+        id: `${type}-script-${scriptNumber}`,
+        type,
+        scriptNumber,
+        content: scriptContent,
+        subject
+      });
+    }
+
+    return scripts.sort((a, b) => a.scriptNumber - b.scriptNumber);
+  } catch (error) {
+    console.error('Error parsing scripts:', error);
+    return [];
+  }
+};
+
+// Function to parse all content types from campaign
+const parseAllScriptsFromCampaign = (campaign: Campaign): ParsedScript[] => {
+  const allScripts: ParsedScript[] = [];
+
+  campaign.allContents.forEach(content => {
+    const scripts = parseScriptsFromContent(content.content, content.type);
+    allScripts.push(...scripts);
+  });
+
+  return allScripts;
+};
+
+// Add filter types
+interface FilterState {
+  type: 'all' | 'email' | 'call' | 'meeting';
+  hasScripts: boolean;
+  scriptType?: string;
+}
+
 const StaticCampaignsNew: React.FC = () => {
   const { mode } = useTheme();
   const [tabValue, setTabValue] = useState<number>(0);
@@ -398,6 +379,10 @@ const StaticCampaignsNew: React.FC = () => {
   const [selectedContentType, setSelectedContentType] = useState<'email' | 'call' | 'meeting'>('email');
   const [parsedTemplates, setParsedTemplates] = useState<ParsedEmailTemplate[]>([]);
   const [templateCategory, setTemplateCategory] = useState<string>('All');
+  const [filterState, setFilterState] = useState<FilterState>({
+    type: 'all',
+    hasScripts: false
+  });
 
   useEffect(() => {
     const fetchCampaigns = async () => {
@@ -512,13 +497,33 @@ const StaticCampaignsNew: React.FC = () => {
     }
   }, [selectedCampaignId, campaigns]);
 
+  // Update the renderTemplateSlider to use the new script parsing
   const renderTemplateSlider = () => {
-    if (!parsedTemplates.length) return null;
+    if (!selectedCampaignId) return null;
+    
+    const campaign = campaigns.find(c => c.id === selectedCampaignId);
+    if (!campaign) return null;
 
-    const categories = ['All', ...new Set(parsedTemplates.map(t => t.category))];
-    const filteredTemplates = templateCategory === 'All' 
-      ? parsedTemplates 
-      : parsedTemplates.filter(t => t.category === templateCategory);
+    const allScripts = parseAllScriptsFromCampaign(campaign);
+    const scriptsByType = allScripts.reduce((acc, script) => {
+      if (!acc[script.type]) {
+        acc[script.type] = [];
+      }
+      acc[script.type].push(script);
+      return acc;
+    }, {} as Record<string, ParsedScript[]>);
+
+    const contentTypes = Object.keys(scriptsByType).map(type => ({
+      type,
+      label: type.charAt(0).toUpperCase() + type.slice(1),
+      count: scriptsByType[type].length,
+      icon: type === 'email' ? <EmailIcon style={{ width: 20, height: 20 }} /> :
+            type === 'call' ? <PhoneIcon style={{ width: 20, height: 20 }} /> :
+            <VideocamIcon style={{ width: 20, height: 20 }} />
+    }));
+
+    const currentScripts = scriptsByType[selectedContentType] || [];
+    if (currentScripts.length === 0) return null;
 
     return (
       <Box sx={{ 
@@ -528,24 +533,28 @@ const StaticCampaignsNew: React.FC = () => {
         backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.01)'
       }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">Email Templates</Typography>
+          <Typography variant="h6">Templates</Typography>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            {categories.map(category => (
+            {contentTypes.map(({ type, label, count, icon }) => (
               <Chip
-                key={category}
-                label={category}
-                onClick={() => setTemplateCategory(category)}
-                variant={templateCategory === category ? 'filled' : 'outlined'}
+                key={type}
+                icon={icon}
+                label={`${label} (${count})`}
+                onClick={() => {
+                  setSelectedContentType(type as 'email' | 'call' | 'meeting');
+                  setCurrentTemplateIndex(0);
+                }}
+                variant={selectedContentType === type ? 'filled' : 'outlined'}
                 sx={{
                   borderRadius: BORDER_RADIUS.md,
-                  backgroundColor: templateCategory === category 
+                  backgroundColor: selectedContentType === type 
                     ? (mode === 'dark' ? 'white' : 'black')
                     : 'transparent',
-                  color: templateCategory === category
+                  color: selectedContentType === type
                     ? (mode === 'dark' ? 'black' : 'white')
                     : 'inherit',
                   '&:hover': {
-                    backgroundColor: templateCategory === category
+                    backgroundColor: selectedContentType === type
                       ? (mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)')
                       : (mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)')
                   }
@@ -558,7 +567,7 @@ const StaticCampaignsNew: React.FC = () => {
         <Box sx={{ position: 'relative', mt: 2 }}>
           <IconButton
             onClick={() => setCurrentTemplateIndex(prev => 
-              prev > 0 ? prev - 1 : filteredTemplates.length - 1
+              prev > 0 ? prev - 1 : currentScripts.length - 1
             )}
             sx={{
               position: 'absolute',
@@ -577,7 +586,7 @@ const StaticCampaignsNew: React.FC = () => {
 
           <IconButton
             onClick={() => setCurrentTemplateIndex(prev => 
-              prev < filteredTemplates.length - 1 ? prev + 1 : 0
+              prev < currentScripts.length - 1 ? prev + 1 : 0
             )}
             sx={{
               position: 'absolute',
@@ -605,11 +614,23 @@ const StaticCampaignsNew: React.FC = () => {
               position: 'relative'
             }}
           >
-            {filteredTemplates.length > 0 && (
+            {currentScripts.length > 0 && (
               <>
-                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                  {filteredTemplates[currentTemplateIndex].subject}
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      Script {currentScripts[currentTemplateIndex].scriptNumber}
+                    </Typography>
+                    {currentScripts[currentTemplateIndex].subject && (
+                      <Typography variant="caption" color="text.secondary">
+                        {currentScripts[currentTemplateIndex].subject}
+                      </Typography>
+                    )}
+                  </Box>
+                  <Typography variant="caption" color="text.secondary">
+                    {currentTemplateIndex + 1} of {currentScripts.length}
+                  </Typography>
+                </Box>
                 <Typography
                   variant="body2"
                   sx={{
@@ -621,26 +642,23 @@ const StaticCampaignsNew: React.FC = () => {
                     overflow: 'auto'
                   }}
                 >
-                  {filteredTemplates[currentTemplateIndex].content}
+                  {currentScripts[currentTemplateIndex].content}
                 </Typography>
                 <Box sx={{ 
                   display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
+                  justifyContent: 'flex-end', 
                   mt: 2,
                   pt: 2,
                   borderTop: 1,
                   borderColor: 'divider'
                 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Template {currentTemplateIndex + 1} of {filteredTemplates.length}
-                  </Typography>
                   <Button
                     variant="contained"
                     startIcon={<ContentCopyIcon style={{ width: 16, height: 16 }} />}
                     onClick={() => {
-                      navigator.clipboard.writeText(filteredTemplates[currentTemplateIndex].content);
-                      // Add copy feedback here
+                      navigator.clipboard.writeText(currentScripts[currentTemplateIndex].content);
+                      setShowCopySuccess(true);
+                      setTimeout(() => setShowCopySuccess(false), 2000);
                     }}
                     size="small"
                     sx={{
@@ -652,7 +670,7 @@ const StaticCampaignsNew: React.FC = () => {
                       }
                     }}
                   >
-                    Copy Template
+                    {showCopySuccess ? 'Copied!' : 'Copy Template'}
                   </Button>
                 </Box>
               </>
@@ -878,6 +896,198 @@ const StaticCampaignsNew: React.FC = () => {
     </Box>
   );
 
+  // Update the filtering logic
+  const filterCampaigns = (campaigns: Campaign[]): Campaign[] => {
+    return campaigns.filter(campaign => {
+      // Filter by search query
+      const matchesSearch = searchQuery === '' ||
+        campaign.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        campaign.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        campaign.clientGroup.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        campaign.solution.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Get all scripts for this campaign
+      const allScripts = parseAllScriptsFromCampaign(campaign);
+      
+      // Filter by tab value and script presence
+      const matchesTab = (() => {
+        switch (tabValue) {
+          case 0: // All Campaigns
+            return true;
+          case 1: // Email Templates
+            return filterState.hasScripts 
+              ? allScripts.some(script => script.type === 'email')
+              : campaign.allContents.some(content => content.type === 'email');
+          case 2: // Call Scripts
+            return filterState.hasScripts 
+              ? allScripts.some(script => script.type === 'call')
+              : campaign.allContents.some(content => content.type === 'call');
+          case 3: // Meeting Points
+            return filterState.hasScripts 
+              ? allScripts.some(script => script.type === 'meeting')
+              : campaign.allContents.some(content => content.type === 'meeting');
+          default:
+            return true;
+        }
+      })();
+
+      // Filter by script presence if needed
+      const matchesScriptFilter = !filterState.hasScripts || allScripts.length > 0;
+
+      return matchesSearch && matchesTab && matchesScriptFilter;
+    });
+  };
+
+  // Update the filter menu
+  const renderFilterMenu = () => (
+    <Menu
+      anchorEl={filterAnchorEl}
+      open={Boolean(filterAnchorEl)}
+      onClose={handleFilterClose}
+      PaperProps={{
+        sx: {
+          mt: 1,
+          minWidth: '200px',
+          boxShadow: mode === 'dark' ? '0 4px 20px rgba(0, 0, 0, 0.5)' : '0 4px 20px rgba(0, 0, 0, 0.15)',
+          borderRadius: BORDER_RADIUS.md,
+        }
+      }}
+    >
+      <MenuItem>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={filterState.hasScripts}
+              onChange={(e) => setFilterState(prev => ({
+                ...prev,
+                hasScripts: e.target.checked
+              }))}
+              sx={{
+                '& .MuiSwitch-switchBase.Mui-checked': {
+                  color: mode === 'dark' ? 'white' : 'black',
+                },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                  backgroundColor: mode === 'dark' ? 'white' : 'black',
+                }
+              }}
+            />
+          }
+          label="Has Scripts"
+        />
+      </MenuItem>
+      <Divider />
+      <MenuItem onClick={() => {
+        setFilterState(prev => ({ ...prev, type: 'all' }));
+        handleFilterClose();
+      }}>
+        <ListItemText primary="All Types" />
+      </MenuItem>
+      <MenuItem onClick={() => {
+        setFilterState(prev => ({ ...prev, type: 'email' }));
+        handleFilterClose();
+      }}>
+        <ListItemIcon>
+          <EmailIcon style={{ width: 20, height: 20 }} />
+        </ListItemIcon>
+        <ListItemText primary="Email Templates" />
+      </MenuItem>
+      <MenuItem onClick={() => {
+        setFilterState(prev => ({ ...prev, type: 'call' }));
+        handleFilterClose();
+      }}>
+        <ListItemIcon>
+          <PhoneIcon style={{ width: 20, height: 20 }} />
+        </ListItemIcon>
+        <ListItemText primary="Call Scripts" />
+      </MenuItem>
+      <MenuItem onClick={() => {
+        setFilterState(prev => ({ ...prev, type: 'meeting' }));
+        handleFilterClose();
+      }}>
+        <ListItemIcon>
+          <VideocamIcon style={{ width: 20, height: 20 }} />
+        </ListItemIcon>
+        <ListItemText primary="Meeting Points" />
+      </MenuItem>
+    </Menu>
+  );
+
+  // Update the campaign list section
+  const renderCampaignList = () => {
+    const filteredCampaigns = filterCampaigns(campaigns);
+    
+    return (
+      <List sx={{ overflow: 'auto', flexGrow: 1, p: 0 }}>
+        {filteredCampaigns.length === 0 ? (
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            <Typography variant="body1" color="text.secondary">
+              {searchQuery 
+                ? 'No campaigns match your search criteria'
+                : filterState.hasScripts 
+                  ? 'No campaigns with scripts found'
+                  : 'No campaigns found'}
+            </Typography>
+          </Box>
+        ) : (
+          filteredCampaigns.map(campaign => {
+            const campaignScripts = parseAllScriptsFromCampaign(campaign);
+            return (
+              <ListItemStyled
+                key={campaign.id}
+                selected={selectedCampaignId === campaign.id}
+                onClick={() => handleCampaignSelect(campaign.id)}
+                sx={{ cursor: 'pointer' }}
+              >
+                <ListItemText
+                  primary={
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                      <Typography variant="subtitle1" fontWeight="bold" noWrap sx={{ maxWidth: '200px' }}>
+                        {campaign.title}
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {campaignScripts.length > 0 && (
+                          <Chip
+                            size="small"
+                            label={`${campaignScripts.length} Scripts`}
+                            sx={{
+                              backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                              fontSize: '0.7rem'
+                            }}
+                          />
+                        )}
+                        <Typography variant="caption" color="text.secondary">
+                          {new Date(campaign.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  }
+                  secondary={
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" noWrap sx={{ mb: 0.5 }}>
+                        {campaign.description}
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        {campaign.allContents.map(content => (
+                          <TypeBadge 
+                            key={content.type}
+                            type={content.type} 
+                            label={campaignScripts.filter(s => s.type === content.type).length > 0 
+                              ? `${content.type.toUpperCase()} (${campaignScripts.filter(s => s.type === content.type).length})`
+                              : content.type.toUpperCase()} 
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+                  }
+                />
+              </ListItemStyled>
+            );
+          })
+        )}
+      </List>
+    );
+  };
+
   // Render loading state
   if (isLoading) {
     return (
@@ -929,25 +1139,6 @@ const StaticCampaignsNew: React.FC = () => {
       </Box>
     );
   }
-
-  // Filter campaigns based on search query and selected tab
-  const filteredCampaigns = campaigns.filter(campaign => {
-    // Filter by search query
-    const matchesSearch = searchQuery === '' ||
-      campaign.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      campaign.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      campaign.clientGroup.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      campaign.solution.toLowerCase().includes(searchQuery.toLowerCase());
-
-    // Filter by tab
-    const matchesTab =
-      tabValue === 0 || // All types
-      (tabValue === 1 && campaign.type === 'email') || // Email templates
-      (tabValue === 2 && campaign.type === 'call') || // Call scripts
-      (tabValue === 3 && campaign.type === 'meeting'); // Meeting points
-
-    return matchesSearch && matchesTab;
-  });
 
   const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId);
 
@@ -1121,101 +1312,31 @@ const StaticCampaignsNew: React.FC = () => {
               onClick={handleFilterClick}
               sx={{
                 borderRadius: BORDER_RADIUS.md,
-                backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                backgroundColor: filterState.hasScripts || filterState.type !== 'all'
+                  ? (mode === 'dark' ? 'white' : 'black')
+                  : (mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)'),
+                color: filterState.hasScripts || filterState.type !== 'all'
+                  ? (mode === 'dark' ? 'black' : 'white')
+                  : 'inherit',
                 transition: TRANSITIONS.medium,
                 padding: '8px',
                 '&:hover': {
-                  backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                  backgroundColor: filterState.hasScripts || filterState.type !== 'all'
+                    ? (mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)')
+                    : (mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'),
                   transform: 'translateY(-2px)'
                 }
               }}
             >
-              <FilterListIcon size={20} color={mode === 'dark' ? '#ffffff' : '#000000'} />
+              <FilterListIcon size={20} />
             </IconButton>
           </Box>
 
-          {/* Filter menu */}
-          <Menu
-            anchorEl={filterAnchorEl}
-            open={Boolean(filterAnchorEl)}
-            onClose={handleFilterClose}
-            PaperProps={{
-              sx: {
-                mt: 1,
-                boxShadow: mode === 'dark' ? '0 4px 20px rgba(0, 0, 0, 0.5)' : '0 4px 20px rgba(0, 0, 0, 0.15)',
-                borderRadius: BORDER_RADIUS.md,
-              }
-            }}
-          >
-            <MenuItem onClick={handleFilterClose}>
-              <Typography variant="body2">All Campaigns</Typography>
-            </MenuItem>
-            <MenuItem onClick={handleFilterClose}>
-              <Typography variant="body2">Recent Campaigns</Typography>
-            </MenuItem>
-            <MenuItem onClick={handleFilterClose}>
-              <Typography variant="body2">AI Generated</Typography>
-            </MenuItem>
-            <MenuItem onClick={handleFilterClose}>
-              <Typography variant="body2">Shared with Me</Typography>
-            </MenuItem>
-          </Menu>
+          {/* Render the filter menu */}
+          {renderFilterMenu()}
 
           {/* List of campaigns */}
-          <List sx={{ overflow: 'auto', flexGrow: 1, p: 0 }}>
-            {filteredCampaigns.length === 0 ? (
-              <Box sx={{ p: 3, textAlign: 'center' }}>
-                <Typography variant="body1" color="text.secondary">
-                  No accounts with campaigns found
-                </Typography>
-              </Box>
-            ) : (
-              filteredCampaigns.map(campaign => (
-                <ListItemStyled
-                  key={campaign.id}
-                  selected={selectedCampaignId === campaign.id}
-                  onClick={() => handleCampaignSelect(campaign.id)}
-                  sx={{ cursor: 'pointer' }}
-                >
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                        <Typography variant="subtitle1" fontWeight="bold" noWrap sx={{ maxWidth: '200px' }}>
-                          {campaign.title}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {new Date(campaign.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </Typography>
-                      </Box>
-                    }
-                    secondary={
-                      <Box>
-                        <Typography variant="body2" color="text.secondary" noWrap sx={{ mb: 0.5 }}>
-                          {campaign.description}
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <TypeBadge type={campaign.type} label={campaign.type.toUpperCase()} />
-                          <Chip
-                            label={campaign.solution}
-                            size="small"
-                            sx={{
-                              backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
-                              fontSize: '0.7rem',
-                              height: 20,
-                              transition: 'transform 0.2s ease',
-                              '&:hover': {
-                                transform: 'scale(1.05)'
-                              }
-                            }}
-                          />
-                        </Box>
-                      </Box>
-                    }
-                  />
-                </ListItemStyled>
-              ))
-            )}
-          </List>
+          {renderCampaignList()}
         </Box>
 
         {/* Campaign detail */}
