@@ -10,9 +10,9 @@ type IconName = keyof typeof FallbackIcons;
 
 // Create a higher-order component that creates icon components
 const createIcon = (iconName: IconName) => {
-  return (props: Omit<React.ComponentProps<typeof IconLoader>, 'iconName'>) => (
-    <IconLoader iconName={iconName} {...props} />
-  );
+  return (props: Omit<React.ComponentProps<typeof IconLoader>, 'iconName'>) => {
+    return React.createElement(IconLoader, { iconName, ...props });
+  };
 };
 
 // Export all icons as React components
