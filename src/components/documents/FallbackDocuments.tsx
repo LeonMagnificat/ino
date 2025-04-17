@@ -354,7 +354,7 @@ const FallbackDocuments = () => {
   // Get the selected campaign
   const selectedCampaign: Campaign | null = campaigns.find(c => c.id === selectedCampaignId) || null;
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
@@ -367,6 +367,7 @@ const FallbackDocuments = () => {
   };
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, campaignId: number) => {
+    event.stopPropagation();
     setMenuAnchorEl(event.currentTarget);
     setSelectedCampaignId(campaignId);
   };
@@ -381,21 +382,21 @@ const FallbackDocuments = () => {
   };
 
   const handleEditClick = () => {
-    if (selectedCampaign) {
-      setEditedContent(selectedCampaign.content);
+    const campaign = campaigns.find(c => c.id === selectedCampaignId);
+    if (campaign) {
+      setEditedContent(campaign.content);
       setIsEditing(true);
     }
   };
 
   const handleSaveEdit = () => {
-    // In a real app, you would save the changes to the backend
-    // For now, we'll just update the local state
+    // In a real app, this would update the campaign in your database
+    // For this demo, we're just ending the edit mode
     setIsEditing(false);
   };
 
   const handleCancelEdit = () => {
     setIsEditing(false);
-    setEditedContent('');
   };
 
   // Filter campaigns based on tab and search query

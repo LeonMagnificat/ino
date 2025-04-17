@@ -1,7 +1,6 @@
 import React from 'react';
 import { IconButton as MuiIconButton, IconButtonProps as MuiIconButtonProps, styled } from '@mui/material';
 import { BORDER_RADIUS, TRANSITIONS, ANIMATIONS } from './constants';
-import { useTheme } from '../../../context/ThemeContext';
 
 // Extended icon button props
 export interface IconButtonProps extends MuiIconButtonProps {
@@ -11,13 +10,16 @@ export interface IconButtonProps extends MuiIconButtonProps {
 }
 
 // Styled icon button component
-const StyledIconButton = styled(MuiIconButton)<IconButtonProps>(({ 
+const StyledIconButton = styled(MuiIconButton, {
+  shouldForwardProp: (prop) => 
+    !['rounded', 'animation', 'active'].includes(prop as string),
+})<IconButtonProps>(({ 
   theme, 
   rounded = 'sm', 
   animation = 'hover',
   active = false,
 }) => {
-  const { mode } = theme.palette;
+  const mode = theme.palette.mode;
   
   // Determine border radius
   let borderRadius;
@@ -69,15 +71,8 @@ const StyledIconButton = styled(MuiIconButton)<IconButtonProps>(({
 });
 
 // Icon button component with enhanced props
-export const IconButton: React.FC<IconButtonProps> = (props) => {
-  const { mode } = useTheme();
-  
-  return (
-    <StyledIconButton
-      theme={{ palette: { mode } }}
-      {...props}
-    />
-  );
-};
+export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>((props, ref) => {
+  return <StyledIconButton ref={ref} {...props} />;
+});
 
 export default IconButton;

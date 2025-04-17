@@ -1,7 +1,6 @@
 import React from 'react';
 import { Tabs as MuiTabs, TabsProps as MuiTabsProps, Tab as MuiTab, TabProps as MuiTabProps, styled } from '@mui/material';
 import { BORDER_RADIUS, TRANSITIONS } from './constants';
-import { useTheme } from '../../../context/ThemeContext';
 
 // Extended tabs props
 export interface TabsProps extends MuiTabsProps {
@@ -15,8 +14,10 @@ export interface TabProps extends MuiTabProps {
 }
 
 // Styled tabs component
-const StyledTabs = styled(MuiTabs)<TabsProps>(({ 
-  theme, 
+const StyledTabs = styled(MuiTabs, {
+  shouldForwardProp: (prop) => 
+    !['indicatorHeight', 'indicatorRounded'].includes(prop as string),
+})<TabsProps>(({ 
   indicatorHeight = 'sm',
   indicatorRounded = true,
 }) => {
@@ -39,11 +40,14 @@ const StyledTabs = styled(MuiTabs)<TabsProps>(({
 });
 
 // Styled tab component
-const StyledTab = styled(MuiTab)<TabProps>(({ 
+const StyledTab = styled(MuiTab, {
+  shouldForwardProp: (prop) => 
+    !['rounded'].includes(prop as string),
+})<TabProps>(({ 
   theme, 
   rounded = 'sm',
 }) => {
-  const { mode } = theme.palette;
+  const mode = theme.palette.mode;
   
   // Determine border radius
   let borderRadius;
@@ -71,27 +75,13 @@ const StyledTab = styled(MuiTab)<TabProps>(({
 });
 
 // Tabs component with enhanced props
-export const Tabs: React.FC<TabsProps> = (props) => {
-  const { mode } = useTheme();
-  
-  return (
-    <StyledTabs
-      theme={{ palette: { mode } }}
-      {...props}
-    />
-  );
-};
+export const Tabs = React.forwardRef<HTMLDivElement, TabsProps>((props, ref) => {
+  return <StyledTabs ref={ref} {...props} />;
+});
 
 // Tab component with enhanced props
-export const Tab: React.FC<TabProps> = (props) => {
-  const { mode } = useTheme();
-  
-  return (
-    <StyledTab
-      theme={{ palette: { mode } }}
-      {...props}
-    />
-  );
-};
+export const Tab = React.forwardRef<HTMLDivElement, TabProps>((props, ref) => {
+  return <StyledTab ref={ref} {...props} />;
+});
 
 export default { Tabs, Tab };

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button as MuiButton, ButtonProps as MuiButtonProps, styled } from '@mui/material';
 import { BORDER_RADIUS, TRANSITIONS, SHADOWS, ANIMATIONS } from './constants';
-import { useTheme } from '../../../context/ThemeContext';
 
 // Extended button props
 export interface ButtonProps extends MuiButtonProps {
@@ -11,15 +10,17 @@ export interface ButtonProps extends MuiButtonProps {
 }
 
 // Styled button component
-const StyledButton = styled(MuiButton)<ButtonProps>(({ 
+const StyledButton = styled(MuiButton, {
+  shouldForwardProp: (prop) => 
+    !['rounded', 'elevation', 'animation'].includes(prop as string),
+})<ButtonProps>(({ 
   theme, 
   rounded = 'md', 
   elevation = 'sm',
   animation = 'hover',
   variant = 'contained',
-  color = 'primary'
 }) => {
-  const { mode } = theme.palette;
+  const mode = theme.palette.mode;
   const isContained = variant === 'contained';
   const isOutlined = variant === 'outlined';
   
@@ -97,15 +98,8 @@ const StyledButton = styled(MuiButton)<ButtonProps>(({
 });
 
 // Button component with enhanced props
-export const Button: React.FC<ButtonProps> = (props) => {
-  const { mode } = useTheme();
-  
-  return (
-    <StyledButton
-      theme={{ palette: { mode } }}
-      {...props}
-    />
-  );
-};
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, ref) => {
+  return <StyledButton ref={ref} {...props} />;
+});
 
 export default Button;

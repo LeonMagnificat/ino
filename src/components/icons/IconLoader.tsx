@@ -20,33 +20,37 @@ const IconLoader: React.FC<IconLoaderProps> = ({
 }) => {
   const [IconComponent, setIconComponent] = useState<React.ComponentType<any> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [useAnimated, setUseAnimated] = useState(false);
+  const [useAnimated, _setUseAnimated] = useState(false);
+  const [_error, setError] = useState(false);
 
   useEffect(() => {
-    // Try to dynamically import the animated icons
-    const loadAnimatedIcons = async () => {
+    const loadIconModule = async () => {
       try {
-        // First check if framer-motion is available
-        await import('framer-motion');
-        
-        // If that succeeds, try to import the animated icons
         const animatedModule = await import('./LucideIcons');
-        if (animatedModule && animatedModule[iconName]) {
-          setIconComponent(() => animatedModule[iconName]);
-          setUseAnimated(true);
+        
+        // Check if the icon exists in the imported module using a type-safe approach
+        if (animatedModule && Object.prototype.hasOwnProperty.call(animatedModule, iconName)) {
+          setIconComponent(() => (animatedModule as any)[iconName]);
+          setIsLoading(false);
         } else {
-          // If the icon doesn't exist in the animated module, use fallback
-          setIconComponent(() => FallbackIcons[iconName]);
+          // Fallback to the static/fallback version
+          const fallbackModule = await import('./FallbackIcons');
+          if (Object.prototype.hasOwnProperty.call(fallbackModule, iconName)) {
+            setIconComponent(() => (fallbackModule as any)[iconName]);
+          } else {
+            console.warn(`Icon ${iconName} not found. Using default icon.`);
+            setIconComponent(() => FallbackIcons[iconName]);
+          }
+          setIsLoading(false);
         }
       } catch (error) {
-        // If either import fails, use the fallback icon
-        setIconComponent(() => FallbackIcons[iconName]);
-      } finally {
+        console.error('Error loading icon:', error);
         setIsLoading(false);
+        setError(true);
       }
     };
 
-    loadAnimatedIcons();
+    loadIconModule();
   }, [iconName]);
 
   // While loading, show a placeholder or the fallback icon

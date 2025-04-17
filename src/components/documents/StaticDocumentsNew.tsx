@@ -16,28 +16,25 @@ import {
   ListItem,
   ListItemText,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useTheme } from '../../context/ThemeContext';
 import { BORDER_RADIUS, TRANSITIONS } from '../ui/common/constants';
 import { Dialog } from '../ui/common/Dialog';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import PendingIcon from '@mui/icons-material/Pending';
-import ScheduleIcon from '@mui/icons-material/Schedule';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 
 // Import our fallback Lucide icons directly
 import {
   CampaignIcon,
-  GroupIcon,
-  TrendingUpIcon,
   FilterListIcon,
   SearchIcon,
   AddIcon,
   MoreVertIcon,
   ShareIcon,
-  VisibilityIcon,
   EmailIcon,
   VideocamIcon,
   PhoneIcon,
@@ -832,212 +829,29 @@ const StaticDocumentsNew: React.FC = () => {
         onClose={handleCloseCreateDialog}
         title="Create New Document"
         maxWidth="md"
-        actions={
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-            <Button
-              variant="outlined"
-              onClick={handleCloseCreateDialog}
-              sx={{
-                borderRadius: BORDER_RADIUS.md,
-                borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                color: mode === 'dark' ? 'white' : 'black',
-                borderWidth: '1.5px',
-                '&:hover': {
-                  borderColor: mode === 'dark' ? 'white' : 'black',
-                  borderWidth: '1.5px',
-                }
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="contained"
-              sx={{
-                borderRadius: BORDER_RADIUS.md,
-                bgcolor: mode === 'dark' ? 'white' : 'black',
-                color: mode === 'dark' ? 'black' : 'white',
-                '&:hover': {
-                  bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)',
-                }
-              }}
-            >
-              Create
-            </Button>
-          </Box>
-        }
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <TextField
-            label="Document Title"
-            fullWidth
-            variant="outlined"
-            placeholder="Enter document title"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: BORDER_RADIUS.md,
-                '& fieldset': {
-                  borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
-                },
-                '&:hover fieldset': {
-                  borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: mode === 'dark' ? 'white' : 'black',
-                  borderWidth: '1.5px',
-                },
-              }
-            }}
-          />
-          
-          <TextField
-            label="Description"
-            fullWidth
-            variant="outlined"
-            placeholder="Enter document description"
-            multiline
-            rows={2}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: BORDER_RADIUS.md,
-                '& fieldset': {
-                  borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
-                },
-                '&:hover fieldset': {
-                  borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: mode === 'dark' ? 'white' : 'black',
-                  borderWidth: '1.5px',
-                },
-              }
-            }}
-          />
-          
-          <Box sx={{ display: 'flex', gap: 2 }}>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
             <TextField
-              label="Client Group"
+              label="Document Title"
               fullWidth
               variant="outlined"
-              placeholder="e.g., Enterprise, SMB"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: BORDER_RADIUS.md,
-                  '& fieldset': {
-                    borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: mode === 'dark' ? 'white' : 'black',
-                    borderWidth: '1.5px',
-                  },
-                }
-              }}
+              placeholder="Enter document title"
             />
-            
             <TextField
-              label="Solution"
+              label="Description"
               fullWidth
               variant="outlined"
-              placeholder="e.g., Cloud Infrastructure"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: BORDER_RADIUS.md,
-                  '& fieldset': {
-                    borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: mode === 'dark' ? 'white' : 'black',
-                    borderWidth: '1.5px',
-                  },
-                }
-              }}
+              placeholder="Enter document description"
+              multiline
+              rows={2}
             />
           </Box>
-          
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={true}
-                  sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': {
-                      color: mode === 'dark' ? 'white' : 'black',
-                    },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                      backgroundColor: mode === 'dark' ? 'white' : 'black',
-                    }
-                  }}
-                />
-              }
-              label="AI Generated"
-            />
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="body2">Document Type:</Typography>
-              <Chip
-                label="Email"
-                clickable
-                sx={{
-                  backgroundColor: '#3498db20',
-                  color: '#3498db',
-                  borderRadius: BORDER_RADIUS.pill,
-                  fontWeight: 'bold',
-                  mr: 1
-                }}
-              />
-              <Chip
-                label="Call"
-                clickable
-                sx={{
-                  backgroundColor: '#2ecc7120',
-                  color: '#2ecc71',
-                  borderRadius: BORDER_RADIUS.pill,
-                  fontWeight: 'bold',
-                  mr: 1
-                }}
-              />
-              <Chip
-                label="Meeting"
-                clickable
-                sx={{
-                  backgroundColor: '#f39c1220',
-                  color: '#f39c12',
-                  borderRadius: BORDER_RADIUS.pill,
-                  fontWeight: 'bold'
-                }}
-              />
-            </Box>
-          </Box>
-          
-          <TextField
-            label="Content"
-            fullWidth
-            variant="outlined"
-            placeholder="Enter document content"
-            multiline
-            rows={10}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: BORDER_RADIUS.md,
-                '& fieldset': {
-                  borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
-                },
-                '&:hover fieldset': {
-                  borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: mode === 'dark' ? 'white' : 'black',
-                  borderWidth: '1.5px',
-                },
-              }
-            }}
-          />
-        </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCreateDialog}>Cancel</Button>
+          <Button variant="contained">Create</Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

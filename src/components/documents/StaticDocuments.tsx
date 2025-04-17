@@ -158,9 +158,7 @@ interface Campaign {
 const StaticDocuments: React.FC = () => {
   const { mode } = useTheme();
   const [tabValue, setTabValue] = useState<number>(0);
-  const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editedContent, setEditedContent] = useState<string>('');
@@ -208,28 +206,12 @@ const StaticDocuments: React.FC = () => {
     }
   ];
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
-  };
-
-  const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
-    setFilterAnchorEl(event.currentTarget);
-  };
-
-  const handleFilterClose = () => {
-    setFilterAnchorEl(null);
   };
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value);
-  };
-
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-    setMenuAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setMenuAnchorEl(null);
   };
 
   const handleCampaignSelect = (id: number) => {
@@ -238,10 +220,6 @@ const StaticDocuments: React.FC = () => {
     if (campaign) {
       setEditedContent(campaign.content);
     }
-  };
-
-  const handleEditToggle = () => {
-    setIsEditing(!isEditing);
   };
 
   const handleContentChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -19,29 +19,31 @@ import { useTheme } from '../../context/ThemeContext';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import { Doughnut, Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   ArcElement,
   CategoryScale,
   LinearScale,
+  PointElement,
   BarElement,
   Title,
   Tooltip,
   Legend,
+  Filler,
 } from 'chart.js';
-import { getClientFunnelData } from '../../services/AnalyticsDataService';
 
 // Register Chart.js components
 ChartJS.register(
   ArcElement,
   CategoryScale,
   LinearScale,
+  PointElement,
   BarElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  Filler
 );
 
 const ChartContainer = styled(Paper)(({ theme }) => ({
@@ -159,7 +161,7 @@ const ClientFunnelChart: React.FC<ClientFunnelChartProps> = ({ title = "Client A
     setChartMenuAnchorEl(null);
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
@@ -254,7 +256,7 @@ const ClientFunnelChart: React.FC<ClientFunnelChartProps> = ({ title = "Client A
         cornerRadius: 8,
         titleFont: {
           size: 14,
-          weight: 'bold',
+          weight: 'bold' as const,
         },
         bodyFont: {
           size: 13,
@@ -274,7 +276,7 @@ const ClientFunnelChart: React.FC<ClientFunnelChartProps> = ({ title = "Client A
       animateRotate: true,
       animateScale: true,
       duration: 1000,
-      easing: 'easeOutQuart',
+      easing: 'easeOutQuart' as const,
     },
   };
 
@@ -314,6 +316,10 @@ const ClientFunnelChart: React.FC<ClientFunnelChartProps> = ({ title = "Client A
             return value + '%';
           },
           color: mode === 'dark' ? '#a0a0a0' : '#5f6368',
+          font: {
+            size: 14,
+            weight: 'bold' as const,
+          },
         },
       },
       x: {
@@ -331,7 +337,7 @@ const ClientFunnelChart: React.FC<ClientFunnelChartProps> = ({ title = "Client A
     },
     animation: {
       duration: 1000,
-      easing: 'easeOutQuart',
+      easing: 'easeOutQuart' as const,
     },
   };
 

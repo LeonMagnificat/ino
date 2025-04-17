@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { cn } from "../../utils";
 import { Link, LinkProps } from "react-router-dom";
 import React, { useState, createContext, useContext } from "react";

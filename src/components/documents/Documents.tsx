@@ -12,16 +12,13 @@ import {
   CardMedia,
   CardActions,
   IconButton,
-  Avatar,
   Tabs,
   Tab,
   TextField,
   InputAdornment,
   Menu,
   MenuItem,
-  Badge,
   Tooltip,
-  LinearProgress,
   List,
   ListItem,
   ListItemIcon,
@@ -32,22 +29,14 @@ import {
 import { styled } from '@mui/material/styles';
 import { useTheme } from '../../context/ThemeContext';
 import { motion } from 'framer-motion';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import PendingIcon from '@mui/icons-material/Pending';
-import ScheduleIcon from '@mui/icons-material/Schedule';
-import FavoriteIcon from '@mui/icons-material/Favorite';
 
 // Import our animated Lucide icons
 import {
   CampaignIcon,
-  GroupIcon,
-  TrendingUpIcon,
   FilterListIcon,
   SearchIcon,
-  AddIcon,
   MoreVertIcon,
   ShareIcon,
-  VisibilityIcon,
   EmailIcon,
   VideocamIcon,
   PhoneIcon,
@@ -57,61 +46,6 @@ import {
   EditIcon,
   DeleteIcon
 } from '../icons/LucideIcons';
-
-// Create motion variants for animations
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2
-    }
-  }
-};
-
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: {
-      type: "spring",
-      stiffness: 300,
-      damping: 24
-    }
-  }
-};
-
-const listItemVariants = {
-  hidden: { x: -20, opacity: 0 },
-  visible: {
-    x: 0,
-    opacity: 1,
-    transition: {
-      type: "spring",
-      stiffness: 300,
-      damping: 24
-    }
-  },
-  hover: {
-    scale: 1.02,
-    backgroundColor: 'rgba(0, 0, 0, 0.04)',
-    transition: {
-      type: "spring",
-      stiffness: 400,
-      damping: 10
-    }
-  },
-  tap: {
-    scale: 0.98,
-    transition: {
-      type: "spring",
-      stiffness: 400,
-      damping: 10
-    }
-  }
-};
 
 // Create styled components with Framer Motion
 const CampaignsContainer = styled(motion.div)(({ theme }) => ({
@@ -138,7 +72,7 @@ const ListContainer = styled(motion.div)(({ theme }) => ({
   height: '100%'
 }));
 
-const DetailContainer = styled(motion.div)(({ theme }) => ({
+const DetailContainer = styled(Box)(({ theme }) => ({
   flexGrow: 1,
   height: '100%',
   display: 'flex',
@@ -156,19 +90,16 @@ const ListItemStyled = styled(MotionListItem)(({ theme, selected }) => ({
     'transparent',
 }));
 
-// Define TypeBadge props interface
-interface TypeBadgeProps {
-  type: 'email' | 'call' | 'meeting' | string;
-  label: string;
-  size?: 'small' | 'medium';
-  [key: string]: any;
-}
-
 // Create a motion Chip component
 const MotionChip = motion(Chip);
 
 // Custom TypeBadge component that uses our animated Lucide icons
-const TypeBadge: React.FC<TypeBadgeProps> = ({ type, label, size = 'small', ...props }) => {
+const TypeBadge: React.FC<{
+  type: 'email' | 'call' | 'meeting' | string;
+  label: string;
+  size?: 'small' | 'medium';
+  [key: string]: any;
+}> = ({ type, label, size = 'small', ...props }) => {
   const { mode } = useTheme();
   let color: string, IconComponent: React.ElementType;
 
@@ -419,10 +350,7 @@ const Documents = () => {
     }
   ];
 
-  // Get the selected campaign
-  const selectedCampaign: Campaign | null = campaigns.find(c => c.id === selectedCampaignId) || null;
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
@@ -435,6 +363,7 @@ const Documents = () => {
   };
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, campaignId: number) => {
+    event.stopPropagation();
     setMenuAnchorEl(event.currentTarget);
     setSelectedCampaignId(campaignId);
   };
@@ -449,21 +378,21 @@ const Documents = () => {
   };
 
   const handleEditClick = () => {
-    if (selectedCampaign) {
-      setEditedContent(selectedCampaign.content);
+    const campaign = campaigns.find(c => c.id === selectedCampaignId);
+    if (campaign) {
+      setEditedContent(campaign.content);
       setIsEditing(true);
     }
   };
 
   const handleSaveEdit = () => {
-    // In a real app, you would save the changes to the backend
-    // For now, we'll just update the local state
+    // In a real app, this would update the campaign in your database
+    // For this demo, we're just ending the edit mode
     setIsEditing(false);
   };
 
   const handleCancelEdit = () => {
     setIsEditing(false);
-    setEditedContent('');
   };
 
   // Filter campaigns based on tab and search query
@@ -728,21 +657,21 @@ const Documents = () => {
 
         {/* Right side with campaign details */}
         <DetailContainer>
-          {selectedCampaign ? (
+          {selectedCampaignId ? (
             <>
               {/* Detail header */}
               <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <Box>
                     <Typography variant="h5" fontWeight="bold" gutterBottom>
-                      {selectedCampaign.title}
+                      {campaigns.find(c => c.id === selectedCampaignId)?.title}
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
                       <TypeBadge
-                        label={getTypeInfo(selectedCampaign.type).label}
-                        type={selectedCampaign.type}
+                        label={getTypeInfo(campaigns.find(c => c.id === selectedCampaignId)?.type || '').label}
+                        type={campaigns.find(c => c.id === selectedCampaignId)?.type || ''}
                       />
-                      {selectedCampaign.aiGenerated && (
+                      {campaigns.find(c => c.id === selectedCampaignId)?.aiGenerated && (
                         <Chip
                           icon={<SmartToyIcon size={16} color={mode === 'dark' ? '#ffffff' : '#000000'} />}
                           label="AI Generated"
@@ -755,11 +684,11 @@ const Documents = () => {
                       )}
                     </Box>
                     <Typography variant="body2" color="text.secondary">
-                      {selectedCampaign.description}
+                      {campaigns.find(c => c.id === selectedCampaignId)?.description}
                     </Typography>
                   </Box>
                   <Box>
-                    <IconButton onClick={(e) => handleMenuClick(e, selectedCampaign.id)}>
+                    <IconButton onClick={(e) => handleMenuClick(e, selectedCampaignId)}>
                       <MoreVertIcon />
                     </IconButton>
                   </Box>
@@ -768,19 +697,19 @@ const Documents = () => {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
                   <Box>
                     <Typography variant="body2" color="text.secondary">
-                      Created on {new Date(selectedCampaign.createdAt).toLocaleDateString()}
+                      Created on {new Date(campaigns.find(c => c.id === selectedCampaignId)?.createdAt || '').toLocaleDateString()}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', gap: 1 }}>
                     <Chip
-                      label={selectedCampaign.clientGroup}
+                      label={campaigns.find(c => c.id === selectedCampaignId)?.clientGroup}
                       size="small"
                       sx={{
                         bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                       }}
                     />
                     <Chip
-                      label={selectedCampaign.solution}
+                      label={campaigns.find(c => c.id === selectedCampaignId)?.solution}
                       size="small"
                       sx={{
                         bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
@@ -841,7 +770,7 @@ const Documents = () => {
                   <>
                     <Box sx={{ mb: 2 }}>
                       <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                        {getTypeInfo(selectedCampaign.type).previewLabel}:
+                        {getTypeInfo(campaigns.find(c => c.id === selectedCampaignId)?.type || '').previewLabel}:
                       </Typography>
                       <Paper
                         variant="outlined"
@@ -858,7 +787,7 @@ const Documents = () => {
                             lineHeight: 1.6
                           }}
                         >
-                          {selectedCampaign.content}
+                          {campaigns.find(c => c.id === selectedCampaignId)?.content}
                         </Typography>
                       </Paper>
                     </Box>

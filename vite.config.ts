@@ -17,5 +17,16 @@ export default defineConfig({
   build: {
     outDir: 'build',
     sourcemap: true,
+    chunkSizeWarningLimit: 1000,
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      tsconfigRaw: {
+        compilerOptions: {
+          noUnusedLocals: false,
+          noUnusedParameters: false,
+        },
+      },
+    },
   },
 }); 

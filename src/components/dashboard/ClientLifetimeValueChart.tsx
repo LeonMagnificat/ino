@@ -19,7 +19,6 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -129,7 +128,7 @@ const ClientLifetimeValueChart: React.FC<ClientLifetimeValueChartProps> = ({ tit
   };
 
   const handleViewModeChange = (
-    event: React.MouseEvent<HTMLElement>,
+    _event: React.MouseEvent<HTMLElement>,
     newMode: 'value' | 'growth' | null,
   ) => {
     if (newMode !== null) {
@@ -215,7 +214,7 @@ const ClientLifetimeValueChart: React.FC<ClientLifetimeValueChartProps> = ({ tit
         cornerRadius: 8,
         titleFont: {
           size: 14,
-          weight: 'bold',
+          weight: 'bold' as const,
         },
         bodyFont: {
           size: 13,
@@ -286,7 +285,7 @@ const ClientLifetimeValueChart: React.FC<ClientLifetimeValueChartProps> = ({ tit
     },
     animation: {
       duration: 1000,
-      easing: 'easeOutQuart',
+      easing: 'easeOutQuart' as const,
     },
   };
 

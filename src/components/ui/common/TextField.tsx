@@ -1,19 +1,21 @@
 import React from 'react';
 import { TextField as MuiTextField, TextFieldProps as MuiTextFieldProps, styled } from '@mui/material';
 import { BORDER_RADIUS, TRANSITIONS } from './constants';
-import { useTheme } from '../../../context/ThemeContext';
 
 // Extended text field props
-export interface TextFieldProps extends MuiTextFieldProps {
+export interface TextFieldProps extends Omit<MuiTextFieldProps, 'rounded'> {
   rounded?: 'xs' | 'sm' | 'md' | 'lg';
 }
 
 // Styled text field component
-const StyledTextField = styled(MuiTextField)<TextFieldProps>(({ 
+const StyledTextField = styled(MuiTextField, {
+  shouldForwardProp: (prop) => 
+    prop !== 'rounded',
+})<TextFieldProps>(({ 
   theme, 
   rounded = 'md',
 }) => {
-  const { mode } = theme.palette;
+  const mode = theme.palette.mode;
   
   // Determine border radius
   let borderRadius;
@@ -69,15 +71,8 @@ const StyledTextField = styled(MuiTextField)<TextFieldProps>(({
 });
 
 // TextField component with enhanced props
-export const TextField: React.FC<TextFieldProps> = (props) => {
-  const { mode } = useTheme();
-  
-  return (
-    <StyledTextField
-      theme={{ palette: { mode } }}
-      {...props}
-    />
-  );
-};
+export const TextField = React.forwardRef<HTMLDivElement, TextFieldProps>((props, ref) => {
+  return <StyledTextField ref={ref} {...props} />;
+});
 
 export default TextField;

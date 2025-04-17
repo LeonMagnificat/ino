@@ -1,117 +1,92 @@
 import React from 'react';
-import { 
-  Dialog as MuiDialog, 
+import {
+  Dialog as MuiDialog,
   DialogProps as MuiDialogProps,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
+  DialogTitle as MuiDialogTitle,
+  DialogContent as MuiDialogContent,
+  DialogActions as MuiDialogActions,
+  DialogContentText as MuiDialogContentText,
   Typography,
-  Box,
+  IconButton,
   styled
 } from '@mui/material';
-import { BORDER_RADIUS, TRANSITIONS, SHADOWS } from './constants';
-import { useTheme } from '../../../context/ThemeContext';
-import { CloseIcon } from '../../icons/FallbackIcons';
+import CloseIcon from '@mui/icons-material/Close';
+import { BORDER_RADIUS, TRANSITIONS } from './constants';
 
 // Extended dialog props
 export interface DialogProps extends MuiDialogProps {
-  title?: React.ReactNode;
-  actions?: React.ReactNode;
-  onClose?: () => void;
-  maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false;
   fullWidth?: boolean;
+  disableBackdropClick?: boolean;
+  disableEscapeKeyDown?: boolean;
+}
+
+// Custom dialog title component props
+export interface DialogTitleProps {
+  id?: string;
+  children?: React.ReactNode;
+  onClose?: () => void;
 }
 
 // Styled dialog component
-const StyledDialog = styled(MuiDialog)(({ theme }) => {
-  const mode = theme.palette.mode;
+const StyledDialog = styled(MuiDialog)(({ theme }) => ({
+  '& .MuiDialogContent-root': {
+    padding: theme.spacing(3),
+  },
+  '& .MuiDialogActions-root': {
+    padding: theme.spacing(2, 3),
+    borderTop: `1px solid ${theme.palette.divider}`,
+  },
+  '& .MuiPaper-root': {
+    borderRadius: BORDER_RADIUS.md,
+    transition: TRANSITIONS.medium,
+    backgroundImage: 'none',
+  },
+}));
 
-  return {
-    '& .MuiDialog-paper': {
-      borderRadius: BORDER_RADIUS.md,
-      boxShadow: mode === 'dark' ? SHADOWS.lg.dark : SHADOWS.lg.light,
-      backgroundImage: 'none',
-      overflow: 'hidden',
-    },
-  };
-});
-
-// Styled dialog title
-const StyledDialogTitle = styled(DialogTitle)(({ theme }) => ({
-  padding: '16px 24px',
+// Styled dialog title component
+const StyledDialogTitle = styled(MuiDialogTitle)(({ theme }) => ({
+  padding: theme.spacing(2, 3),
   display: 'flex',
-  justifyContent: 'space-between',
   alignItems: 'center',
+  justifyContent: 'space-between',
   borderBottom: `1px solid ${theme.palette.divider}`,
 }));
 
-// Styled dialog content
-const StyledDialogContent = styled(DialogContent)(() => ({
-  padding: '24px',
-}));
-
-// Styled dialog actions
-const StyledDialogActions = styled(DialogActions)(({ theme }) => ({
-  padding: '16px 24px',
-  borderTop: `1px solid ${theme.palette.divider}`,
-}));
-
-// Dialog component with enhanced props
-export const Dialog: React.FC<DialogProps> = ({
-  children,
-  title,
-  actions,
-  onClose,
-  maxWidth = 'sm',
-  fullWidth = true,
-  ...props
-}) => {
-  // We don't need to use mode directly in this component
-  // The theme will be passed down through the MUI ThemeProvider
-
+// Custom dialog title with close button
+export const DialogTitle = ({ children, onClose, ...props }: DialogTitleProps) => {
   return (
-    <StyledDialog
-      maxWidth={maxWidth}
-      fullWidth={fullWidth}
-      onClose={onClose}
-      {...props}
-    >
-      {title && (
-        <StyledDialogTitle>
-          {typeof title === 'string' ? (
-            <Typography variant="h6" fontWeight="bold">
-              {title}
-            </Typography>
-          ) : (
-            title
-          )}
-          {onClose && (
-            <IconButton
-              aria-label="close"
-              onClick={onClose}
-              sx={{
-                transition: TRANSITIONS.fast,
-                '&:hover': {
-                  transform: 'scale(1.1)',
-                },
-              }}
-            >
-              <CloseIcon size={20} color="inherit" />
-            </IconButton>
-          )}
-        </StyledDialogTitle>
-      )}
-      <StyledDialogContent>
+    <StyledDialogTitle {...props}>
+      <Typography variant="h6" component="div">
         {children}
-      </StyledDialogContent>
-      {actions && (
-        <StyledDialogActions>
-          {actions}
-        </StyledDialogActions>
+      </Typography>
+      {onClose && (
+        <IconButton
+          aria-label="close"
+          onClick={onClose}
+          size="small"
+          sx={{
+            marginLeft: 2,
+            color: 'text.secondary',
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
       )}
-    </StyledDialog>
+    </StyledDialogTitle>
   );
 };
 
-export default Dialog;
+// Re-export styled MUI dialog components
+export const Dialog = StyledDialog;
+export const DialogContent = MuiDialogContent;
+export const DialogActions = MuiDialogActions;
+export const DialogContentText = MuiDialogContentText;
+
+export default {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+};

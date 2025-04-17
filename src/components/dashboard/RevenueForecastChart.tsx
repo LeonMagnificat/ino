@@ -12,15 +12,12 @@ import {
   Grid,
   Chip,
   Button,
-  Divider,
   LinearProgress,
 } from '@mui/material';
 import { useTheme } from '../../context/ThemeContext';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import { Line } from 'react-chartjs-2';
@@ -93,7 +90,7 @@ const OpportunityCard = styled(Box)(({ theme }) => ({
   },
 }));
 
-const StyledChip = styled(Chip)(({ theme }) => ({
+const StyledChip = styled(Chip)(() => ({
   borderRadius: '6px',
   fontWeight: 600,
   fontSize: '0.75rem',
@@ -253,7 +250,7 @@ const RevenueForecastChart: React.FC<RevenueForecastChartProps> = ({ title = "Re
         cornerRadius: 8,
         titleFont: {
           size: 14,
-          weight: 'bold',
+          weight: 'bold' as const,
         },
         bodyFont: {
           size: 13,
@@ -324,7 +321,7 @@ const RevenueForecastChart: React.FC<RevenueForecastChartProps> = ({ title = "Re
     },
     animation: {
       duration: 1000,
-      easing: 'easeOutQuart',
+      easing: 'easeOutQuart' as const,
     },
   };
 

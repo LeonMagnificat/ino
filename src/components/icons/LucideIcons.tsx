@@ -71,7 +71,7 @@ const animations = {
 };
 
 // Create a wrapper component for Lucide icons with Framer Motion
-const createAnimatedIcon = (Icon: React.ElementType, defaultAnimation: keyof typeof animations = 'hover') => {
+const createAnimatedIcon = (Icon: React.ElementType) => {
   return ({ size = 24, color = 'currentColor', strokeWidth = 2, className = '', onClick }: AnimatedIconProps) => {
     return (
       <motion.div

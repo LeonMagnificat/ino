@@ -18,12 +18,9 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import BarChartIcon from '@mui/icons-material/BarChart';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -103,46 +100,6 @@ const SectionHeader = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(2),
 }));
 
-const ViewAllLink = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  color: theme.palette.primary.main,
-  cursor: 'pointer',
-  fontWeight: 500,
-  transition: 'all 0.2s ease-in-out',
-  '&:hover': {
-    color: theme.palette.primary.dark,
-    transform: 'translateX(2px)',
-  },
-}));
-
-// Create a styled component for the ViewAllLink that uses react-router-dom
-const RouterViewAllLink = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  color: theme.palette.primary.main,
-  cursor: 'pointer',
-  fontWeight: 500,
-  transition: 'all 0.2s ease-in-out',
-  '&:hover': {
-    color: theme.palette.primary.dark,
-    transform: 'translateX(2px)',
-  },
-}));
-
-// Create a styled button for navigating to advanced analytics
-const AnalyticsButton = styled(Button)(({ theme }) => ({
-  textTransform: 'none',
-  fontWeight: 600,
-  borderRadius: '8px',
-  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
-  transition: 'all 0.2s ease-in-out',
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: theme.palette.mode === 'dark' ? '0 4px 12px rgba(0, 0, 0, 0.4)' : '0 4px 12px rgba(0, 0, 0, 0.15)',
-  },
-}));
-
 const ChartContainer = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
   borderRadius: '3px',
@@ -184,7 +141,7 @@ const Dashboard: React.FC = () => {
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'quarter' | 'year'>('quarter');
   const theme = useMuiTheme();
   const { mode } = useTheme();
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
 
   const handleFilterChange = (filter: 'all' | 'below' | 'above') => {
     setActiveFilter(filter);
@@ -254,7 +211,7 @@ const Dashboard: React.FC = () => {
         cornerRadius: 8,
         titleFont: {
           size: 14,
-          weight: 'bold',
+          weight: 'bold' as const,
         },
         bodyFont: {
           size: 13,
@@ -281,7 +238,7 @@ const Dashboard: React.FC = () => {
           color: mode === 'dark' ? '#a0a0a0' : '#5f6368',
           font: {
             size: 12,
-            weight: '500',
+            weight: 500 as const,
           },
         },
       },
@@ -315,7 +272,7 @@ const Dashboard: React.FC = () => {
     },
     animation: {
       duration: 1000,
-      easing: 'easeOutQuart',
+      easing: 'easeOutQuart' as const,
     },
   };
 

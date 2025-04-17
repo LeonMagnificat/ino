@@ -43,6 +43,23 @@ interface Campaign {
   };
 }
 
+// Define the RevenueForecastSummary interface at the top with other interfaces
+interface RevenueForecastSummary {
+  totalActual: number;
+  totalForecast: number;
+  totalRevenue: number;
+  pipelineValue: number;
+  weightedPipelineValue: number;
+  pipelineToForecastRatio: number;
+}
+
+// Add this interface at the top with other interfaces
+interface RevenueForecastData {
+  actual: (number | null)[];
+  forecast: (number | null)[];
+  benchmark?: (number | null)[];
+}
+
 // Sample data for accounts (this would normally come from your backend)
 const sampleAccounts: Account[] = [
   {
@@ -595,9 +612,9 @@ export const getRevenueForecastData = () => {
 
   // Calculate forecast metrics
   const calculateMetrics = () => {
-    const actualSum = forecastData.actual.reduce((sum, val) => sum + (val || 0), 0);
-    const forecastSum = forecastData.forecast.reduce((sum, val) => sum + (val || 0), 0);
-    const totalRevenue = actualSum + forecastSum;
+    const actualSum = forecastData.actual.reduce((sum, val) => (sum || 0) + (val || 0), 0);
+    const forecastSum = forecastData.forecast.reduce((sum, val) => (sum || 0) + (val || 0), 0);
+    const totalRevenue = (actualSum || 0) + (forecastSum || 0);
     
     const lastMonthIndex = forecastData.actual.findIndex(val => val === null) - 1;
     const lastMonthValue = forecastData.actual[lastMonthIndex] || 0;
@@ -610,14 +627,40 @@ export const getRevenueForecastData = () => {
       totalRevenue,
       monthOverMonthChange,
       weightedPipeline,
-      pipelineToForecastRatio: (weightedPipeline / forecastSum) * 100,
+      pipelineToForecastRatio: ((weightedPipeline / (forecastSum || 1)) * 100) || 0,
     };
+  };
+
+  // Add these functions inside getRevenueForecastData
+  const getPipelineValue = () => {
+    return opportunities.reduce((sum, opp) => sum + opp.value, 0);
+  };
+  
+  const getWeightedPipelineValue = () => {
+    return opportunities.reduce((sum, opp) => sum + (opp.value * opp.probability / 100), 0);
   };
 
   return {
     forecastData,
     months,
     opportunities,
-    metrics: calculateMetrics()
+    metrics: calculateMetrics(),
+    getForecastSummary: (data: RevenueForecastData): RevenueForecastSummary => {
+      const actualSum = data.actual.reduce((sum: number, val: number | null) => (sum || 0) + (val || 0), 0);
+      const forecastSum = data.forecast.reduce((sum: number, val: number | null) => (sum || 0) + (val || 0), 0);
+      const totalRevenue = (actualSum || 0) + (forecastSum || 0);
+      
+      const pipeline = getPipelineValue();
+      const weightedPipeline = getWeightedPipelineValue();
+      
+      return {
+        totalActual: actualSum || 0,
+        totalForecast: forecastSum || 0,
+        totalRevenue: totalRevenue,
+        pipelineValue: pipeline,
+        weightedPipelineValue: weightedPipeline,
+        pipelineToForecastRatio: ((weightedPipeline / (forecastSum || 1)) * 100) || 0,
+      };
+    }
   };
 };

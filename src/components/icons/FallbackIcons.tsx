@@ -1,14 +1,14 @@
 import React from 'react';
 
 // Define the base icon props interface
-interface IconProps {
+export interface IconProps {
   size?: number;
   color?: string;
   strokeWidth?: number;
   className?: string;
   style?: React.CSSProperties;
-  animate?: boolean;
-  animationVariant?: 'pulse' | 'bounce' | 'spin';
+  ref?: React.Ref<SVGSVGElement>;
+  [key: string]: any;
 }
 
 // Create a higher-order component for icons without animations

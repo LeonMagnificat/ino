@@ -1,6 +1,6 @@
 import React from 'react';
 import { styled } from '@mui/material/styles';
-import { SvgIcon, SvgIconProps } from '@mui/material';
+import { SvgIcon } from '@mui/material';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import VideocamIcon from '@mui/icons-material/Videocam';
@@ -20,10 +20,32 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 
-// Define props interface for our animated icons
-interface AnimatedIconProps extends SvgIconProps {
+// Define animations for the icons
+const animations = {
+  hover: {
+    y: -2,
+  },
+  pulse: {
+    scale: [1, 1.1, 1],
+  },
+  spin: {
+    rotate: 360,
+  },
+  bounce: {
+    y: [0, -5, 0],
+  }
+};
+
+// Extended props for animated icons
+interface AnimatedIconProps {
   size?: number;
   color?: string;
+  strokeWidth?: number;
+  className?: string;
+  style?: React.CSSProperties;
+  animate?: boolean;
+  animationVariant?: keyof typeof animations;
+  [key: string]: any;
 }
 
 // Create a styled version of each icon with pulse animation
@@ -37,7 +59,7 @@ const createAnimatedIcon = (Icon: React.ElementType) => {
       }}
       {...props}
     />
-  ))(({ theme }) => ({
+  ))(() => ({
     '@keyframes pulse': {
       '0%': {
         transform: 'scale(1)',

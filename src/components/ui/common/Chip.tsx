@@ -1,7 +1,6 @@
 import React from 'react';
 import { Chip as MuiChip, ChipProps as MuiChipProps, styled } from '@mui/material';
 import { BORDER_RADIUS, TRANSITIONS, ANIMATIONS } from './constants';
-import { useTheme } from '../../../context/ThemeContext';
 
 // Extended chip props
 export interface ChipProps extends MuiChipProps {
@@ -11,14 +10,17 @@ export interface ChipProps extends MuiChipProps {
 }
 
 // Styled chip component
-const StyledChip = styled(MuiChip)<ChipProps>(({ 
+const StyledChip = styled(MuiChip, {
+  shouldForwardProp: (prop) => 
+    !['rounded', 'animation', 'customColor'].includes(prop as string),
+})<ChipProps>(({ 
   theme, 
   rounded = 'pill', 
   animation = 'scale',
   customColor,
   variant = 'filled',
 }) => {
-  const { mode } = theme.palette;
+  const mode = theme.palette.mode;
   
   // Determine border radius
   let borderRadius;
@@ -70,15 +72,8 @@ const StyledChip = styled(MuiChip)<ChipProps>(({
 });
 
 // Chip component with enhanced props
-export const Chip: React.FC<ChipProps> = (props) => {
-  const { mode } = useTheme();
-  
-  return (
-    <StyledChip
-      theme={{ palette: { mode } }}
-      {...props}
-    />
-  );
-};
+export const Chip = React.forwardRef<HTMLDivElement, ChipProps>((props, ref) => {
+  return <StyledChip ref={ref} {...props} />;
+});
 
 export default Chip;

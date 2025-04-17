@@ -1,7 +1,6 @@
 import React from 'react';
-import { Box, BoxProps, styled, keyframes } from '@mui/material';
+import { Box, BoxProps, styled, keyframes, Theme } from '@mui/material';
 import { BORDER_RADIUS } from './constants';
-import { useTheme } from '../../../context/ThemeContext';
 
 // Define the pulse animation
 const pulseAnimation = keyframes`
@@ -28,14 +27,17 @@ export interface BadgeProps extends BoxProps {
 }
 
 // Styled badge component
-const StyledBadge = styled(Box)<BadgeProps>(({ 
+const StyledBadge = styled(Box, {
+  shouldForwardProp: (prop) => 
+    !['color', 'size', 'pulse', 'dot'].includes(prop as string),
+})<BadgeProps>(({ 
   theme, 
   color = 'error',
   size = 'sm',
   pulse = false,
   dot = true,
 }) => {
-  const { mode } = theme.palette;
+  const mode = theme.palette.mode;
   
   // Determine size
   let width, height;
@@ -84,15 +86,8 @@ const StyledBadge = styled(Box)<BadgeProps>(({
 });
 
 // Badge component with enhanced props
-export const Badge: React.FC<BadgeProps> = (props) => {
-  const { mode } = useTheme();
-  
-  return (
-    <StyledBadge
-      theme={{ palette: { mode } }}
-      {...props}
-    />
-  );
-};
+export const Badge = React.forwardRef<HTMLDivElement, BadgeProps>((props, ref) => {
+  return <StyledBadge ref={ref} {...props} />;
+});
 
 export default Badge;

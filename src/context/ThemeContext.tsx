@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { ThemeProvider as MUIThemeProvider, createTheme, responsiveFontSizes, PaletteMode } from '@mui/material/styles';
+import { ThemeProvider as MUIThemeProvider, createTheme, responsiveFontSizes } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+
+type PaletteMode = 'light' | 'dark';
 
 type ThemeContextType = {
   mode: PaletteMode;
@@ -35,7 +37,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Fonction pour basculer entre les modes
   const toggleColorMode = () => {
-    setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
+    setMode((prevMode: PaletteMode) => (prevMode === 'light' ? 'dark' : 'light'));
   };
 
   // Create theme with improved color palettes for better contrast and professional look

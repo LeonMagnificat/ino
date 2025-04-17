@@ -7,7 +7,6 @@ import {
   styled 
 } from '@mui/material';
 import { BORDER_RADIUS, TRANSITIONS } from './constants';
-import { useTheme } from '../../../context/ThemeContext';
 
 // Extended list props
 export interface ListProps extends MuiListProps {
@@ -25,8 +24,10 @@ export interface ListItemProps extends MuiListItemProps {
 }
 
 // Styled list component
-const StyledList = styled(MuiList)<ListProps>(({ 
-  theme, 
+const StyledList = styled(MuiList, {
+  shouldForwardProp: (prop) => 
+    !['rounded', 'spacing'].includes(prop as string),
+})<ListProps>(({ 
   rounded = 'md',
   spacing = 'none',
 }) => {
@@ -66,7 +67,10 @@ const StyledList = styled(MuiList)<ListProps>(({
 });
 
 // Styled list item component
-const StyledListItem = styled(MuiListItem)<ListItemProps>(({ 
+const StyledListItem = styled(MuiListItem, {
+  shouldForwardProp: (prop) => 
+    !['rounded', 'selected', 'hoverable', 'interactive', 'divider'].includes(prop as string),
+})<ListItemProps>(({ 
   theme, 
   rounded = 'md',
   selected = false,
@@ -74,7 +78,7 @@ const StyledListItem = styled(MuiListItem)<ListItemProps>(({
   interactive = false,
   divider = false,
 }) => {
-  const { mode } = theme.palette;
+  const mode = theme.palette.mode;
   
   // Determine border radius
   let borderRadius;
@@ -120,27 +124,13 @@ const StyledListItem = styled(MuiListItem)<ListItemProps>(({
 });
 
 // List component with enhanced props
-export const List: React.FC<ListProps> = (props) => {
-  const { mode } = useTheme();
-  
-  return (
-    <StyledList
-      theme={{ palette: { mode } }}
-      {...props}
-    />
-  );
-};
+export const List = React.forwardRef<HTMLUListElement, ListProps>((props, ref) => {
+  return <StyledList ref={ref} {...props} />;
+});
 
 // ListItem component with enhanced props
-export const ListItem: React.FC<ListItemProps> = (props) => {
-  const { mode } = useTheme();
-  
-  return (
-    <StyledListItem
-      theme={{ palette: { mode } }}
-      {...props}
-    />
-  );
-};
+export const ListItem = React.forwardRef<HTMLLIElement, ListItemProps>((props, ref) => {
+  return <StyledListItem ref={ref} {...props} />;
+});
 
 export default { List, ListItem };

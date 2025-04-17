@@ -19,7 +19,6 @@ import { useTheme } from '../../context/ThemeContext';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import { Doughnut, Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -101,20 +100,6 @@ const MetricCard = styled(Box)(({ theme }) => ({
   height: '100%',
 }));
 
-const ConversionItem = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'space-between',
-  padding: theme.spacing(1.5, 2),
-  borderRadius: '8px',
-  marginBottom: theme.spacing(1.5),
-  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
-  transition: 'all 0.2s ease-in-out',
-  '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
-    transform: 'translateX(4px)',
-  },
-}));
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -186,7 +171,7 @@ const ClientFunnelChartNew: React.FC<ClientFunnelChartProps> = ({ title = "Clien
     setChartMenuAnchorEl(null);
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
@@ -293,7 +278,7 @@ const ClientFunnelChartNew: React.FC<ClientFunnelChartProps> = ({ title = "Clien
         cornerRadius: 8,
         titleFont: {
           size: 14,
-          weight: 'bold',
+          weight: 'bold' as const,
         },
         bodyFont: {
           size: 13,
@@ -319,7 +304,7 @@ const ClientFunnelChartNew: React.FC<ClientFunnelChartProps> = ({ title = "Clien
         cornerRadius: 8,
         titleFont: {
           size: 14,
-          weight: 'bold',
+          weight: 'bold' as const,
         },
         bodyFont: {
           size: 13,
@@ -356,7 +341,7 @@ const ClientFunnelChartNew: React.FC<ClientFunnelChartProps> = ({ title = "Clien
     },
     animation: {
       duration: 1000,
-      easing: 'easeOutQuart',
+      easing: 'easeOutQuart' as const,
     },
   };
 

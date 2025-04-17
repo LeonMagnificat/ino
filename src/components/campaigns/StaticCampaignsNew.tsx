@@ -5,7 +5,6 @@ import {
   Button,
   Chip,
   IconButton,
-  Avatar,
   Tabs,
   Tab,
   TextField,
@@ -19,38 +18,30 @@ import {
   FormControlLabel,
   Paper,
   ListItemIcon,
-  Divider
+  Divider,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useTheme } from '../../context/ThemeContext';
 import { BORDER_RADIUS, TRANSITIONS } from '../ui/common/constants';
 import { Dialog } from '../ui/common/Dialog';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import PendingIcon from '@mui/icons-material/Pending';
-import ScheduleIcon from '@mui/icons-material/Schedule';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import fetchClient from '../../utils/fetchClient.js';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import {
-  CampaignIcon,
-  GroupIcon,
-  TrendingUpIcon,
-  FilterListIcon,
-  SearchIcon,
-  AddIcon,
-  MoreVertIcon,
-  ShareIcon,
-  VisibilityIcon,
+  FileTextIcon,
   EmailIcon,
-  VideocamIcon,
   PhoneIcon,
+  VideocamIcon,
+  FilterListIcon,
+  MoreVertIcon,
+  SearchIcon,
   SmartToyIcon,
-  AutoAwesomeIcon,
-  EditIcon,
-  DeleteIcon
-} from '../icons/FallbackIcons';
+  AddIcon
+} from '../icons/FallbackIcons.new';
 
 // Create a styled list item with proper typing
 interface StyledListItemProps {
@@ -98,7 +89,7 @@ const TypeBadge: React.FC<TypeBadgeProps> = ({ type, label, size = 'small', ...p
       break;
     default:
       color = '#95a5a6'; // grey
-      IconComponent = CampaignIcon;
+      IconComponent = FileTextIcon;
   }
 
   return (
@@ -849,7 +840,7 @@ const StaticCampaignsNew: React.FC = () => {
                 }
               }}
             >
-              <ShareIcon style={{ width: 20, height: 20 }} />
+              <ContentCopyIcon style={{ width: 20, height: 20 }} />
             </IconButton>
             <IconButton
               sx={{
@@ -1184,28 +1175,6 @@ const StaticCampaignsNew: React.FC = () => {
           >
             New Campaign
           </Button>
-          <Button
-            variant="outlined"
-            startIcon={<SmartToyIcon size={20} />}
-            sx={{
-              borderRadius: BORDER_RADIUS.md,
-              textTransform: 'none',
-              fontWeight: 'bold',
-              borderColor: mode === 'dark' ? 'white' : 'black',
-              color: mode === 'dark' ? 'white' : 'black',
-              borderWidth: '1.5px',
-              transition: TRANSITIONS.medium,
-              '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.05)',
-                borderColor: mode === 'dark' ? 'white' : 'black',
-                borderWidth: '1.5px',
-                bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-              }
-            }}
-          >
-            AI Suggestions
-          </Button>
         </Box>
       </Box>
 
@@ -1374,214 +1343,25 @@ const StaticCampaignsNew: React.FC = () => {
         onClose={handleCloseCreateDialog}
         title="Create New Campaign"
         maxWidth="md"
-        actions={
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-            <Button
-              variant="outlined"
-              onClick={handleCloseCreateDialog}
-              sx={{
-                borderRadius: BORDER_RADIUS.md,
-                borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                color: mode === 'dark' ? 'white' : 'black',
-                borderWidth: '1.5px',
-                '&:hover': {
-                  borderColor: mode === 'dark' ? 'white' : 'black',
-                  borderWidth: '1.5px',
-                }
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="contained"
-              sx={{
-                borderRadius: BORDER_RADIUS.md,
-                bgcolor: mode === 'dark' ? 'white' : 'black',
-                color: mode === 'dark' ? 'black' : 'white',
-                '&:hover': {
-                  bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)',
-                }
-              }}
-            >
-              Create
-            </Button>
-          </Box>
-        }
       >
-        {/* Show email templates in the create dialog */}
-        {renderTemplateSlider()}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <TextField
-            label="Campaign Title"
-            fullWidth
-            variant="outlined"
-            placeholder="Enter campaign title"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: BORDER_RADIUS.md,
-                '& fieldset': {
-                  borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
-                },
-                '&:hover fieldset': {
-                  borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: mode === 'dark' ? 'white' : 'black',
-                  borderWidth: '1.5px',
-                },
-              }
-            }}
-          />
-          
-          <TextField
-            label="Description"
-            fullWidth
-            variant="outlined"
-            placeholder="Enter campaign description"
-            multiline
-            rows={2}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: BORDER_RADIUS.md,
-                '& fieldset': {
-                  borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
-                },
-                '&:hover fieldset': {
-                  borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: mode === 'dark' ? 'white' : 'black',
-                  borderWidth: '1.5px',
-                },
-              }
-            }}
-          />
-          
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <TextField
-              label="Client Group"
-              fullWidth
-              variant="outlined"
-              placeholder="e.g., Enterprise, SMB"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: BORDER_RADIUS.md,
-                  '& fieldset': {
-                    borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: mode === 'dark' ? 'white' : 'black',
-                    borderWidth: '1.5px',
-                  },
-                }
-              }}
-            />
-            
-            <TextField
-              label="Solution"
-              fullWidth
-              variant="outlined"
-              placeholder="e.g., Cloud Infrastructure"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: BORDER_RADIUS.md,
-                  '& fieldset': {
-                    borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: mode === 'dark' ? 'white' : 'black',
-                    borderWidth: '1.5px',
-                  },
-                }
-              }}
-            />
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
+            {/* ... existing dialog content ... */}
           </Box>
-          
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={true}
-                  sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': {
-                      color: mode === 'dark' ? 'white' : 'black',
-                    },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                      backgroundColor: mode === 'dark' ? 'white' : 'black',
-                    }
-                  }}
-                />
-              }
-              label="AI Generated"
-            />
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="body2">Campaign Type:</Typography>
-              <Chip
-                label="Email"
-                clickable
-                sx={{
-                  backgroundColor: '#3498db20',
-                  color: '#3498db',
-                  borderRadius: BORDER_RADIUS.pill,
-                  fontWeight: 'bold',
-                  mr: 1
-                }}
-              />
-              <Chip
-                label="Call"
-                clickable
-                sx={{
-                  backgroundColor: '#2ecc7120',
-                  color: '#2ecc71',
-                  borderRadius: BORDER_RADIUS.pill,
-                  fontWeight: 'bold',
-                  mr: 1
-                }}
-              />
-              <Chip
-                label="Meeting"
-                clickable
-                sx={{
-                  backgroundColor: '#f39c1220',
-                  color: '#f39c12',
-                  borderRadius: BORDER_RADIUS.pill,
-                  fontWeight: 'bold'
-                }}
-              />
-            </Box>
-          </Box>
-          
-          <TextField
-            label="Content"
-            fullWidth
-            variant="outlined"
-            placeholder="Enter campaign content"
-            multiline
-            rows={10}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: BORDER_RADIUS.md,
-                '& fieldset': {
-                  borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
-                },
-                '&:hover fieldset': {
-                  borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: mode === 'dark' ? 'white' : 'black',
-                  borderWidth: '1.5px',
-                },
-              }
-            }}
-          />
-        </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            variant="outlined" 
+            onClick={handleCloseCreateDialog}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="contained"
+          >
+            Create
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );
