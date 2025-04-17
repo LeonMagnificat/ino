@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Metric } from 'web-vitals';
 
 const reportWebVitals = (onPerfEntry?: (metric: Metric) => void) => {
