@@ -2400,7 +2400,7 @@ const Accounts: React.FC = () => {
 
       // Call the webhook API
       const response = await fetchClient.post(
-        'https://primary-production-a43c.up.railway.app/webhook/8f0792c8-d816-459d-803d-c69a6d3ca4fa',
+        'https://primary-production-a43c.up.railway.app/webhook-test/8f0792c8-d816-459d-803d-c69a6d3ca4fa',
         analysisData,
         {
           headers: {
@@ -2519,7 +2519,7 @@ const Accounts: React.FC = () => {
       
       // Call the webhook API using POST method
       const response = await fetchClient.post(
-        `https://primary-production-a43c.up.railway.app/webhook/8f0792c8-d816-459d-803d-c69a6d3ca4fa`,
+        `https://primary-production-a43c.up.railway.app/webhook-test/8f0792c8-d816-459d-803d-c69a6d3ca4fa`,
         {
           user_id: userId,
           organization_type: organizationType,
@@ -3851,7 +3851,7 @@ const Accounts: React.FC = () => {
     try {
       // Make POST request to the webhook endpoint
       const response = await fetchClient.post(
-        'https://primary-production-a43c.up.railway.app/webhook/de9fa1c6-965e-4b51-aeb0-d8d919bbe46b',
+        'https://primary-production-a43c.up.railway.app/webhook-test/de9fa1c6-965e-4b51-aeb0-d8d919bbe46b',
         {
           id: selectedAccount.id,
           account_name: selectedAccount.account_name,
