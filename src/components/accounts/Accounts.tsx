@@ -1778,24 +1778,18 @@ const Accounts: React.FC = () => {
   const validateAccountForm = (): boolean => {
     const errors: AccountFormErrors = {};
     
-    // Required fields validation
+    // Required fields validation - only these four fields are required
+    if (!accountForm.accountName.trim()) {
+      errors.accountName = 'Account Name is required';
+    }
     if (!accountForm.billingCountry.trim()) {
       errors.billingCountry = 'Billing Country is required';
     }
     if (!accountForm.shippingCity.trim()) {
       errors.shippingCity = 'Shipping City is required';
     }
-    if (!accountForm.accountName.trim()) {
-      errors.accountName = 'Account Name is required';
-    }
     if (!accountForm.organisationType.trim()) {
       errors.organisationType = 'Organisation Type is required';
-    }
-    if (!accountForm.productName.trim()) {
-      errors.productName = 'Product Name is required';
-    }
-    if (!accountForm.riskAssets.trim()) {
-      errors.riskAssets = 'Risk Assets is required';
     }
 
     setAccountFormErrors(errors);
@@ -2389,19 +2383,10 @@ const Accounts: React.FC = () => {
         accountId: accountToAnalyze.id
       });
 
-      // Prepare the data for the webhook
-      const analysisData = {
-        id: accountToAnalyze.id,
-        account_name: accountToAnalyze.account_name,
-        location: accountToAnalyze.location,
-        organisation_type: accountToAnalyze.organisation_type,
-        user_id: userId
-      };
-
-      // Call the webhook API
+      // Call the new API endpoint: /analyze/:accountid
       const response = await fetchClient.post(
-        'https://primary-production-a43c.up.railway.app/webhook/8f0792c8-d816-459d-803d-c69a6d3ca4fa',
-        analysisData,
+        `/accounts/analyze/${accountToAnalyze.id}`,
+        {}, // No body required
         {
           headers: {
             'Content-Type': 'application/json',
@@ -2470,7 +2455,6 @@ const Accounts: React.FC = () => {
 
   // Add analyze by type function
   const handleAnalyzeByType = async (organizationType: string) => {
-    // Example: If organizationType is "Custody & Fund Accounting", we'll only process accounts with that exact type
     setNotification({
       open: true,
       severity: 'info',
@@ -2481,19 +2465,14 @@ const Accounts: React.FC = () => {
     try {
       // Get user ID once
       const userId = await fetchUserProfile();
-      
+      const authToken = getAuthToken();
       // Get ONLY accounts that exactly match the organization type (exact string match)
       const selectedAccounts = accounts.filter(account => 
-        account.organisation_type === organizationType // This ensures exact match
-      ).map(account => ({
-        id: String(account.id),
-        account_name: account.account_name || '',
-        location: account.location || '',
-        organisation_type: account.organisation_type || '',
-        user_id: userId
-      }));
+        account.organisation_type === organizationType
+      );
+      const accountIds = selectedAccounts.map(account => String(account.id));
       
-      if (selectedAccounts.length === 0) {
+      if (accountIds.length === 0) {
         setNotification({
           open: true,
           severity: 'warning',
@@ -2503,27 +2482,11 @@ const Accounts: React.FC = () => {
         return;
       }
       
-      console.log(`Found ${selectedAccounts.length} accounts with organization type "${organizationType}"`);
-      console.log('Selected accounts for analysis:', selectedAccounts);
-      
-      // Log token for debugging
-      const authToken = getAuthToken();
-      console.log('Using auth token:', authToken.substring(0, 15) + '...');
-      
-      // Extract just the account names and IDs for a more efficient GET request
-      const accountData = selectedAccounts.map(account => ({
-        id: account.id,
-        account_name: account.account_name
-      }));
-      console.log(`Sending ${accountData.length} accounts with organization type "${organizationType}" for analysis:`, accountData);
-      
-      // Call the webhook API using POST method
+      // Call the new API endpoint: /analyze-multiple
       const response = await fetchClient.post(
-        `https://primary-production-a43c.up.railway.app/webhook/8f0792c8-d816-459d-803d-c69a6d3ca4fa`,
+        '/accounts/analyze-multiple',
         {
-          user_id: userId,
-          organization_type: organizationType,
-          accounts: selectedAccounts
+          account_ids: accountIds
         },
         {
           headers: {
@@ -2533,8 +2496,6 @@ const Accounts: React.FC = () => {
         }
       );
       
-      console.log('Analysis API response:', response);
-      
       if (response.data && response.status >= 200 && response.status < 300) {
         setNotification({
           open: true,
@@ -2542,23 +2503,37 @@ const Accounts: React.FC = () => {
           message: `Analysis complete for all ${organizationType} accounts`,
           accountId: null
         });
-        
-        // Update the accounts data with new insights if provided in the response
-        if (response.data.accounts) {
-          // Handle the updated accounts data from the response
-          // This would depend on your specific implementation
-        }
+        // Optionally, start polling for all these accounts
+        pollCompanyInsights(
+          accountIds,
+          (accountId) => {
+            setAccounts(currentAccounts => 
+              currentAccounts.map(account => 
+                account.id === accountId 
+                  ? { ...account, updates: 'completed' as const } 
+                  : account
+              )
+            );
+          },
+          (accountId) => {
+            setAccounts(currentAccounts => 
+              currentAccounts.map(account => 
+                account.id === accountId 
+                  ? { ...account, updates: 'failed' as const } 
+                  : account
+              )
+            );
+          }
+        );
       } else {
         throw new Error(response.data?.message || 'Unknown error occurred');
       }
     } catch (error: any) {
       console.error('Error during analysis:', error);
       let errorMessage = 'Unknown error occurred';
-      
       if (error.response) {
         if (error.response.status === 401) {
           errorMessage = 'Authentication failed. Please log out and log in again.';
-          console.error('Authentication error. Token:', getAuthToken().substring(0, 15) + '...');
         } else if (error.response.data && error.response.data.message) {
           errorMessage = error.response.data.message;
         } else {
@@ -2567,7 +2542,6 @@ const Accounts: React.FC = () => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
       setNotification({
         open: true,
         severity: 'error',
@@ -4830,19 +4804,6 @@ const Accounts: React.FC = () => {
                   <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
-                      label="Product Name"
-                      name="productName"
-                      value={accountForm.productName}
-                      onChange={handleAccountFormChange}
-                      error={!!accountFormErrors.productName}
-                      helperText={accountFormErrors.productName}
-                      required
-                    />
-                  </Grid>
-                  
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
                       label="Billing Country"
                       name="billingCountry"
                       value={accountForm.billingCountry}
@@ -4878,6 +4839,23 @@ const Accounts: React.FC = () => {
                       required
                     />
                   </Grid>
+
+                  {/* Optional Fields Section */}
+                  <Grid item xs={12}>
+                    <Typography variant="h6" sx={{ mt: 3, mb: 2, color: 'text.secondary' }}>
+                      Additional Information
+                    </Typography>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Product Name"
+                      name="productName"
+                      value={accountForm.productName}
+                      onChange={handleAccountFormChange}
+                    />
+                  </Grid>
                   
                   <Grid item xs={12} sm={6}>
                     <TextField
@@ -4886,17 +4864,7 @@ const Accounts: React.FC = () => {
                       name="riskAssets"
                       value={accountForm.riskAssets}
                       onChange={handleAccountFormChange}
-                      error={!!accountFormErrors.riskAssets}
-                      helperText={accountFormErrors.riskAssets}
-                      required
                     />
-                  </Grid>
-
-                  {/* Optional Fields Section */}
-                  <Grid item xs={12}>
-                    <Typography variant="h6" sx={{ mt: 3, mb: 2, color: 'text.secondary' }}>
-                      Additional Information
-                    </Typography>
                   </Grid>
                   
                   <Grid item xs={12} sm={6}>
