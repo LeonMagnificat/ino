@@ -3473,28 +3473,30 @@ const Accounts: React.FC = () => {
                 </SectionTitle>
               </Box>
               <Box sx={{ p: 3 }}>
-                {getActionPlan(selectedAccount)?.map((action, index) => (
-                  <Paper
-                    key={index}
-                    elevation={0}
-                    sx={{
-                      p: 2,
-                      mb: 2,
-                      borderRadius: (theme) => theme.shape.borderRadius,
-                      border: '1px solid #eee',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 1
-                    }}
-                  >
-                    <Typography variant="subtitle1" fontWeight={600} color="primary">
-                      {action.recommendation}
-                    </Typography>
-                    <Typography variant="body2">
-                      {action.description}
-                    </Typography>
-                  </Paper>
-                )) || (
+                {Array.isArray(getActionPlan(selectedAccount)) && getActionPlan(selectedAccount).length > 0 ? (
+                  getActionPlan(selectedAccount).map((action, index) => (
+                    <Paper
+                      key={index}
+                      elevation={0}
+                      sx={{
+                        p: 2,
+                        mb: 2,
+                        borderRadius: (theme) => theme.shape.borderRadius,
+                        border: '1px solid #eee',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1
+                      }}
+                    >
+                      <Typography variant="subtitle1" fontWeight={600} color="primary">
+                        {action.recommendation}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {action.description}
+                      </Typography>
+                    </Paper>
+                  ))
+                ) : (
                   <Box sx={{ p: 2, textAlign: 'center' }}>
                     <Typography variant="body2" color="text.secondary" fontStyle="italic">
                       {selectedAccount.updates === 'completed' 
@@ -3765,7 +3767,44 @@ const Accounts: React.FC = () => {
       const value = insight[field as keyof typeof insight];
       
       if (value && typeof value === 'string') {
-        return value.split('\n').filter(line => line.trim().length > 0);
+        // Check if it's a JSON string by trying to parse it
+        try {
+          const parsed = JSON.parse(value);
+          // If it's an array of strings, return as is
+          if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
+            return parsed;
+          }
+          // If it's an array of objects (like action_plan), extract relevant text
+          if (Array.isArray(parsed)) {
+            return parsed.map(item => {
+              if (typeof item === 'string') return item;
+              // Handle objects with recommendation/description or step/explanation
+              if (item.recommendation && item.description) {
+                return `${item.recommendation}: ${item.description}`;
+              }
+              if (item.step && item.explanation) {
+                return `${item.step}: ${item.explanation}`;
+              }
+              // Fallback to string representation
+              return JSON.stringify(item);
+            });
+          }
+          // If it's an object (like financial_health, strategic_moves), format it nicely
+          if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+            return Object.entries(parsed).map(([key, value]) => {
+              // Format key: remove underscores, capitalize words
+              const formattedKey = key
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, char => char.toUpperCase());
+              return `${formattedKey}: ${value}`;
+            });
+          }
+          // If it's a regular string, split by newlines
+          return value.split('\n').filter(line => line.trim().length > 0);
+        } catch (e) {
+          // If parsing fails, treat as regular string and split by newlines
+          return value.split('\n').filter(line => line.trim().length > 0);
+        }
       }
     }
     
@@ -3776,10 +3815,50 @@ const Accounts: React.FC = () => {
         if (value.length > 0 && typeof value[0] === 'string') {
           return value as string[];
         }
+        // If array contains objects, convert to strings
+        if (value.length > 0 && typeof value[0] === 'object') {
+          return value.map(item => {
+            if (item.recommendation && item.description) {
+              return `${item.recommendation}: ${item.description}`;
+            }
+            if (item.step && item.explanation) {
+              return `${item.step}: ${item.explanation}`;
+            }
+            return JSON.stringify(item);
+          });
+        }
         // If array contains objects, we can't return it directly
         return undefined;
       } else if (value && typeof value === 'string') {
-        return [value];
+        // Try to parse JSON string
+        try {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed)) {
+            return parsed.map(item => {
+              if (typeof item === 'string') return item;
+              if (item.recommendation && item.description) {
+                return `${item.recommendation}: ${item.description}`;
+              }
+              if (item.step && item.explanation) {
+                return `${item.step}: ${item.explanation}`;
+              }
+              return JSON.stringify(item);
+            });
+          }
+          // If it's an object, format it nicely
+          if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+            return Object.entries(parsed).map(([key, value]) => {
+              // Format key: remove underscores, capitalize words
+              const formattedKey = key
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, char => char.toUpperCase());
+              return `${formattedKey}: ${value}`;
+            });
+          }
+          return [value];
+        } catch (e) {
+          return [value];
+        }
       }
     }
     
@@ -3789,14 +3868,46 @@ const Accounts: React.FC = () => {
   // Helper to get action plan
   const getActionPlan = (account: Account) => {
     // Try new format first
-    if (account.CompanyInsights && account.CompanyInsights.length > 0 && 
-        account.CompanyInsights[0].action_plan) {
-      return account.CompanyInsights[0].action_plan;
+    if (account.CompanyInsights && account.CompanyInsights.length > 0) {
+      const insight = account.CompanyInsights[0];
+      
+      // Handle action_plan as JSON string
+      if (insight.action_plan) {
+        if (Array.isArray(insight.action_plan)) {
+          return insight.action_plan;
+        } else if (typeof insight.action_plan === 'string') {
+          try {
+            const parsed = JSON.parse(insight.action_plan);
+            // Transform the API format to the frontend format
+            return parsed.map((item: any) => ({
+              recommendation: item.step,
+              description: item.explanation
+            }));
+          } catch (e) {
+            console.error('Failed to parse action_plan:', e);
+            return undefined;
+          }
+        }
+      }
     }
     
     // Fall back to old format
     if (account.companyInsight?.action_plan) {
-      return account.companyInsight.action_plan;
+      if (Array.isArray(account.companyInsight.action_plan)) {
+        return account.companyInsight.action_plan;
+      } else if (typeof account.companyInsight.action_plan === 'string') {
+        try {
+          const parsed = JSON.parse(account.companyInsight.action_plan);
+          // Transform the API format to the frontend format
+          return parsed.map((item: any) => ({
+            recommendation: item.step,
+            description: item.explanation
+          }));
+        } catch (e) {
+          console.error('Failed to parse action_plan:', e);
+          return undefined;
+        }
+      }
     }
     
     return undefined;
@@ -3805,10 +3916,29 @@ const Accounts: React.FC = () => {
   // Helper to get solution
   const getSolution = (account: Account): string => {
     // Try new format first
-    if (account.CompanyInsights && account.CompanyInsights.length > 0 && 
-        account.CompanyInsights[0].solution && 
-        typeof account.CompanyInsights[0].solution === 'string') {
-      return account.CompanyInsights[0].solution;
+    if (account.CompanyInsights && account.CompanyInsights.length > 0) {
+      const insight = account.CompanyInsights[0];
+      
+      // Handle solution as JSON string
+      if (insight.solution) {
+        if (typeof insight.solution === 'string') {
+          // Check if it's a JSON string by trying to parse it
+          try {
+            const parsed = JSON.parse(insight.solution);
+            // If it's an array of objects, format it as a string
+            if (Array.isArray(parsed)) {
+              return parsed.map((item: any) => 
+                `${item.solution}: ${item.explanation}`
+              ).join('\n\n');
+            }
+            // If it's already a string, return as is
+            return insight.solution;
+          } catch (e) {
+            // If parsing fails, it's likely a regular string
+            return insight.solution;
+          }
+        }
+      }
     }
     
     // Fall back to empty string
@@ -5285,7 +5415,7 @@ const Accounts: React.FC = () => {
                 variant="contained"
                 onClick={handleNextStep}
                 disabled={(importMethod === 'csv' && !csvFile) || 
-                         (importMethod === 'single' && (!accountForm.accountName || !accountForm.location || !accountForm.organisationType || !accountForm.productFamily))}
+                         (importMethod === 'single' && (!accountForm.accountName || !accountForm.billingCountry || !accountForm.shippingCity || !accountForm.organisationType))}
               >
                 Next
               </Button>
