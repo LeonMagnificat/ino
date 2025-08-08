@@ -3953,13 +3953,12 @@ const Accounts: React.FC = () => {
     setLoadingDraft(draftType);
     
     try {
-      // Make POST request to the webhook endpoint
+      // Make POST request to the new outreach-recommendation endpoint
       const response = await fetchClient.post(
-        'https://primary-production-a43c.up.railway.app/webhook/de9fa1c6-965e-4b51-aeb0-d8d919bbe46b',
+        '/accounts/outreach-recommendation',
         {
-          id: selectedAccount.id,
-          account_name: selectedAccount.account_name,
-          draft: draftType
+          account_id: selectedAccount.id,
+          channel: draftType
         },
         {
           headers: {
@@ -3969,26 +3968,30 @@ const Accounts: React.FC = () => {
         }
       );
       
-      console.log(`Draft ${draftType} request sent:`, response);
+      console.log(`Outreach recommendation ${draftType} request sent:`, response);
+      
+      // Extract the outreach content from the response
+      const outreachContent = response.data?.outreach || '';
       
       // Show success notification
       setNotification({
         open: true,
         severity: 'success',
-        message: `Successfully created ${draftType} draft for ${selectedAccount.account_name}`,
+        message: `Successfully generated ${draftType} draft for ${selectedAccount.account_name}`,
         accountId: selectedAccount.id
       });
       
       // Reset loading state
       setLoadingDraft(null);
       
-      // Navigate to campaigns page with the draft type
+      // Navigate to campaigns page with the draft content
       navigate('/campaigns', { 
         state: { 
           type: draftType, 
           accountName: selectedAccount.account_name,
           accountId: selectedAccount.id,
-          created: true
+          created: true,
+          content: outreachContent
         } 
       });
       
@@ -3999,7 +4002,7 @@ const Accounts: React.FC = () => {
       setNotification({
         open: true,
         severity: 'error',
-        message: `Failed to create ${draftType} draft. Please try again.`,
+        message: `Failed to generate ${draftType} draft. Please try again.`,
         accountId: null
       });
       
@@ -4010,7 +4013,9 @@ const Accounts: React.FC = () => {
       navigate('/campaigns', { 
         state: { 
           type: draftType, 
-          accountName: selectedAccount.account_name,
+          accountName: selectedAccount?.account_name || '',
+          accountId: selectedAccount?.id || '',
+          created: false,
           error: true
         } 
       });
