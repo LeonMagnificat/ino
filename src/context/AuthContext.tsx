@@ -22,6 +22,7 @@ interface AuthContextType {
   getProfile: () => Promise<User>;
   updateProfile: (profileData: Partial<User>) => Promise<void>;
   updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  loginWithGoogle: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,7 +38,7 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const API_URL = 'https://ino-by-sam-be-production.up.railway.app';
+  const API_URL = 'http://127.0.0.1:3000';
 
   // Initial fetch of stored user data
   useEffect(() => {
@@ -359,6 +360,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithGoogle = () => {
+    // Redirect to Google OAuth - backend will handle the flow and redirect back
+    window.location.href = `${API_URL}/auth/google`;
+  };
+
   const logout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
@@ -374,10 +380,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     getProfile,
     updateProfile,
-    updatePassword
+    updatePassword,
+    loginWithGoogle
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export default AuthContext;

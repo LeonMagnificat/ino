@@ -102,7 +102,7 @@ const PrimaryButton = styled(Button)(({ theme }) => ({
 const LoginPage: React.FC = () => {
   const { mode } = useTheme();
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const { login, loginWithGoogle, isAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authError, setAuthError] = useState('');
@@ -184,7 +184,9 @@ const LoginPage: React.FC = () => {
     setAuthError('');
 
     try {
-      const response = await fetch('https://ino-by-sam-be-production.up.railway.app/auth/login', {
+      console.log('Attempting login to:', 'http://127.0.0.1:3000/auth/login');
+      
+      const response = await fetch('http://127.0.0.1:3000/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -195,25 +197,35 @@ const LoginPage: React.FC = () => {
         }),
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error('Non-JSON response received:', textResponse.substring(0, 200));
+        throw new Error('Server returned non-JSON response. Is the backend server running?');
+      }
+
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (!response.ok) {
         throw new Error(data.message || 'Login failed');
       }
 
-      // Assuming the API returns a token
-      const { token } = data;
-      
-      // Save token to localStorage
-      localStorage.setItem('token', token);
-
-      // Call the login function from AuthContext with email and password
+      // Use AuthContext login instead of direct API call
       await login(loginForm.email, loginForm.password);
 
       // Redirect will happen automatically via useEffect
     } catch (error: any) {
       console.error('Login error:', error);
-      setAuthError(error.message || 'Invalid email or password. Please try again.');
+      if (error.message.includes('fetch')) {
+        setAuthError('Unable to connect to server. Please check if the backend is running.');
+      } else {
+        setAuthError(error.message || 'Invalid email or password. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -221,7 +233,10 @@ const LoginPage: React.FC = () => {
 
   const handleSocialLogin = (provider: string) => {
     console.log(`Login with ${provider}`);
-    // Implement social login logic here
+    if (provider === 'Google') {
+      loginWithGoogle();
+    }
+    // Implement other social login logic here
   };
 
   const goToSignup = () => {

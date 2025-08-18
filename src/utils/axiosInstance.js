@@ -1,6 +1,6 @@
 // fetchClient.js - A fetch-based API client that mimics axios interface
 
-const BASE_URL = 'https://ino-by-sam-be-production.up.railway.app';
+const BASE_URL = 'http://127.0.0.1:3000/';
 
 // Helper to handle response and convert to JSON
 const handleResponse = async (response) => {

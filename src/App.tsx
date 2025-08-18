@@ -15,6 +15,7 @@ import LandingPage from './components/auth/LandingPage';
 import LoginPage from './components/auth/LoginPage';
 import SignupPage from './components/auth/SignupPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import GoogleCallbackHandler from './components/auth/GoogleCallbackHandler';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -37,6 +38,7 @@ function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
+              <Route path="/auth/callback" element={<GoogleCallbackHandler />} />
               <Route path="/logout" element={<LogoutRedirect />} />
 
               {/* Protected routes */}
