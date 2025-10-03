@@ -1,5 +1,5 @@
 {
-  "name": "ino",
+  "name": "inspire",
   "private": true,
   "version": "0.1.0",
   "scripts": {
@@ -13,6 +13,7 @@
   "dependencies": {
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
+    "@heroicons/react": "^2.2.0",
     "@mui/icons-material": "^5.14.18",
     "@mui/material": "^5.14.18",
     "@testing-library/dom": "^9.3.3",
@@ -42,6 +43,8 @@
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react-swc": "^3.5.0",
     "autoprefixer": "^10.4.16",
+    "browserslist": "^4.26.2",
+    "caniuse-lite": "^1.0.30001743",
     "postcss": "^8.4.31",
     "tailwindcss": "^3.3.5",
     "vite": "^4.5.2"

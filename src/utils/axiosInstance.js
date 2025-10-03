@@ -1,6 +1,6 @@
 // fetchClient.js - A fetch-based API client that mimics axios interface
 
-const BASE_URL = 'http://127.0.0.1:3000/';
+const BASE_URL = 'http://127.0.0.1:3000';
 
 // Helper to handle response and convert to JSON
 const handleResponse = async (response) => {

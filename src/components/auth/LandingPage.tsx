@@ -1,234 +1,563 @@
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-
+import { motion } from 'framer-motion';
+import { 
+  ArrowRightIcon, 
+  ChartBarIcon, 
+  UsersIcon, 
+  BoltIcon,
+  ShieldCheckIcon,
+  StarIcon,
+  CheckIcon,
+  PlayIcon,
+  SparklesIcon,
+  ArrowTrendingUpIcon,
+  EyeIcon,
+  ClockIcon
+} from '@heroicons/react/24/outline';
 
 export default function LandingPage(): JSX.Element {
-const executeScroll = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      const navbarHeight = 80; // Height of your fixed navbar
-      const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
-      window.scrollTo({
-        top: elementPosition - navbarHeight,
-        behavior: 'smooth'
-      });
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [activeTestimonial, setActiveTestimonial] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const testimonials = [
+    {
+      name: "Sarah Johnson",
+      role: "Business Development Manager, TechCorp",
+      content: "Inspire has revolutionized our B2B outreach. The AI-powered opportunity discovery helped us identify 3 new enterprise clients within weeks, increasing our pipeline by 85%.",
+      avatar: "/images/Humaaans/standing-1.svg"
+    },
+    {
+      name: "Michael Chen",
+      role: "Sales Director, GrowthLabs",
+      content: "The web scraping and NLP capabilities are incredible. We now discover opportunities before our competitors even know they exist, giving us a massive competitive advantage.",
+      avatar: "/images/Humaaans/sitting-1.svg"
+    },
+    {
+      name: "Jessica Williams",
+      role: "Strategic Partnerships Lead, Enterprise Solutions",
+      content: "Inspire's personalized recommendations have transformed our approach to B2B sales. We're now reaching out with highly relevant proposals that actually resonate with prospects.",
+      avatar: "/images/Humaaans/standing-2.svg"
     }
-  };
+  ];
+
+  const features = [
+    {
+      icon: ChartBarIcon,
+      title: "AI-Powered Web Scraping",
+      description: "Intelligent data extraction from news sources, company websites, and social media to gather real-time insights about your target companies.",
+      color: "from-blue-500 to-purple-600"
+    },
+    {
+      icon: UsersIcon,
+      title: "Target Company Analysis",
+      description: "Input your target companies and get comprehensive analysis of their recent activities, growth patterns, and business needs.",
+      color: "from-green-500 to-blue-600"
+    },
+    {
+      icon: BoltIcon,
+      title: "Natural Language Processing",
+      description: "Advanced NLP algorithms analyze news articles, press releases, and updates to extract meaningful business insights and trends.",
+      color: "from-yellow-500 to-orange-600"
+    },
+    {
+      icon: ShieldCheckIcon,
+      title: "Personalized Recommendations",
+      description: "Get tailored suggestions on how your services can address specific needs based on real-time company developments and trends.",
+      color: "from-red-500 to-pink-600"
+    },
+    {
+      icon: ArrowTrendingUpIcon,
+      title: "Opportunity Scoring",
+      description: "AI-powered scoring system ranks opportunities by relevance, timing, and potential success probability for your business.",
+      color: "from-purple-500 to-indigo-600"
+    },
+    {
+      icon: EyeIcon,
+      title: "Market Intelligence",
+      description: "Stay ahead with comprehensive market insights, competitor analysis, and industry trends that impact your B2B opportunities.",
+      color: "from-teal-500 to-cyan-600"
+    }
+  ];
+
+  const stats = [
+    { value: "85%", label: "More relevant opportunities found" },
+    { value: "12hrs", label: "Saved per week on research" },
+    { value: "94%", label: "Accuracy in trend analysis" },
+    { value: "3.2x", label: "Faster B2B outreach success" }
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0F051D] to-[#1A0B2E] text-white flex flex-col items-center px-6">
-      {/* Navbar */}
-      <nav className="w-full max-w-6xl flex justify-between items-center py-6 fixed top-0 z-50 bg-gradient-to-b from-[#0F051D]/95 to-transparent backdrop-blur-sm">
-        <h1 className="text-xl font-bold">Ino</h1>
-        <div className="hidden md:flex items-center space-x-6">
-          <Link to="/login" className="text-white bg-transparent px-4 py-2 hover:bg-white/10 rounded">Login</Link>
-          <Link to="/signup" className="bg-white text-black px-4 py-2 rounded hover:bg-white/90">Sign Up</Link>
-        </div>
-        <button className="md:hidden text-white">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-      </nav>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden">
+      {/* Navigation */}
+      <motion.nav 
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+          isScrolled 
+            ? 'bg-slate-900/95 backdrop-blur-md border-b border-slate-800/50' 
+            : 'bg-transparent'
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex justify-between items-center">
+            <motion.div 
+              className="flex items-center space-x-2"
+              whileHover={{ scale: 1.05 }}
+            >
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <SparklesIcon className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                Inspire
+              </span>
+            </motion.div>
+            
+            <div className="hidden md:flex items-center space-x-8">
+              <a href="#features" className="text-slate-300 hover:text-white transition-colors">Features</a>
+              <a href="#testimonials" className="text-slate-300 hover:text-white transition-colors">Testimonials</a>
+              <a href="#pricing" className="text-slate-300 hover:text-white transition-colors">Pricing</a>
+            </div>
 
-      {/* Main Content */}
-      <div className="w-full max-w-6xl pt-24 pb-12">
-        {/* Hero Section */}
-        <div className="text-center mt-16 max-w-4xl mx-auto">
-          <div className="bg-[#6227A7] text-sm px-4 py-2 rounded-full inline-block">
-            New: AI-powered analytics now available! <a href="#" className="underline">See what's new</a>
-          </div>
-          <h2 className="text-5xl font-bold mt-6 leading-tight">
-            Unlock business insights <br /> with powerful analytics
-          </h2>
-          <p className="text-gray-400 mt-4 text-lg max-w-2xl mx-auto">
-            Vaultflow helps teams make better decisions with real-time data visualization, custom reports, and AI-powered insights that drive growth.
-          </p>
-          <div className="mt-6 space-x-4">
-            <button className="bg-white text-black px-6 py-3 rounded font-medium hover:bg-white/90">Start Free Trial</button>
-            <button className="text-white border border-white px-6 py-3 rounded font-medium hover:bg-white/10">Schedule Demo</button>
+            <div className="flex items-center space-x-4">
+              <Link 
+                to="/login" 
+                className="text-slate-300 hover:text-white transition-colors px-4 py-2 rounded-lg hover:bg-slate-800/50"
+              >
+                Sign In
+              </Link>
+              <Link 
+                to="/signup" 
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105"
+              >
+                Get Started
+              </Link>
+            </div>
           </div>
         </div>
+      </motion.nav>
 
-        {/* Dashboard Preview */}
-        <div className="mt-12 w-full max-w-5xl mx-auto">
-          <div style={{ backgroundColor: '#1A0B2E', padding: '24px', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' }}>
-            <img src="/dashboard_mockup.png" alt="Analytics dashboard preview" style={{ borderRadius: '8px', width: '100%' }} />
+      {/* Hero Section */}
+      <section className="pt-32 pb-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-5xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              className="mb-8"
+            >
+              <div className="inline-flex items-center space-x-2 bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-full px-4 py-2 mb-6">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-sm text-slate-300">AI-powered B2B opportunity discovery is here</span>
+                <ArrowRightIcon className="w-4 h-4 text-slate-400" />
+              </div>
+              
+              <h1 className="text-6xl md:text-7xl font-bold mb-6 leading-tight">
+                <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  Discover Strategic
+                </span>
+                <br />
+                <span className="text-white">B2B Opportunities</span>
+              </h1>
+              
+              <p className="text-xl text-slate-300 mb-8 max-w-3xl mx-auto leading-relaxed">
+                Transform how you discover and pursue strategic B2B opportunities with AI-powered insights 
+                that turn market intelligence into actionable business growth.
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12"
+            >
+              <Link 
+                to="/signup"
+                className="group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+              >
+                Start Free Trial
+                <ArrowRightIcon className="w-5 h-5 inline ml-2 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              
+              <button className="group flex items-center space-x-2 bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 hover:bg-slate-700/50 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300">
+                <PlayIcon className="w-5 h-5" />
+                <span>Watch Demo</span>
+              </button>
+            </motion.div>
+
+            {/* Stats */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto"
+            >
+              {stats.map((stat, index) => (
+                <div key={index} className="text-center">
+                  <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
+                    {stat.value}
+                  </div>
+                  <div className="text-slate-400 text-sm">{stat.label}</div>
+                </div>
+              ))}
+            </motion.div>
           </div>
         </div>
+      </section>
 
-        {/* Key Features Section */}
-        <div className="mt-24 w-full max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Everything you need in one platform</h2>
-            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-              Powerful tools to help you track, analyze, and optimize your business performance
+      {/* Dashboard Preview */}
+      <section className="py-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="relative"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-3xl blur-3xl"></div>
+            <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-3xl p-8 shadow-2xl">
+              <div className="bg-slate-900/50 rounded-2xl p-6 border border-slate-700/30">
+                <img 
+                  src="/dashboard_mockup.png" 
+                  alt="Inspire Dashboard Preview" 
+                  className="w-full rounded-xl shadow-lg"
+                  onError={(e) => {
+                    // Fallback if image doesn't exist
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+                <div className="mt-6 text-center">
+                  <p className="text-slate-400 text-sm">
+                    Experience the power of AI-driven B2B opportunity discovery
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="py-20 px-6 bg-slate-800/20">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-5xl font-bold mb-6">
+              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                Everything you need
+              </span>
+              <br />
+              <span className="text-white">to succeed</span>
+            </h2>
+            <p className="text-xl text-slate-300 max-w-3xl mx-auto">
+              Powerful AI-driven tools designed specifically for B2B opportunity discovery. 
+              Transform how you identify, analyze, and pursue strategic business opportunities.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white/5 p-6 rounded-xl hover:bg-white/10 transition-all">
-              <div className="bg-[#6227A7] w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Real-time Analytics</h3>
-              <p className="text-gray-400">Monitor your business performance with live dashboards and instant insights.</p>
-            </div>
-
-            <div className="bg-white/5 p-6 rounded-xl hover:bg-white/10 transition-all">
-              <div className="bg-[#6227A7] w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">AI-Powered Insights</h3>
-              <p className="text-gray-400">Leverage machine learning to uncover patterns and predict future trends.</p>
-            </div>
-
-            <div className="bg-white/5 p-6 rounded-xl hover:bg-white/10 transition-all">
-              <div className="bg-[#6227A7] w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Custom Reporting</h3>
-              <p className="text-gray-400">Create tailored reports with drag-and-drop simplicity for any stakeholder.</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {features.map((feature, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: index * 0.1 }}
+                viewport={{ once: true }}
+                whileHover={{ y: -5 }}
+                className="group bg-slate-800/30 backdrop-blur-sm border border-slate-700/30 hover:border-slate-600/50 rounded-2xl p-8 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10"
+              >
+                <div className={`w-16 h-16 bg-gradient-to-r ${feature.color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                  <feature.icon className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold mb-4 text-white group-hover:text-blue-400 transition-colors">
+                  {feature.title}
+                </h3>
+                <p className="text-slate-300 leading-relaxed">
+                  {feature.description}
+                </p>
+              </motion.div>
+            ))}
           </div>
         </div>
+      </section>
 
-        {/* Testimonials with Humaaans */}
-        <div className="mt-24 w-full max-w-6xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-12">Trusted by innovative teams</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Testimonial 1 */}
-            <div className="bg-white/5 p-6 rounded-xl">
-              <div className="flex items-center mb-6">
-                <div className="w-16 h-16 mr-4">
-                  <img src="/images/Humaaans/standing-1.svg" alt="Customer" className="w-full h-full object-contain" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold">Sarah Johnson</h3>
-                  <p className="text-gray-400">Marketing Director, Acme Inc.</p>
+      {/* Testimonials Section */}
+      <section id="testimonials" className="py-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-5xl font-bold mb-6">
+              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                Trusted by
+              </span>
+              <br />
+              <span className="text-white">B2B professionals worldwide</span>
+            </h2>
+            <p className="text-xl text-slate-300 max-w-3xl mx-auto">
+              See how leading companies are using Inspire to discover strategic B2B opportunities and accelerate growth.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="relative"
+          >
+            <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/30 rounded-3xl p-8 md:p-12">
+              <div className="flex items-center justify-center mb-8">
+                <div className="flex space-x-2">
+                  {testimonials.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setActiveTestimonial(index)}
+                      className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                        index === activeTestimonial 
+                          ? 'bg-blue-500 scale-125' 
+                          : 'bg-slate-600 hover:bg-slate-500'
+                      }`}
+                    />
+                  ))}
                 </div>
               </div>
-              <p className="text-gray-300 italic">"Vaultflow transformed how we analyze campaign performance. The insights we've gained have increased our ROI by 37% in just three months."</p>
-            </div>
 
-            {/* Testimonial 2 */}
-            <div className="bg-white/5 p-6 rounded-xl">
-              <div className="flex items-center mb-6">
-                <div className="w-16 h-16 mr-4">
-                  <img src="/images/Humaaans/sitting-1.svg" alt="Customer" className="w-full h-full object-contain" />
+              <div className="text-center max-w-4xl mx-auto">
+                <div className="flex items-center justify-center mb-8">
+                  <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <img 
+                      src={testimonials[activeTestimonial].avatar} 
+                      alt={testimonials[activeTestimonial].name}
+                      className="w-16 h-16 object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
                 </div>
+
+                <blockquote className="text-2xl md:text-3xl font-medium text-white mb-8 leading-relaxed">
+                  "{testimonials[activeTestimonial].content}"
+                </blockquote>
+
                 <div>
-                  <h3 className="text-xl font-semibold">Michael Chen</h3>
-                  <p className="text-gray-400">CTO, TechNova</p>
+                  <h4 className="text-xl font-bold text-white mb-2">
+                    {testimonials[activeTestimonial].name}
+                  </h4>
+                  <p className="text-slate-400 text-lg">
+                    {testimonials[activeTestimonial].role}
+                  </p>
                 </div>
               </div>
-              <p className="text-gray-300 italic">"The AI-powered forecasting has been a game-changer for our product planning. We can now anticipate market shifts with remarkable accuracy."</p>
-            </div>
 
-            {/* Testimonial 3 */}
-            <div className="bg-white/5 p-6 rounded-xl">
-              <div className="flex items-center mb-6">
-                <div className="w-16 h-16 mr-4">
-                  <img src="/images/Humaaans/standing-2.svg" alt="Customer" className="w-full h-full object-contain" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold">Jessica Williams</h3>
-                  <p className="text-gray-400">CEO, GrowthLabs</p>
+              {/* Star ratings */}
+              <div className="flex justify-center mt-8">
+                <div className="flex space-x-1">
+                  {[...Array(5)].map((_, i) => (
+                    <StarIcon key={i} className="w-6 h-6 text-yellow-400 fill-current" />
+                  ))}
                 </div>
               </div>
-              <p className="text-gray-300 italic">"Implementing Vaultflow was the best decision we made last year. The platform's ease of use and depth of insights have accelerated our growth strategy."</p>
             </div>
-          </div>
+          </motion.div>
         </div>
+      </section>
 
-        {/* How It Works Section */}
-        <div className="mt-24 w-full max-w-6xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-16">How Vaultflow works for your business</h2>
+      {/* How It Works Section */}
+      <section className="py-20 px-6 bg-slate-800/20">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-5xl font-bold mb-6">
+              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                How Inspire works
+              </span>
+              <br />
+              <span className="text-white">for your business</span>
+            </h2>
+            <p className="text-xl text-slate-300 max-w-3xl mx-auto">
+              Get started in minutes with our simple 4-step process designed for B2B opportunity discovery.
+            </p>
+          </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            {/* Step 1 */}
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="w-48 h-48 flex-shrink-0 relative">
-                <div className="absolute top-0 left-0 bg-[#6227A7] w-8 h-8 rounded-full flex items-center justify-center font-bold">1</div>
-                <img src="/images/Humaaans/working-1.svg" alt="Connect data sources" className="w-full h-full object-contain" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-semibold mb-2">Connect your data sources</h3>
-                <p className="text-gray-400">Easily integrate with your existing tools and platforms with our 50+ pre-built connectors.</p>
-              </div>
-            </div>
-
-            {/* Step 2 */}
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="w-48 h-48 flex-shrink-0 relative">
-                <div className="absolute top-0 left-0 bg-[#6227A7] w-8 h-8 rounded-full flex items-center justify-center font-bold">2</div>
-                <img src="/images/Humaaans/working-2.svg" alt="Customize dashboards" className="w-full h-full object-contain" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-semibold mb-2">Customize your dashboards</h3>
-                <p className="text-gray-400">Build personalized views with our intuitive drag-and-drop interface, no coding required.</p>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="w-48 h-48 flex-shrink-0 relative">
-                <div className="absolute top-0 left-0 bg-[#6227A7] w-8 h-8 rounded-full flex items-center justify-center font-bold">3</div>
-                <img src="/images/Humaaans/sitting-2.svg" alt="Analyze data" className="w-full h-full object-contain" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-semibold mb-2">Analyze and discover insights</h3>
-                <p className="text-gray-400">Let our AI identify trends, anomalies, and opportunities hidden in your data.</p>
-              </div>
-            </div>
-
-            {/* Step 4 */}
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="w-48 h-48 flex-shrink-0 relative">
-                <div className="absolute top-0 left-0 bg-[#6227A7] w-8 h-8 rounded-full flex items-center justify-center font-bold">4</div>
-                <img src="/images/Humaaans/standing-3.svg" alt="Take action" className="w-full h-full object-contain" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-semibold mb-2">Take action and grow</h3>
-                <p className="text-gray-400">Make data-driven decisions and set up automated workflows based on your insights.</p>
-              </div>
-            </div>
+            {[
+              {
+                step: 1,
+                title: "Describe Your Services",
+                description: "Tell us what your company offers - your products, services, and unique value propositions that set you apart in the market.",
+                image: "/images/Humaaans/sitting-1.svg"
+              },
+              {
+                step: 2,
+                title: "Input Target Companies",
+                description: "Add your list of target companies you want to connect with. Our system will analyze each one for relevant opportunities.",
+                image: "/images/Humaaans/standing-1.svg"
+              },
+              {
+                step: 3,
+                title: "AI Web Scraping & Analysis",
+                description: "Our AI scrapes news, updates, and trends about your target companies, using NLP to extract meaningful business insights.",
+                image: "/images/Humaaans/sitting-2.svg"
+              },
+              {
+                step: 4,
+                title: "Get Personalized Recommendations",
+                description: "Receive tailored suggestions on how your services can address specific needs based on real-time company developments.",
+                image: "/images/Humaaans/standing-2.svg"
+              }
+            ].map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8, delay: index * 0.2 }}
+                viewport={{ once: true }}
+                className="flex flex-col md:flex-row items-center gap-8"
+              >
+                <div className="w-48 h-48 flex-shrink-0 relative">
+                  <div className="absolute -top-4 -left-4 w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center font-bold text-white text-xl shadow-lg">
+                    {item.step}
+                  </div>
+                  <div className="w-full h-full bg-slate-800/50 rounded-2xl flex items-center justify-center border border-slate-700/50">
+                    <img 
+                      src={item.image} 
+                      alt={item.title}
+                      className="w-32 h-32 object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="flex-1 text-center md:text-left">
+                  <h3 className="text-2xl font-bold mb-4 text-white">
+                    {item.title}
+                  </h3>
+                  <p className="text-slate-300 leading-relaxed text-lg">
+                    {item.description}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
+      </section>
 
-        {/* CTA Section */}
-        <div className="mt-24 w-full max-w-6xl mx-auto mb-20">
-          <div className="bg-gradient-to-r from-[#6227A7] to-[#8A42D5] rounded-2xl p-12 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to transform your analytics?</h2>
-            <p className="text-lg mb-8 max-w-2xl mx-auto">
-              Join thousands of companies using Vaultflow to make better decisions with data.
-            </p>
-            <div className="flex flex-col md:flex-row justify-center gap-4">
-              <button className="bg-white text-[#6227A7] px-6 py-3 rounded font-medium hover:bg-white/90">Start your free 14-day trial</button>
-              <button className="bg-transparent border border-white text-white px-6 py-3 rounded font-medium hover:bg-white/10">
-                Request a demo
-              </button>
+      {/* CTA Section */}
+      <section className="py-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="relative"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-3xl blur-3xl"></div>
+            <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl p-12 md:p-16 text-center shadow-2xl">
+              <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
+                Ready to discover strategic
+                <br />
+                <span className="bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
+                  B2B opportunities?
+                </span>
+              </h2>
+              <p className="text-xl text-blue-100 mb-10 max-w-3xl mx-auto leading-relaxed">
+                Join hundreds of B2B professionals who are already using Inspire to discover opportunities, 
+                analyze target companies, and accelerate growth with AI-powered insights.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-8">
+                <Link 
+                  to="/signup"
+                  className="group bg-white text-blue-600 px-10 py-4 rounded-xl font-bold text-lg hover:bg-blue-50 transition-all duration-300 transform hover:scale-105 shadow-lg"
+                >
+                  Start Free Trial
+                  <ArrowRightIcon className="w-5 h-5 inline ml-2 group-hover:translate-x-1 transition-transform" />
+                </Link>
+                <button className="group bg-transparent border-2 border-white text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-white/10 transition-all duration-300">
+                  <PlayIcon className="w-5 h-5 inline mr-2" />
+                  Watch Demo
+                </button>
+              </div>
+
+              <div className="flex items-center justify-center space-x-8 text-blue-100">
+                <div className="flex items-center space-x-2">
+                  <CheckIcon className="w-5 h-5" />
+                  <span>14-day free trial</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckIcon className="w-5 h-5" />
+                  <span>No credit card required</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckIcon className="w-5 h-5" />
+                  <span>Setup in 5 minutes</span>
+                </div>
+              </div>
             </div>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </section>
 
       {/* Footer */}
-      <footer className="w-full max-w-6xl py-8 border-t border-white/10">
-        <div className="flex flex-col md:flex-row justify-between items-center">
-          <div className="mb-4 md:mb-0">
-            <h1 className="text-xl font-bold">Vaultflow</h1>
-            <p className="text-gray-400 text-sm">© 2023 Vaultflow, Inc. All rights reserved.</p>
-          </div>
-          <div className="flex space-x-6">
-            <a href="#" className="text-gray-400 hover:text-white">Terms</a>
-            <a href="#" className="text-gray-400 hover:text-white">Privacy</a>
-            <a href="#" className="text-gray-400 hover:text-white">Security</a>
-            <a href="#" className="text-gray-400 hover:text-white">Contact</a>
+      <footer className="py-12 px-6 border-t border-slate-800/50 bg-slate-900/50">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="flex items-center space-x-2 mb-6 md:mb-0">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <SparklesIcon className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                Inspire
+              </span>
+            </div>
+            
+            <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-8">
+              <div className="flex space-x-6 text-slate-400">
+                <a href="#" className="hover:text-white transition-colors">Terms</a>
+                <a href="#" className="hover:text-white transition-colors">Privacy</a>
+                <a href="#" className="hover:text-white transition-colors">Security</a>
+                <a href="#" className="hover:text-white transition-colors">Contact</a>
+              </div>
+              <div className="text-slate-400 text-sm">
+                © 2024 Inspire, Inc. All rights reserved.
+              </div>
+            </div>
           </div>
         </div>
       </footer>
